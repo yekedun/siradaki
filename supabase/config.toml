@@ -1,0 +1,58 @@
+# Supabase lokal geliştirme ayarları
+# Dökümantasyon: https://supabase.com/docs/guides/cli/config
+
+project_id = "berber-randevu"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.pooler]
+enabled = false
+
+[realtime]
+enabled = true
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1"
+
+[inbucket]
+enabled = true
+port = 54324
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://localhost:3000", "berberapp://"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false  # Lokal dev'de e-mail confirmation kapalı
+
+[functions.get-availability]
+verify_jwt = false
+import_map = "./functions/import_map.json"
+
+[functions.book-appointment]
+verify_jwt = false
+import_map = "./functions/import_map.json"
+
+[functions.block-walkin]
+verify_jwt = false
+import_map = "./functions/import_map.json"
+
+[functions.create-widget-token]
+verify_jwt = true
+import_map = "./functions/import_map.json"

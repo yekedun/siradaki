@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm i *)",
+      "Bash(pnpm --version)",
+      "Bash(npm uninstall *)",
+      "Bash(mkdir -p \"C:/Users/Emre/bin\")",
+      "Bash(cd /tmp)",
+      "Bash(curl -sSL -o supabase.tar.gz \"https://github.com/supabase/cli/releases/latest/download/supabase_windows_amd64.tar.gz\")",
+      "Bash(tar -xzf supabase.tar.gz)",
+      "Bash(mv supabase.exe \"C:/Users/Emre/bin/\")",
+      "Bash(\"C:/Users/Emre/bin/supabase.exe\" --version)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm -F @berber/web type-check)",
+      "Bash(pnpm -F @berber/shared type-check)",
+      "Bash(pnpm -F @berber/mobile type-check)",
+      "Bash(pnpm -F @berber/web build)"
+    ]
+  }
+}

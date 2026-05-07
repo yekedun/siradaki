@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web (Next.js dev)",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@berber/web", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "mobile (Expo dev server)",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@berber/mobile", "start"],
+      "port": 8081
+    },
+    {
+      "name": "supabase (local stack)",
+      "runtimeExecutable": "supabase",
+      "runtimeArgs": ["start"],
+      "port": 54321
+    }
+  ]
+}

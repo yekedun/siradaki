@@ -1,0 +1,16 @@
+{
+  "name": "@berber/shared",
+  "version": "0.0.1",
+  "private": true,
+  "exports": {
+    "./slot-utils": "./src/slot-utils.ts",
+    "./constants": "./src/constants.ts",
+    "./types": "./src/types.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

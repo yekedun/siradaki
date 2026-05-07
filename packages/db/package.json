@@ -1,0 +1,9 @@
+{
+  "name": "@berber/db",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Database migrations and generated types",
+  "scripts": {
+    "generate-types": "supabase gen types typescript --local > src/database.types.ts"
+  }
+}
