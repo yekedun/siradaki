@@ -18,7 +18,7 @@ serve(async (req) => {
     return error("Geçersiz JSON");
   }
 
-  const { shop_slug, service_id, barber_id, starts_at, customer_name, customer_phone } = body;
+  const { shop_slug, service_id, staff_id, starts_at, customer_name, customer_phone } = body;
 
   if (!shop_slug || !service_id || !starts_at || !customer_name) {
     return error("shop_slug, service_id, starts_at, customer_name zorunlu");
@@ -58,32 +58,31 @@ serve(async (req) => {
   ).toISOString();
 
   // 3. Usta belirleme
-  // barber_id = null → "Fark Etmez": assign_any_barber ile otomatik ata
-  let resolvedBarberId: string;
+  // staff_id = null → "Fark Etmez": assign_any_staff ile otomatik ata
+  let resolvedStaffId: string;
 
-  if (!barber_id) {
-    const { data: assigned } = await supabase.rpc("assign_any_barber", {
+  if (!staff_id) {
+    const { data: assigned } = await supabase.rpc("assign_any_staff", {
       p_shop_id: shop.id,
       p_starts_at: starts_at,
       p_ends_at: endsAt,
     });
 
     if (!assigned) {
-      return error("Seçilen saatte hiç müsait usta yok", 409);
+      return error("Seçilen saatte hiç müsait personel yok", 409);
     }
-    resolvedBarberId = assigned;
+    resolvedStaffId = assigned;
   } else {
-    // Belirtilen ustanın bu dükkana ait ve aktif olduğunu doğrula
-    const { data: barber } = await supabase
-      .from("barbers")
+    // Belirtilen personelin bu dükkana ait olduğunu doğrula
+    const { data: staffMember } = await supabase
+      .from("staff")
       .select("id")
-      .eq("id", barber_id)
+      .eq("id", staff_id)
       .eq("shop_id", shop.id)
-      .eq("is_active", true)
       .single();
 
-    if (!barber) return error("Usta bulunamadı", 404);
-    resolvedBarberId = barber.id;
+    if (!staffMember) return error("Personel bulunamadı", 404);
+    resolvedStaffId = staffMember.id;
   }
 
   // 4. Server-side slot revalidation (race condition guard)
@@ -91,7 +90,7 @@ serve(async (req) => {
 
   const { data: occupied, error: rpcError } = await supabase.rpc(
     "get_occupied_ranges",
-    { p_barber_id: resolvedBarberId, p_date: dateStr }
+    { p_staff_id: resolvedStaffId, p_date: dateStr }
   );
 
   if (rpcError) {
@@ -119,7 +118,7 @@ serve(async (req) => {
   const { data: appointment, error: insertError } = await supabase
     .from("appointments")
     .insert({
-      barber_id: resolvedBarberId,
+      staff_id: resolvedStaffId,
       service_id: service.id,
       customer_name: customer_name.trim(),
       customer_phone: customer_phone?.trim() || null,
@@ -131,24 +130,24 @@ serve(async (req) => {
 
   if (insertError) {
     if (insertError.code === "23P01") {
-      return error("Bu saat az önce doldu, başka bir saat seçin", 409);
+      return error("Seçilen personel bu saatte dolu", 409);
     }
     console.error("Appointment insert error:", insertError);
     return error("Randevu oluşturulamadı", 500);
   }
 
-  // Usta adını döndürmek için resolve et
-  const { data: barberRow } = await supabase
-    .from("barbers")
-    .select("display_name")
-    .eq("id", resolvedBarberId)
+  // Personel adını döndürmek için resolve et
+  const { data: staffRow } = await supabase
+    .from("staff")
+    .select("name")
+    .eq("id", resolvedStaffId)
     .single();
 
   return json({
     appointment_id: appointment!.id,
     starts_at,
     ends_at: endsAt,
-    barber_display_name: barberRow?.display_name ?? "",
+    staff_name: staffRow?.name ?? "",
     service_name: service.name,
   });
 });

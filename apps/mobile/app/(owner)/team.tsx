@@ -13,14 +13,14 @@ import { Feather } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
 import { useUserRole } from "../../lib/user-context";
 import { T, R, Shadow } from "../../lib/theme";
+import { StaffScheduleModal } from "../../components/StaffScheduleModal";
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
-interface Barber {
+interface Staff {
   id: string;
-  display_name: string;
-  invite_email: string | null;
+  name: string;
   is_active: boolean;
   user_id: string | null;
 }
@@ -31,72 +31,48 @@ function initials(s: string): string {
 
 export default function TeamScreen() {
   const { shopId } = useUserRole();
-  const [barbers, setBarbers]   = useState<Barber[]>([]);
+  const [staffList, setStaffList] = useState<Staff[]>([]);
   const [loading, setLoading]   = useState(true);
   const [inviting, setInviting] = useState(false);
+  const [modalStaff, setModalStaff] = useState<Staff | null>(null);
 
   const load = useCallback(async () => {
     if (!shopId) return;
     const { data } = await supabase
-      .from("barbers")
-      .select("id, display_name, invite_email, is_active, user_id")
+      .from("staff")
+      .select("id, name, is_active, user_id")
       .eq("shop_id", shopId)
       .order("created_at");
-    setBarbers((data as Barber[]) ?? []);
+    setStaffList(data ?? []);
     setLoading(false);
   }, [shopId]);
 
   useEffect(() => { load(); }, [load]);
 
   function promptInvite() {
-    let email = "";
-    let name  = "";
     Alert.prompt(
-      "Usta Davet Et",
-      "Adı Soyadı",
-      (text) => {
-        name = text ?? "";
-        Alert.prompt(
-          "Usta Davet Et",
-          "E-posta adresi",
-          (text2) => {
-            email = text2 ?? "";
-            if (name.trim().length < 2 || !email.includes("@")) {
-              Alert.alert("Geçersiz", "Geçerli bir ad ve e-posta gir.");
-              return;
-            }
-            handleInvite(name.trim(), email.trim().toLowerCase());
-          },
-          "plain-text",
-          "",
-          "email-address"
-        );
+      "Personel Ekle",
+      "Personelin Adı Soyadı",
+      (name) => {
+        if (!name || name.trim().length < 2) {
+          Alert.alert("Geçersiz", "Geçerli bir ad gir.");
+          return;
+        }
+        handleAddStaff(name.trim());
       },
       "plain-text",
       ""
     );
   }
 
-  async function handleInvite(displayName: string, email: string) {
+  async function handleAddStaff(name: string) {
     setInviting(true);
     try {
-      const session = (await supabase.auth.getSession()).data.session;
-      if (!session) throw new Error("Oturum bulunamadı");
-
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/invite-barber`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({ email, display_name: displayName }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Davet başarısız");
-
-      Alert.alert("Davet Gönderildi", `${displayName} adresine davet e-postası gönderildi.`);
+      const { error } = await supabase
+        .from("staff")
+        .insert({ shop_id: shopId as string, name });
+      if (error) throw error;
+      Alert.alert("Başarılı", `${name} başarıyla eklendi.`);
       await load();
     } catch (err) {
       Alert.alert("Hata", (err as Error).message);
@@ -105,21 +81,21 @@ export default function TeamScreen() {
     }
   }
 
-  async function handleToggleActive(barber: Barber) {
-    const action = barber.is_active ? "pasif" : "aktif";
+  async function handleToggleActive(staffMember: Staff) {
+    const action = staffMember.is_active ? "pasif" : "aktif";
     Alert.alert(
       "Durumu Değiştir",
-      `${barber.display_name} ustayı ${action} yap?`,
+      `${staffMember.name} personelini ${action} yap?`,
       [
         { text: "Vazgeç", style: "cancel" },
         {
-          text: barber.is_active ? "Pasif Yap" : "Aktif Yap",
-          style: barber.is_active ? "destructive" : "default",
+          text: staffMember.is_active ? "Pasif Yap" : "Aktif Yap",
+          style: staffMember.is_active ? "destructive" : "default",
           onPress: async () => {
             const { error } = await supabase
-              .from("barbers")
-              .update({ is_active: !barber.is_active })
-              .eq("id", barber.id);
+              .from("staff")
+              .update({ is_active: !staffMember.is_active })
+              .eq("id", staffMember.id);
             if (error) { Alert.alert("Hata", error.message); return; }
             await load();
           },
@@ -144,40 +120,47 @@ export default function TeamScreen() {
           ) : (
             <>
               <Feather name="user-plus" size={16} color="#fff" />
-              <Text style={styles.inviteBtnTxt}>Usta Davet Et</Text>
+              <Text style={styles.inviteBtnTxt}>Personel Ekle</Text>
             </>
           )}
         </Pressable>
 
         {loading ? (
           <ActivityIndicator color={T.navy} style={{ marginTop: 20 }} />
-        ) : barbers.length === 0 ? (
+        ) : staffList.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyTxt}>Henüz usta yok. Davet et.</Text>
+            <Text style={styles.emptyTxt}>Henüz personel yok. Yeni personel ekleyin.</Text>
           </View>
         ) : (
           <View style={{ gap: 10, marginTop: 8 }}>
-            {barbers.map((b) => (
-              <View key={b.id} style={[styles.barberCard, !b.is_active && styles.inactiveCard]}>
+            {staffList.map((b) => (
+              <View key={b.id} style={[styles.staffCard, !b.is_active && styles.inactiveCard]}>
                 <View style={[styles.avatar, !b.is_active && { backgroundColor: T.surfaceAlt }]}>
                   <Text style={[styles.avatarTxt, !b.is_active && { color: T.muted }]}>
-                    {initials(b.display_name)}
+                    {initials(b.name)}
                   </Text>
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[styles.barberName, !b.is_active && { color: T.muted }]} numberOfLines={1}>
-                    {b.display_name}
-                  </Text>
-                  <Text style={styles.barberEmail} numberOfLines={1}>
-                    {b.invite_email ?? "—"}
+                  <Text style={[styles.staffName, !b.is_active && { color: T.muted }]} numberOfLines={1}>
+                    {b.name}
                   </Text>
                   <Text style={[styles.statusChip, b.is_active ? styles.activeChip : styles.inactiveChip]}>
-                    {b.user_id ? (b.is_active ? "Aktif" : "Pasif") : "Davet Bekleniyor"}
+                    {b.is_active ? "Aktif" : "Pasif"}
                   </Text>
                 </View>
+                {/* Çalışma saatleri butonu */}
+                <Pressable
+                  onPress={() => setModalStaff(b)}
+                  style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
+                  hitSlop={8}
+                >
+                  <Feather name="clock" size={18} color={T.blue} />
+                </Pressable>
+                {/* Aktif/Pasif toggle */}
                 <Pressable
                   onPress={() => handleToggleActive(b)}
-                  style={({ pressed }) => [styles.toggleBtn, pressed && { opacity: 0.7 }]}
+                  style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
+                  hitSlop={8}
                 >
                   <Feather name={b.is_active ? "pause-circle" : "play-circle"} size={22} color={b.is_active ? T.muted : T.navy} />
                 </Pressable>
@@ -186,6 +169,13 @@ export default function TeamScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Çalışma Saatleri Modalı */}
+      <StaffScheduleModal
+        visible={modalStaff !== null}
+        staff={modalStaff}
+        onClose={() => setModalStaff(null)}
+      />
     </View>
   );
 }
@@ -213,7 +203,7 @@ const styles = StyleSheet.create({
   empty: { paddingTop: 40, alignItems: "center" },
   emptyTxt: { fontSize: 13, color: T.mutedAlt },
 
-  barberCard: {
+  staffCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -232,11 +222,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarTxt: { fontSize: 16, fontWeight: "700", color: T.navy },
-  barberName: { fontSize: 14, fontWeight: "600", color: T.ink },
-  barberEmail: { fontSize: 12, color: T.muted, marginTop: 1 },
+  staffName: { fontSize: 14, fontWeight: "600", color: T.ink },
   statusChip: { fontSize: 10, fontWeight: "600", marginTop: 4, alignSelf: "flex-start" },
   activeChip: { color: "#16a34a" },
   inactiveChip: { color: T.muted },
 
   toggleBtn: { padding: 4 },
+  iconBtn:   { padding: 4 },
 });

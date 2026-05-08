@@ -4,13 +4,59 @@ import { corsOptions, error, json } from "../_shared/cors.ts";
 import { computeAvailableSlots } from "@berber/shared/slot-utils";
 import type { WorkingHours } from "@berber/shared/types";
 
+// ── Yardımcı: personelin o gün kendi schedule'ını çek ─────────────────────────
+// staff_schedules kaydı varsa work_start/work_end'i kullan;
+// yoksa dükkanın working_hours'una fall-back yap.
+async function resolveWorkingHours(
+  supabase: ReturnType<typeof createAdminClient>,
+  staffId: string,
+  date: string,           // "YYYY-MM-DD"
+  shopWorkingHours: WorkingHours,
+  timezone: string
+): Promise<{ workingHours: WorkingHours; closed: boolean }> {
+  const { data: schedule } = await supabase
+    .rpc("get_staff_day_hours", { p_staff_id: staffId, p_date: date })
+    .maybeSingle();
+
+  // Kayıt yok → dükkan saatlerine fall-back (mevcut davranış korunuyor)
+  if (!schedule) {
+    return { workingHours: shopWorkingHours, closed: false };
+  }
+
+  // is_working = false → personel o gün kapalı
+  if (!schedule.is_working) {
+    return { workingHours: shopWorkingHours, closed: true };
+  }
+
+  // Personele özel çalışma saatlerini WorkingHours formatına dönüştür
+  // date.getDay() → 0=Sun,1=Mon,...,6=Sat; DAY_KEYS aynı sıralamayı kullanır
+  const dateObj = new Date(date + "T00:00:00Z");
+  const jsDay   = dateObj.getUTCDay(); // UTC gün (0-6)
+  const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+  const dayKey   = DAY_KEYS[jsDay];
+
+  // Mevcut shopWorkingHours yapısını kopyala, sadece o günü override et
+  const overridden: WorkingHours = {
+    ...shopWorkingHours,
+    [dayKey]: {
+      open:    schedule.work_start,   // "HH:MM:SS" → slot-utils "HH:MM" de kabul eder
+      close:   schedule.work_end,
+      enabled: true,
+    },
+  };
+
+  return { workingHours: overridden, closed: false };
+}
+
+// ── Ana Handler ───────────────────────────────────────────────────────────────
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions();
 
-  const url = new URL(req.url);
-  const shopSlug  = url.searchParams.get("shop_slug");
-  const date      = url.searchParams.get("date");
-  const serviceId = url.searchParams.get("service_id");
+  const url          = new URL(req.url);
+  const shopSlug     = url.searchParams.get("shop_slug");
+  const date         = url.searchParams.get("date");
+  const serviceId    = url.searchParams.get("service_id");
   // staff_id = UUID → belirli personel | "any" veya yoksa → en az 1 personel müsait slot
   const staffIdParam = url.searchParams.get("staff_id");
 
@@ -40,10 +86,10 @@ serve(async (req) => {
 
   if (!service) return error("Hizmet bulunamadı", 404);
 
-  const workingHours = shop.working_hours as WorkingHours;
-  const timezone     = shop.timezone;
+  const shopWorkingHours = shop.working_hours as WorkingHours;
+  const timezone         = shop.timezone;
 
-  // Belirli personel seçildiyse: sadece o personelle hesapla
+  // ── Belirli personel seçildiyse ─────────────────────────────────────────
   if (staffIdParam && staffIdParam !== "any") {
     const { data: staffMember } = await supabase
       .from("staff")
@@ -53,6 +99,25 @@ serve(async (req) => {
       .single();
 
     if (!staffMember) return error("Personel bulunamadı", 404);
+
+    // Personelin o günkü çalışma saatlerini al (varsa schedule'dan, yoksa shop WH)
+    const { workingHours, closed } = await resolveWorkingHours(
+      supabase,
+      staffMember.id,
+      date,
+      shopWorkingHours,
+      timezone
+    );
+
+    if (closed) {
+      // Personel o gün çalışmıyor → tüm slotlar available=false
+      return json({
+        staff_id: staffMember.id,
+        closed: true,
+        occupied: [],
+        slots: [],
+      });
+    }
 
     const { data: occupied, error: rpcError } = await supabase.rpc(
       "get_occupied_ranges",
@@ -74,6 +139,7 @@ serve(async (req) => {
 
     return json({
       staff_id: staffMember.id,
+      closed: false,
       occupied: occupied ?? [],
       slots: slots.map((s) => ({
         starts_at: s.startsAt.toISOString(),
@@ -83,49 +149,62 @@ serve(async (req) => {
     });
   }
 
-  // "Fark Etmez" (any): slot müsait = en az 1 personel müsait
+  // ── "Fark Etmez" (any): slot müsait = en az 1 aktif personel müsait ────
   const { data: staffList } = await supabase
     .from("staff")
     .select("id")
-    .eq("shop_id", shop.id);
+    .eq("shop_id", shop.id)
+    .eq("is_active", true);   // pasif personeli dahil etme
 
   if (!staffList || staffList.length === 0) {
     return error("Dükkanda aktif personel yok", 404);
   }
 
-  // Her personel için occupied ranges al — paralel
-  const occupiedPerStaff = await Promise.all(
+  // Her personel için: schedule kontrolü + occupied ranges — paralel
+  const perStaff = await Promise.all(
     staffList.map(async (b) => {
+      const { workingHours, closed } = await resolveWorkingHours(
+        supabase,
+        b.id,
+        date,
+        shopWorkingHours,
+        timezone
+      );
+
+      if (closed) return { wh: workingHours, occupied: [], closed: true };
+
       const { data } = await supabase.rpc("get_occupied_ranges", {
         p_staff_id: b.id,
         p_date: date,
       });
-      return data ?? [];
+
+      return { wh: workingHours, occupied: data ?? [], closed: false };
     })
   );
 
   // Slot bazında union: en az 1 personel müsaitse available = true
   const slotMap = new Map<string, { available: boolean; ends_at: string }>();
 
-  for (const occupied of occupiedPerStaff) {
+  for (const { wh, occupied, closed } of perStaff) {
+    if (closed) continue; // bu personel gün kapalı, atlat
+
     const slots = computeAvailableSlots({
       date: new Date(date),
       durationMin: service.duration_min,
-      workingHours,
+      workingHours: wh,
       occupied,
       timezone,
     });
 
     for (const slot of slots) {
-      const key = slot.startsAt.toISOString();
+      const key      = slot.startsAt.toISOString();
       const existing = slotMap.get(key);
       if (!existing) {
         slotMap.set(key, {
           available: slot.available,
-          ends_at: slot.endsAt.toISOString(),
+          ends_at:   slot.endsAt.toISOString(),
         });
       } else if (slot.available) {
-        // En az 1 personel müsaitse available = true
         slotMap.set(key, { ...existing, available: true });
       }
     }

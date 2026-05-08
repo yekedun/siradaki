@@ -19,8 +19,11 @@ CREATE TABLE IF NOT EXISTS public.staff (
   user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   name text NOT NULL,
   role public.staff_role NOT NULL DEFAULT 'staff',
+  is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+-- is_active sütunu sonradan eklenmiş olabilir, idempotent kıl
+ALTER TABLE public.staff ADD COLUMN IF NOT EXISTS is_active boolean NOT NULL DEFAULT true;
 
 -- 1.5. Veri Kaybını Önleme (Data Migration)
 -- ALTER işlemlerinden önce mevcut barber_id'leri staff tablosuna taşıyarak veri bütünlüğünü sağlama
