@@ -5,7 +5,9 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "type-check": "turbo type-check",
-    "lint": "turbo lint"
+    "lint": "turbo lint",
+    "db:sync": "bash supabase/functions/_sync-types.sh",
+    "db:check": "cmp -s packages/db/src/database.types.ts supabase/functions/_shared/database.types.ts || (echo 'database.types out of sync — run pnpm db:sync' && exit 1)"
   },
   "devDependencies": {
     "turbo": "^2.0.0",

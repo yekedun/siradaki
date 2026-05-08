@@ -37,7 +37,9 @@ export function computeAvailableSlots(params: {
   const slots: Slot[] = [];
   const graceCutoffMs = Date.now() - BOOKING_GRACE_PERIOD_MIN * 60_000;
   const durationMs = durationMin * 60_000;
-  const stepMs = SLOT_GRANULARITY_MIN * 60_000;
+  // Step = service duration so adjacent slots don't pre-overlap.
+  // Floor to SLOT_GRANULARITY_MIN to keep round times when service < granularity.
+  const stepMs = Math.max(SLOT_GRANULARITY_MIN * 60_000, durationMs);
 
   let cursorMs = openTs.getTime();
 
@@ -68,6 +70,26 @@ export function computeAvailableSlots(params: {
  * Strateji: Önce o saati naif olarak UTC kabul et, sonra o UTC anında
  * timezone'un yerel saatini Intl ile oku, fark kadar düzelt.
  */
+// F-2J: Intl.DateTimeFormat constructor pahalı (~100-500µs). Module-level cache.
+const tzFormatterCache = new Map<string, Intl.DateTimeFormat>();
+function getTzFormatter(timezone: string): Intl.DateTimeFormat {
+  let f = tzFormatterCache.get(timezone);
+  if (!f) {
+    f = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+    tzFormatterCache.set(timezone, f);
+  }
+  return f;
+}
+
 function localTimeToUTC(date: Date, time: string, timezone: string): Date {
   const [hStr, mStr] = time.split(":");
   const h = Number(hStr);
@@ -81,17 +103,7 @@ function localTimeToUTC(date: Date, time: string, timezone: string): Date {
   const naiveUTC = Date.UTC(y, mo, d, h, m, 0);
 
   // O UTC anında timezone yerel saati
-  const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-  const parts = dtf.formatToParts(new Date(naiveUTC));
+  const parts = getTzFormatter(timezone).formatToParts(new Date(naiveUTC));
   const get = (type: string) =>
     Number(parts.find((p) => p.type === type)?.value ?? "0");
 

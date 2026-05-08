@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mert'in Yeri · Online Randevu</title>
+<link rel="stylesheet" href="tokens.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  body { background: var(--bg); }
+  .stage { min-height: 100vh; padding: 32px 24px; }
+  .container { max-width: 1080px; margin: 0 auto; }
+  .grid { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 32px; }
+  @media (max-width: 880px) { .grid { grid-template-columns: 1fr; gap: 20px; } .container { padding: 0 4px; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+const TR_DAY_SHORT = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
+const TR_MONTH = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+
+const services = [
+  { id: 's1', name: 'Saç Kesimi',          dur: 30, price: 250 },
+  { id: 's2', name: 'Sakal Tıraşı',        dur: 20, price: 150 },
+  { id: 's3', name: 'Saç + Sakal',         dur: 60, price: 380 },
+  { id: 's4', name: 'Yıkama + Stil',       dur: 25, price: 180 },
+];
+
+const allSlots = [
+  '09:00','09:30','10:00','10:30','11:00','11:30',
+  '12:00','12:30','13:00','13:30','14:00','14:30',
+  '15:00','15:30','16:00','16:30','17:00','17:30','18:00','18:30',
+];
+// pretend some are full
+const fullSlots = new Set(['09:30','11:00','12:30','14:00','15:30','17:00']);
+
+function buildDays(start, n) {
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    return d;
+  });
+}
+const sameDay = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+
+function ProfileCard() {
+  return (
+    <aside style={{
+      background: 'var(--surface)', border: '1px solid var(--hair)',
+      borderRadius: 'var(--r-card)', boxShadow: 'var(--shadow-card)',
+      padding: 22, position: 'sticky', top: 32,
+    }}>
+      {/* Photo placeholder */}
+      <div style={{
+        width: '100%', aspectRatio: '4/3', borderRadius: 'var(--r-card)',
+        background: 'repeating-linear-gradient(135deg, #DBEAFE 0 12px, #EFF6FF 12px 24px)',
+        position: 'relative', overflow: 'hidden', marginBottom: 18,
+        border: '1px solid var(--hair)',
+      }}>
+        <div style={{
+          position: 'absolute', left: 12, bottom: 12,
+          fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 10,
+          color: 'var(--navy)', background: 'rgba(255,255,255,0.85)',
+          padding: '4px 8px', borderRadius: 6,
+          letterSpacing: 0.5,
+        }}>// dükkan vitrini fotoğrafı</div>
+      </div>
+
+      <div className="eyebrow" style={{ marginBottom: 4 }}>BERBER · ONLİNE RANDEVU</div>
+      <h1 style={{ margin: '0 0 4px', fontSize: 30, fontWeight: 700, letterSpacing: -0.5 }}>Mert'in Yeri</h1>
+      <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>Mert Yıldız · 12 yıllık usta</div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 13, color: 'var(--ink)' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flex: '0 0 auto', marginTop: 2 }}>
+            <path d="M12 21s-7-7.5-7-12a7 7 0 0 1 14 0c0 4.5-7 12-7 12z" stroke="#6B7280" strokeWidth="1.6"/>
+            <circle cx="12" cy="9" r="2.5" stroke="#6B7280" strokeWidth="1.6"/>
+          </svg>
+          <div>Bağdat Cad. No: 142/3<br/><span style={{ color: 'var(--muted)' }}>Kadıköy, İstanbul</span></div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flex: '0 0 auto' }}>
+            <path d="M5 4.5h3l1.5 4-2 1.5a11 11 0 0 0 6 6l1.5-2 4 1.5V19a1.5 1.5 0 0 1-1.5 1.5C9.5 20.5 3.5 14.5 3.5 6A1.5 1.5 0 0 1 5 4.5z" stroke="#6B7280" strokeWidth="1.6" strokeLinejoin="round"/>
+          </svg>
+          <a href="tel:+902165550042" style={{ color: 'var(--navy)', fontWeight: 600, textDecoration: 'none' }}>
+            +90 (216) 555 00 42
+          </a>
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flex: '0 0 auto' }}>
+            <circle cx="12" cy="12" r="8.5" stroke="#6B7280" strokeWidth="1.6"/>
+            <path d="M12 7.5V12l3 2" stroke="#6B7280" strokeWidth="1.6" strokeLinecap="round"/>
+          </svg>
+          Pzt–Cmt · 09:00–19:00
+        </div>
+      </div>
+
+      <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--hair)',
+        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+        {[
+          { k: '4.9', l: 'Puan' },
+          { k: '320+', l: 'Müşteri' },
+          { k: '12y', l: 'Tecrübe' },
+        ].map(s => (
+          <div key={s.l} style={{
+            padding: '10px 8px', background: 'var(--surfaceAlt)', borderRadius: 10,
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--navy)' }}>{s.k}</div>
+            <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2,
+              textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: 600 }}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+    </aside>
+  );
+}
+
+function ServiceSelector({ value, onChange }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      {services.map(s => {
+        const sel = value === s.id;
+        return (
+          <button key={s.id} onClick={() => onChange(s.id)} style={{
+            padding: 14, textAlign: 'left',
+            background: sel ? 'var(--blueSoft)' : 'var(--surface)',
+            border: `1.5px solid ${sel ? 'var(--navy)' : 'var(--hair)'}`,
+            borderRadius: 'var(--r-card)', cursor: 'pointer',
+          }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: sel ? 'var(--navy)' : 'var(--ink)' }}>{s.name}</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4, display: 'flex', justifyContent: 'space-between' }}>
+              <span>{s.dur} dk</span>
+              <span style={{ color: sel ? 'var(--navy)' : 'var(--ink)', fontWeight: 600 }}>{s.price}₺</span>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function DateStrip({ today, value, onChange }) {
+  const days = buildDays(today, 14);
+  return (
+    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }} className="no-scrollbar">
+      {days.map((d, i) => {
+        const sel = sameDay(d, value);
+        const isToday = sameDay(d, today);
+        return (
+          <button key={i} onClick={() => onChange(d)} style={{
+            flex: '0 0 auto', width: 56, height: 72, borderRadius: 14,
+            border: isToday && !sel ? '1.5px solid var(--red)' : `1px solid ${sel ? 'var(--ink)' : 'var(--hair)'}`,
+            background: sel ? 'var(--ink)' : 'var(--surface)',
+            color: sel ? '#fff' : 'var(--ink)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', padding: 0,
+            boxShadow: sel ? 'var(--shadow-pill)' : 'none',
+          }}>
+            <div style={{
+              fontSize: 10, fontWeight: 600, letterSpacing: 0.5,
+              color: sel ? 'rgba(255,255,255,0.7)' : 'var(--muted)',
+              textTransform: 'uppercase', marginBottom: 2,
+            }}>{TR_DAY_SHORT[d.getDay()]}</div>
+            <div style={{ fontSize: 20, fontWeight: 700 }}>{d.getDate()}</div>
+            <div style={{ fontSize: 9, color: sel ? 'rgba(255,255,255,0.6)' : 'var(--mutedAlt)', marginTop: 2 }}>
+              {TR_MONTH[d.getMonth()].slice(0,3)}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function SlotGrid({ value, onChange, loading }) {
+  if (loading) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+        {Array.from({ length: 12 }, (_, i) => (
+          <div key={i} style={{
+            height: 44, borderRadius: 'var(--r-input)',
+            background: 'var(--hair)', opacity: 0.5,
+            animation: 'skeleton 1.4s ease-in-out infinite',
+          }} />
+        ))}
+        <style>{`@keyframes skeleton { 0%,100% { opacity: 0.4 } 50% { opacity: 0.7 } }`}</style>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+      {allSlots.map(s => {
+        const sel = value === s;
+        const full = fullSlots.has(s);
+        return (
+          <button key={s} disabled={full} onClick={() => onChange(s)} style={{
+            height: 44, borderRadius: 'var(--r-input)',
+            background: sel ? 'var(--navy)' : (full ? 'var(--surfaceAlt)' : 'var(--surface)'),
+            border: `1px solid ${sel ? 'var(--navy)' : 'var(--hair)'}`,
+            color: sel ? '#fff' : (full ? 'var(--mutedAlt)' : 'var(--ink)'),
+            fontSize: 13, fontWeight: sel ? 700 : 600,
+            cursor: full ? 'not-allowed' : 'pointer',
+            fontVariantNumeric: 'tabular-nums',
+            textDecoration: full ? 'line-through' : 'none',
+            textDecorationColor: 'var(--mutedAlt)',
+          }}>{s}</button>
+        );
+      })}
+    </div>
+  );
+}
+
+function BookingModal({ open, onClose, summary, onConfirm }) {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [note, setNote] = useState('');
+  const inputStyle = {
+    width: '100%', padding: '12px 14px',
+    background: 'var(--bg)', border: '1.5px solid var(--hair)',
+    borderRadius: 'var(--r-input)', fontSize: 14, color: 'var(--ink)',
+    outline: 'none', boxSizing: 'border-box',
+  };
+  const labelStyle = {
+    fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6, display: 'block',
+  };
+  return (
+    <>
+      <div onClick={onClose} style={{
+        position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 50,
+        opacity: open ? 1 : 0, pointerEvents: open ? 'auto' : 'none',
+        transition: 'opacity 200ms ease',
+      }} />
+      <div style={{
+        position: 'fixed', left: '50%', top: '50%', zIndex: 60,
+        transform: open ? 'translate(-50%, -50%)' : 'translate(-50%, calc(-50% + 20px))',
+        opacity: open ? 1 : 0, pointerEvents: open ? 'auto' : 'none',
+        width: 'min(440px, calc(100% - 32px))',
+        background: 'var(--surface)', borderRadius: 'var(--r-sheet)',
+        boxShadow: '0 30px 80px rgba(15,23,42,0.3)',
+        transition: 'all 280ms cubic-bezier(.4,0,.2,1)',
+      }}>
+        <div style={{ padding: '20px 22px 8px', borderBottom: '1px solid var(--hair)' }}>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Randevuyu Onayla</h2>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>{summary}</div>
+        </div>
+        <div style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <label><span style={labelStyle}>Ad Soyad</span>
+            <input value={name} onChange={e=>setName(e.target.value)} placeholder="örn. Ahmet Yılmaz" style={inputStyle} /></label>
+          <label><span style={labelStyle}>Telefon</span>
+            <input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="0(5xx) xxx xx xx" style={inputStyle} /></label>
+          <label><span style={labelStyle}>Not (opsiyonel)</span>
+            <textarea value={note} onChange={e=>setNote(e.target.value)} rows={2}
+              placeholder="Saç uzunluğu, tercih, vs." style={{ ...inputStyle, resize: 'none' }} /></label>
+        </div>
+        <div style={{ padding: '0 22px 22px', display: 'flex', gap: 8 }}>
+          <button onClick={onClose} style={{
+            flex: 1, padding: 14, background: 'var(--surfaceAlt)', color: 'var(--ink)',
+            border: 'none', borderRadius: 'var(--r-cta)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+          }}>İptal</button>
+          <button onClick={() => onConfirm({ name: name || 'Müşteri', phone })} style={{
+            flex: 2, padding: 14, background: 'var(--navy)', color: '#fff',
+            border: 'none', borderRadius: 'var(--r-cta)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            boxShadow: 'var(--shadow-cta)',
+          }}>Randevuyu Onayla</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function App() {
+  const today = new Date(2026, 4, 7);
+  const [serviceId, setServiceId] = useState('s1');
+  const [date, setDate] = useState(today);
+  const [slot, setSlot] = useState(null);
+  const [open, setOpen] = useState(false);
+  const [booked, setBooked] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const service = services.find(s => s.id === serviceId);
+  const summary = `${service.name} · ${date.getDate()} ${TR_MONTH[date.getMonth()]} ${date.getFullYear()}, ${slot || '—'}`;
+
+  // Simulate slot loading on date change
+  React.useEffect(() => {
+    setLoading(true);
+    const t = setTimeout(() => setLoading(false), 500);
+    return () => clearTimeout(t);
+  }, [date, serviceId]);
+
+  const sectionTitle = (n, t) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+      <div style={{
+        width: 22, height: 22, borderRadius: 11, background: 'var(--navy)',
+        color: '#fff', fontSize: 11, fontWeight: 700,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>{n}</div>
+      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+        textTransform: 'uppercase', letterSpacing: 0.6 }}>{t}</div>
+    </div>
+  );
+
+  return (
+    <div className="stage">
+      <div className="container">
+        <div className="grid">
+          <ProfileCard />
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+            <section style={{
+              background: 'var(--surface)', border: '1px solid var(--hair)',
+              borderRadius: 'var(--r-card)', boxShadow: 'var(--shadow-card)', padding: 22,
+            }}>
+              {sectionTitle(1, 'Hizmet Seç')}
+              <ServiceSelector value={serviceId} onChange={setServiceId} />
+            </section>
+
+            <section style={{
+              background: 'var(--surface)', border: '1px solid var(--hair)',
+              borderRadius: 'var(--r-card)', boxShadow: 'var(--shadow-card)', padding: 22,
+            }}>
+              {sectionTitle(2, 'Tarih')}
+              <DateStrip today={today} value={date} onChange={setDate} />
+            </section>
+
+            <section style={{
+              background: 'var(--surface)', border: '1px solid var(--hair)',
+              borderRadius: 'var(--r-card)', boxShadow: 'var(--shadow-card)', padding: 22,
+            }}>
+              {sectionTitle(3, 'Saat')}
+              <SlotGrid value={slot} onChange={setSlot} loading={loading} />
+
+              <button disabled={!slot}
+                onClick={() => setOpen(true)}
+                style={{
+                  width: '100%', padding: 16, marginTop: 18,
+                  background: slot ? 'var(--navy)' : 'var(--surfaceAlt)',
+                  color: slot ? '#fff' : 'var(--mutedAlt)',
+                  border: 'none', borderRadius: 'var(--r-cta)',
+                  fontSize: 15, fontWeight: 600,
+                  cursor: slot ? 'pointer' : 'not-allowed',
+                  boxShadow: slot ? 'var(--shadow-cta)' : 'none',
+                }}>
+                {slot ? `${slot}'da Devam Et` : 'Saat Seç'}
+              </button>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <BookingModal open={open} onClose={() => setOpen(false)} summary={summary}
+        onConfirm={(d) => { setBooked({ ...d, summary }); setOpen(false); }} />
+
+      {/* Success modal */}
+      {booked && (
+        <>
+          <div onClick={() => { setBooked(null); setSlot(null); }} style={{
+            position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 70,
+          }} />
+          <div style={{
+            position: 'fixed', left: '50%', top: '50%', zIndex: 80,
+            transform: 'translate(-50%, -50%)',
+            width: 'min(420px, calc(100% - 32px))',
+            background: 'var(--surface)', borderRadius: 'var(--r-sheet)',
+            padding: 28, textAlign: 'center',
+            boxShadow: '0 30px 80px rgba(15,23,42,0.3)',
+          }}>
+            <div style={{
+              display: 'inline-block', padding: '4px 12px', borderRadius: 100,
+              background: 'var(--blueSoft)', color: 'var(--navy)',
+              fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase',
+              marginBottom: 12,
+            }}>ONAYLANDI</div>
+            <h2 style={{ margin: '0 0 6px', fontSize: 24, fontWeight: 700 }}>Randevunuz alındı</h2>
+            <div style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 16, lineHeight: 1.5 }}>
+              {booked.summary}<br/>{booked.name} · onay SMS'i yolda.
+            </div>
+            <button onClick={() => { setBooked(null); setSlot(null); }} style={{
+              width: '100%', padding: 14,
+              background: 'var(--surfaceAlt)', color: 'var(--ink)',
+              border: 'none', borderRadius: 'var(--r-cta)',
+              fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            }}>Yeni randevu</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

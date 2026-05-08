@@ -7,78 +7,171 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
-      appointment_slots: {
+      shops: {
         Row: {
-          appointment_id: string
-          barber_id: string
-          ends_at: string
-          starts_at: string
+          id: string
+          owner_user_id: string
+          slug: string
+          display_name: string
+          bio: string | null
+          avatar_url: string | null
+          timezone: string
+          working_hours: Json
+          created_at: string
+          updated_at: string
         }
         Insert: {
-          appointment_id: string
-          barber_id: string
-          ends_at: string
-          starts_at: string
+          id?: string
+          owner_user_id: string
+          slug: string
+          display_name: string
+          bio?: string | null
+          avatar_url?: string | null
+          timezone?: string
+          working_hours?: Json
+          created_at?: string
+          updated_at?: string
         }
         Update: {
-          appointment_id?: string
-          barber_id?: string
-          ends_at?: string
-          starts_at?: string
+          id?: string
+          owner_user_id?: string
+          slug?: string
+          display_name?: string
+          bio?: string | null
+          avatar_url?: string | null
+          timezone?: string
+          working_hours?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      barbers: {
+        Row: {
+          id: string
+          shop_id: string
+          user_id: string | null
+          display_name: string
+          avatar_url: string | null
+          invite_email: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          shop_id: string
+          user_id?: string | null
+          display_name: string
+          avatar_url?: string | null
+          invite_email?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          shop_id?: string
+          user_id?: string | null
+          display_name?: string
+          avatar_url?: string | null
+          invite_email?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "appointment_slots_appointment_id_fkey"
-            columns: ["appointment_id"]
-            isOneToOne: true
-            referencedRelation: "appointments"
+            foreignKeyName: "barbers_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          id: string
+          shop_id: string
+          name: string
+          duration_min: number
+          price_cents: number | null
+          display_order: number
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          shop_id: string
+          name: string
+          duration_min: number
+          price_cents?: number | null
+          display_order?: number
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          shop_id?: string
+          name?: string
+          duration_min?: number
+          price_cents?: number | null
+          display_order?: number
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
             referencedColumns: ["id"]
           },
         ]
       }
       appointments: {
         Row: {
+          id: string
           barber_id: string
-          created_at: string
+          service_id: string | null
           customer_name: string
           customer_phone: string | null
-          ends_at: string
-          id: string
-          notes: string | null
-          service_id: string
           starts_at: string
+          ends_at: string
           status: string
+          notes: string | null
+          created_at: string
         }
         Insert: {
+          id?: string
           barber_id: string
-          created_at?: string
+          service_id?: string | null
           customer_name: string
           customer_phone?: string | null
-          ends_at: string
-          id?: string
-          notes?: string | null
-          service_id: string
           starts_at: string
+          ends_at: string
           status?: string
+          notes?: string | null
+          created_at?: string
         }
         Update: {
+          id?: string
           barber_id?: string
-          created_at?: string
+          service_id?: string | null
           customer_name?: string
           customer_phone?: string | null
-          ends_at?: string
-          id?: string
-          notes?: string | null
-          service_id?: string
           starts_at?: string
+          ends_at?: string
           status?: string
+          notes?: string | null
+          created_at?: string
         }
         Relationships: [
           {
@@ -97,72 +190,33 @@ export type Database = {
           },
         ]
       }
-      barbers: {
-        Row: {
-          auth_user_id: string
-          avatar_url: string | null
-          bio: string | null
-          created_at: string
-          display_name: string
-          id: string
-          slug: string
-          timezone: string
-          updated_at: string
-          working_hours: Json
-        }
-        Insert: {
-          auth_user_id: string
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string
-          display_name: string
-          id?: string
-          slug: string
-          timezone?: string
-          updated_at?: string
-          working_hours?: Json
-        }
-        Update: {
-          auth_user_id?: string
-          avatar_url?: string | null
-          bio?: string | null
-          created_at?: string
-          display_name?: string
-          id?: string
-          slug?: string
-          timezone?: string
-          updated_at?: string
-          working_hours?: Json
-        }
-        Relationships: []
-      }
       blocks: {
         Row: {
-          barber_id: string
-          created_at: string
-          created_via: string
-          ends_at: string
           id: string
-          reason: string
+          barber_id: string
           starts_at: string
+          ends_at: string
+          reason: string
+          created_via: string
+          created_at: string
         }
         Insert: {
-          barber_id: string
-          created_at?: string
-          created_via?: string
-          ends_at: string
           id?: string
-          reason?: string
+          barber_id: string
           starts_at: string
+          ends_at: string
+          reason?: string
+          created_via?: string
+          created_at?: string
         }
         Update: {
-          barber_id?: string
-          created_at?: string
-          created_via?: string
-          ends_at?: string
           id?: string
-          reason?: string
+          barber_id?: string
           starts_at?: string
+          ends_at?: string
+          reason?: string
+          created_via?: string
+          created_at?: string
         }
         Relationships: [
           {
@@ -174,81 +228,98 @@ export type Database = {
           },
         ]
       }
-      services: {
+      widget_tokens: {
         Row: {
-          barber_id: string
-          created_at: string
-          display_order: number
-          duration_min: number
           id: string
-          is_active: boolean
-          name: string
-          price_cents: number | null
+          shop_id: string
+          token_hash: string
+          label: string
+          last_used_at: string | null
+          expires_at: string | null
+          created_at: string
         }
         Insert: {
-          barber_id: string
-          created_at?: string
-          display_order?: number
-          duration_min: number
           id?: string
-          is_active?: boolean
-          name: string
-          price_cents?: number | null
+          shop_id: string
+          token_hash: string
+          label?: string
+          last_used_at?: string | null
+          expires_at?: string | null
+          created_at?: string
         }
         Update: {
-          barber_id?: string
-          created_at?: string
-          display_order?: number
-          duration_min?: number
           id?: string
-          is_active?: boolean
-          name?: string
-          price_cents?: number | null
+          shop_id?: string
+          token_hash?: string
+          label?: string
+          last_used_at?: string | null
+          expires_at?: string | null
+          created_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "services_barber_id_fkey"
-            columns: ["barber_id"]
+            foreignKeyName: "widget_tokens_shop_id_fkey"
+            columns: ["shop_id"]
             isOneToOne: false
-            referencedRelation: "barbers"
+            referencedRelation: "shops"
             referencedColumns: ["id"]
           },
         ]
       }
-      widget_tokens: {
+      appointment_slots: {
         Row: {
+          appointment_id: string
           barber_id: string
-          created_at: string
-          expires_at: string | null
-          id: string
-          label: string
-          last_used_at: string | null
-          token_hash: string
+          starts_at: string
+          ends_at: string
         }
         Insert: {
+          appointment_id: string
           barber_id: string
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          label?: string
-          last_used_at?: string | null
-          token_hash: string
+          starts_at: string
+          ends_at: string
         }
         Update: {
+          appointment_id?: string
           barber_id?: string
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          label?: string
-          last_used_at?: string | null
-          token_hash?: string
+          starts_at?: string
+          ends_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "widget_tokens_barber_id_fkey"
-            columns: ["barber_id"]
-            isOneToOne: false
-            referencedRelation: "barbers"
+            foreignKeyName: "appointment_slots_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: true
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      block_slots: {
+        Row: {
+          block_id: string
+          barber_id: string
+          starts_at: string
+          ends_at: string
+        }
+        Insert: {
+          block_id: string
+          barber_id: string
+          starts_at: string
+          ends_at: string
+        }
+        Update: {
+          block_id?: string
+          barber_id?: string
+          starts_at?: string
+          ends_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "block_slots_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: true
+            referencedRelation: "blocks"
             referencedColumns: ["id"]
           },
         ]
@@ -261,9 +332,13 @@ export type Database = {
       get_occupied_ranges: {
         Args: { p_barber_id: string; p_date: string }
         Returns: {
-          ends_at: string
           starts_at: string
+          ends_at: string
         }[]
+      }
+      assign_any_barber: {
+        Args: { p_shop_id: string; p_starts_at: string; p_ends_at: string }
+        Returns: string | null
       }
     }
     Enums: {

@@ -30,7 +30,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="30 Dakika"
-        android:backgroundTint="#EA580C"
+        android:backgroundTint="#1E3A8A"
         android:textColor="#FFFFFF"
         android:textSize="13sp" />
 

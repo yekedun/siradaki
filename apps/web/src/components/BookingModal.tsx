@@ -2,10 +2,16 @@
 
 import { useState } from "react";
 import { formatSlotTime } from "@berber/shared/slot-utils";
-import type { ServicePublic, Slot, BookAppointmentResponse } from "@berber/shared/types";
+import type {
+  ServicePublic,
+  Slot,
+  BookAppointmentResponse,
+} from "@berber/shared/types";
 
 interface BookingModalProps {
-  barberSlug: string;
+  shopSlug: string;
+  shopName: string;
+  barberId: string | null;   // null = "Fark Etmez", sunucu atar
   barberName: string;
   service: ServicePublic;
   slot: Slot;
@@ -17,7 +23,9 @@ interface BookingModalProps {
 type Step = "form" | "loading" | "success" | "error";
 
 export function BookingModal({
-  barberSlug,
+  shopSlug,
+  shopName,
+  barberId,
   barberName,
   service,
   slot,
@@ -25,10 +33,11 @@ export function BookingModal({
   onClose,
   onSuccess,
 }: BookingModalProps) {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [step, setStep] = useState<Step>("form");
-  const [errorMsg, setErrorMsg] = useState("");
+  const [name, setName]           = useState("");
+  const [phone, setPhone]         = useState("");
+  const [note, setNote]           = useState("");
+  const [step, setStep]           = useState<Step>("form");
+  const [errorMsg, setErrorMsg]   = useState("");
   const [confirmation, setConfirmation] = useState<BookAppointmentResponse | null>(null);
 
   const timeLabel = formatSlotTime(slot.startsAt, timezone);
@@ -39,12 +48,12 @@ export function BookingModal({
     timeZone: timezone,
   });
 
+  const barberLabel = barberId === null ? "Uygun Usta" : barberName;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (name.trim().length < 2) return;
-
     setStep("loading");
-
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/book-appointment`,
@@ -55,23 +64,22 @@ export function BookingModal({
             apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
           },
           body: JSON.stringify({
-            slug: barberSlug,
-            service_id: service.id,
-            starts_at: slot.startsAt.toISOString(),
-            customer_name: name.trim(),
+            shop_slug:      shopSlug,
+            service_id:     service.id,
+            barber_id:      barberId,   // null → assign_any_barber
+            starts_at:      slot.startsAt.toISOString(),
+            customer_name:  name.trim(),
             customer_phone: phone.trim() || undefined,
+            notes:          note.trim() || undefined,
           }),
         }
       );
-
       const data = await res.json();
-
       if (!res.ok) {
         setErrorMsg(data.error ?? "Randevu oluşturulamadı.");
         setStep("error");
         return;
       }
-
       setConfirmation(data as BookAppointmentResponse);
       setStep("success");
       onSuccess();
@@ -82,65 +90,63 @@ export function BookingModal({
   }
 
   return (
-    /* Backdrop */
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(15,23,42,0.45)] p-4 sm:items-center"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+      <div className="w-full max-w-[440px] rounded-sheet bg-surface shadow-[0_30px_80px_rgba(15,23,42,0.3)]">
         {step === "form" && (
           <>
-            <div className="mb-5">
-              <h3 className="text-lg font-bold">{barberName}</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {service.name} · {dateLabel} · {timeLabel}
+            <div className="border-b border-hair px-[22px] pb-2 pt-5">
+              <h2 className="m-0 text-[20px] font-bold text-ink">
+                Randevuyu Onayla
+              </h2>
+              <p className="mt-1.5 text-[13px] text-muted">
+                {barberLabel} · {service.name} · {dateLabel}, {timeLabel}
               </p>
             </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Adınız <span className="text-red-500">*</span>
-                </label>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 p-[22px]">
+              <Field label="Ad Soyad">
                 <input
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Ahmet Yılmaz"
+                  placeholder="örn. Ahmet Yılmaz"
                   required
                   minLength={2}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className={inputCls}
                 />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Telefon{" "}
-                  <span className="text-xs text-gray-400">(isteğe bağlı)</span>
-                </label>
+              </Field>
+              <Field label="Telefon">
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="0532 000 00 00"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  placeholder="0(5xx) xxx xx xx"
+                  className={inputCls}
                 />
-              </div>
-
-              <div className="flex gap-3 pt-2">
+              </Field>
+              <Field label="Not (opsiyonel)">
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={2}
+                  placeholder="Saç uzunluğu, tercih, vs."
+                  className={`${inputCls} resize-none`}
+                />
+              </Field>
+              <div className="flex gap-2 pt-1">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 rounded-lg border border-gray-300 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="flex-1 rounded-cta bg-surfaceAlt py-3.5 text-[14px] font-semibold text-ink"
                 >
                   İptal
                 </button>
                 <button
                   type="submit"
                   disabled={name.trim().length < 2}
-                  className="flex-1 rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40"
+                  className="flex-[2] rounded-cta bg-navy py-3.5 text-[14px] font-semibold text-white shadow-cta disabled:opacity-40"
                 >
                   Randevuyu Onayla
                 </button>
@@ -150,23 +156,23 @@ export function BookingModal({
         )}
 
         {step === "loading" && (
-          <div className="flex flex-col items-center py-8 text-center">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-            <p className="mt-4 text-sm text-gray-500">Randevu oluşturuluyor…</p>
+          <div className="flex flex-col items-center py-12 text-center">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-navy border-t-transparent" />
+            <p className="mt-4 text-sm text-muted">Randevu oluşturuluyor…</p>
           </div>
         )}
 
         {step === "success" && confirmation && (
-          <div className="flex flex-col items-center py-6 text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-3xl">
-              ✓
-            </div>
-            <h3 className="text-lg font-bold text-green-700">Randevu Alındı!</h3>
-            <p className="mt-2 text-sm text-gray-600">
-              <strong>{confirmation.barber_display_name}</strong> —{" "}
-              {confirmation.service_name}
-            </p>
-            <p className="mt-1 text-sm text-gray-500">
+          <div className="flex flex-col items-center px-7 py-9 text-center">
+            <span className="mb-3 inline-block rounded-full bg-blue-soft px-3 py-1 text-[11px] font-bold uppercase tracking-[1.2px] text-navy">
+              Onaylandı
+            </span>
+            <h3 className="m-0 text-[24px] font-bold text-ink">
+              Randevunuz alındı
+            </h3>
+            <p className="mt-2 text-[14px] leading-6 text-muted">
+              {confirmation.barber_display_name} · {confirmation.service_name}
+              <br />
               {new Date(confirmation.starts_at).toLocaleDateString("tr-TR", {
                 weekday: "long",
                 day: "numeric",
@@ -175,33 +181,34 @@ export function BookingModal({
                 minute: "2-digit",
                 timeZone: timezone,
               })}
+              <br />
+              <span className="text-mutedAlt">onay SMS'i yolda.</span>
             </p>
             <button
               onClick={onClose}
-              className="mt-6 w-full rounded-lg bg-gray-900 py-2.5 text-sm font-medium text-white hover:bg-gray-700"
+              className="mt-6 w-full rounded-cta bg-surfaceAlt py-3.5 text-[14px] font-semibold text-ink"
             >
-              Kapat
+              Yeni randevu
             </button>
           </div>
         )}
 
         {step === "error" && (
-          <div className="flex flex-col items-center py-6 text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-3xl">
-              ✕
-            </div>
-            <h3 className="text-lg font-bold text-red-700">Hata</h3>
-            <p className="mt-2 text-sm text-gray-600">{errorMsg}</p>
-            <div className="mt-6 flex w-full gap-3">
+          <div className="flex flex-col items-center px-7 py-9 text-center">
+            <span className="mb-3 inline-block rounded-full bg-red-soft px-3 py-1 text-[11px] font-bold uppercase tracking-[1.2px] text-red">
+              Hata
+            </span>
+            <p className="mt-1 text-[14px] text-muted">{errorMsg}</p>
+            <div className="mt-6 flex w-full gap-2">
               <button
                 onClick={onClose}
-                className="flex-1 rounded-lg border border-gray-300 py-2.5 text-sm font-medium"
+                className="flex-1 rounded-cta bg-surfaceAlt py-3.5 text-[14px] font-semibold text-ink"
               >
                 Kapat
               </button>
               <button
                 onClick={() => setStep("form")}
-                className="flex-1 rounded-lg bg-blue-600 py-2.5 text-sm font-medium text-white"
+                className="flex-1 rounded-cta bg-navy py-3.5 text-[14px] font-semibold text-white"
               >
                 Tekrar Dene
               </button>
@@ -210,5 +217,25 @@ export function BookingModal({
         )}
       </div>
     </div>
+  );
+}
+
+const inputCls =
+  "w-full rounded-input border-[1.5px] border-hair bg-bg px-3.5 py-3 text-[14px] text-ink outline-none focus:border-navy";
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.6px] text-muted">
+        {label}
+      </span>
+      {children}
+    </label>
   );
 }

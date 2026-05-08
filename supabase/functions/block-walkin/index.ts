@@ -7,7 +7,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions();
   if (req.method !== "POST") return error("Method not allowed", 405);
 
-  // Widget token auth (not JWT — widget extensions can't refresh tokens)
+  // Widget token auth
   const authHeader = req.headers.get("Authorization");
   const rawToken = authHeader?.replace("Bearer ", "").trim();
 
@@ -16,9 +16,10 @@ serve(async (req) => {
   const supabase = createAdminClient();
   const tokenHash = await sha256(rawToken);
 
+  // Token → shop_id resolve
   const { data: widgetToken } = await supabase
     .from("widget_tokens")
-    .select("id, barber_id, expires_at")
+    .select("id, shop_id, expires_at")
     .eq("token_hash", tokenHash)
     .single();
 
@@ -37,19 +38,32 @@ serve(async (req) => {
     return error("Geçersiz JSON");
   }
 
-  const { duration_min, reason = "walkin" } = body;
+  const { barber_id, duration_min, reason = "walkin" } = body;
+
+  if (!barber_id) return error("barber_id zorunlu");
 
   if (!duration_min || duration_min < 5 || duration_min > 480) {
     return error("duration_min 5-480 dakika arasında olmalı");
   }
 
-  const now = new Date();
+  // Belirtilen ustaanın bu dükkana ait olduğunu doğrula
+  const { data: barber } = await supabase
+    .from("barbers")
+    .select("id")
+    .eq("id", barber_id)
+    .eq("shop_id", widgetToken.shop_id)
+    .eq("is_active", true)
+    .single();
+
+  if (!barber) return error("Usta bu dükkana ait değil", 403);
+
+  const now    = new Date();
   const endsAt = new Date(now.getTime() + duration_min * 60_000);
 
   const { data: block, error: insertError } = await supabase
     .from("blocks")
     .insert({
-      barber_id: widgetToken.barber_id,
+      barber_id: barber.id,
       starts_at: now.toISOString(),
       ends_at: endsAt.toISOString(),
       reason,
@@ -66,7 +80,6 @@ serve(async (req) => {
     return error("Blok oluşturulamadı", 500);
   }
 
-  // Update last_used_at for token
   await supabase
     .from("widget_tokens")
     .update({ last_used_at: now.toISOString() })

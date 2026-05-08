@@ -1,3 +1,73 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Token aliases — DESIGN.md / Designs/tokens.css */
+:root {
+  --bg: #F8FAFC;
+  --surface: #FFFFFF;
+  --surfaceAlt: #F1F5F9;
+  --ink: #111827;
+  --muted: #6B7280;
+  --mutedAlt: #9CA3AF;
+  --hair: #E5E7EB;
+  --hairAlt: #CBD5E1;
+  --past: #D1D5DB;
+  --red: #DC2626;
+  --redSoft: #FEF2F2;
+  --redBorder: #FECACA;
+  --blue: #2563EB;
+  --blueSoft: #EFF6FF;
+  --navy: #1E3A8A;
+  --avatarFrom: #DBEAFE;
+  --avatarTo: #EFF6FF;
+}
+
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+}
+
+.eyebrow {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 1.4px; text-transform: uppercase;
+  color: var(--red);
+}
+
+.pulse-dot {
+  width: 14px; height: 14px; border-radius: 14px;
+  background: var(--red);
+  box-shadow: 0 0 0 0 rgba(220,38,38,0.5);
+  animation: pulse 1.6s ease-out infinite;
+  position: relative; z-index: 3;
+}
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0    rgba(220,38,38,0.6); }
+  70%  { box-shadow: 0 0 0 12px rgba(220,38,38,0); }
+  100% { box-shadow: 0 0 0 0    rgba(220,38,38,0); }
+}
+
+.barber-pole {
+  background-image: repeating-linear-gradient(
+    135deg,
+    #DC2626 0 6px,
+    #FFFFFF 6px 12px,
+    #2563EB 12px 18px,
+    #FFFFFF 18px 24px
+  );
+  background-size: 100% auto;
+  animation: barber-scroll 6s linear infinite;
+}
+@keyframes barber-scroll {
+  from { background-position: 0 0; }
+  to   { background-position: 0 -48px; }
+}
+
+button { font-family: inherit; transition: transform 0.08s ease, background 0.15s ease, border-color 0.15s ease; }
+button:active { transform: scale(0.985); }
+input, select, textarea { font-family: inherit; }
+
+.no-scrollbar::-webkit-scrollbar { width: 0; height: 0; }

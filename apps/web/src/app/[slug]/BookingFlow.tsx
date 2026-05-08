@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
-import { computeAvailableSlots } from "@berber/shared/slot-utils";
 import type {
+  ShopPublic,
   BarberPublic,
   ServicePublic,
-  OccupiedRange,
   Slot,
 } from "@berber/shared/types";
 import { ServiceSelector } from "@/components/ServiceSelector";
@@ -14,230 +13,336 @@ import { SlotGrid } from "@/components/SlotGrid";
 import { BookingModal } from "@/components/BookingModal";
 
 interface BookingFlowProps {
-  barber: BarberPublic;
+  shop: ShopPublic;
+  barbers: BarberPublic[];
   services: ServicePublic[];
 }
 
-interface AvailabilityResponse {
-  occupied: OccupiedRange[];
-  slots: { starts_at: string; ends_at: string; available: boolean }[];
+type BarberSelection = BarberPublic | "any";
+
+interface SlotItem {
+  starts_at: string;
+  ends_at: string;
+  available: boolean;
 }
 
-export function BookingFlow({ barber, services }: BookingFlowProps) {
-  const [selectedService, setSelectedService] = useState<ServicePublic | null>(
-    null
-  );
-  const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split("T")[0]!
-  );
-  const [occupied, setOccupied] = useState<OccupiedRange[]>([]);
-  const [slots, setSlots] = useState<Slot[]>([]);
-  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
-  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+const TR_DAY_SHORT = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
+const TR_MONTH = [
+  "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
+];
 
-  // F-08: client'ı render'lar arası tek instance olarak tut
+function ymd(d: Date): string {
+  return d.toISOString().split("T")[0]!;
+}
+function isSameYMD(a: Date, b: Date): boolean {
+  return ymd(a) === ymd(b);
+}
+function initials(name: string): string {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]!.toUpperCase()).join("");
+}
+
+export function BookingFlow({ shop, barbers, services }: BookingFlowProps) {
+  const [selectedService, setSelectedService]     = useState<ServicePublic | null>(null);
+  const [selectedBarber, setSelectedBarber]       = useState<BarberSelection | null>(null);
+  const [selectedDate, setSelectedDate]           = useState<string>(() => ymd(new Date()));
+  const [serverSlots, setServerSlots]             = useState<SlotItem[]>([]);
+  const [selectedSlot, setSelectedSlot]           = useState<Slot | null>(null);
+  const [isLoadingSlots, setIsLoadingSlots]       = useState(false);
+  const [confirmOpen, setConfirmOpen]             = useState(false);
+
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
-  // Initial fetch — occupied ranges'i API'dan direkt al
-  useEffect(() => {
-    if (!selectedService || !selectedDate) return;
+  const selectedBarberId = selectedBarber === null
+    ? null
+    : selectedBarber === "any"
+    ? "any"
+    : selectedBarber.id;
 
+  // Slot'ları sunucudan çek
+  const fetchSlots = useCallback(() => {
+    if (!selectedService || selectedBarberId === null) return;
     let cancelled = false;
     setIsLoadingSlots(true);
-
-    fetch(
-      `/api/availability?slug=${encodeURIComponent(barber.slug)}&date=${encodeURIComponent(selectedDate)}&service_id=${encodeURIComponent(selectedService.id)}`
-    )
-      .then((r) => r.json())
-      .then((data: AvailabilityResponse) => {
-        if (cancelled) return;
-        setOccupied(data.occupied ?? []);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingSlots(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedService, selectedDate, barber.slug]);
-
-  // Slotları client-side hesapla — occupied her güncellendiğinde tekrar çalışır
-  useEffect(() => {
-    if (!selectedService) {
-      setSlots([]);
-      return;
-    }
-    const computed = computeAvailableSlots({
-      date: new Date(selectedDate),
-      durationMin: selectedService.duration_min,
-      workingHours: barber.working_hours,
-      occupied,
-      timezone: barber.timezone,
+    const params = new URLSearchParams({
+      shop_slug:  shop.slug,
+      date:       selectedDate,
+      service_id: selectedService.id,
+      barber_id:  selectedBarberId,
     });
-    setSlots(computed);
-    // F-12: tüm `barber` yerine etkilenen iki alanı dinle
-  }, [occupied, selectedService, selectedDate, barber.timezone, barber.working_hours]);
+    fetch(`/api/availability?${params}`)
+      .then((r) => r.json())
+      .then((data: { slots: SlotItem[] }) => {
+        if (cancelled) return;
+        setServerSlots(data.slots ?? []);
+      })
+      .catch(() => { if (!cancelled) setServerSlots([]); })
+      .finally(() => { if (!cancelled) setIsLoadingSlots(false); });
+    return () => { cancelled = true; };
+  }, [selectedService, selectedBarberId, selectedDate, shop.slug]);
 
-  // Realtime: blocks (* event) + appointment_slots (INSERT)
   useEffect(() => {
-    const channel = supabase
-      .channel(`availability:${barber.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "blocks",
-          filter: `barber_id=eq.${barber.id}`,
-        },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            const row = payload.new as { starts_at: string; ends_at: string };
-            setOccupied((prev) => [
-              ...prev,
-              { starts_at: row.starts_at, ends_at: row.ends_at },
-            ]);
-          } else if (payload.eventType === "DELETE") {
-            const old = payload.old as { starts_at: string; ends_at: string };
-            setOccupied((prev) =>
-              prev.filter(
-                (o) =>
-                  !(o.starts_at === old.starts_at && o.ends_at === old.ends_at)
-              )
-            );
-          } else if (payload.eventType === "UPDATE") {
-            const oldRow = payload.old as { starts_at: string; ends_at: string };
-            const newRow = payload.new as { starts_at: string; ends_at: string };
-            setOccupied((prev) =>
-              prev
-                .filter(
-                  (o) =>
-                    !(
-                      o.starts_at === oldRow.starts_at &&
-                      o.ends_at === oldRow.ends_at
-                    )
-                )
-                .concat({ starts_at: newRow.starts_at, ends_at: newRow.ends_at })
-            );
-          }
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "appointment_slots",
-          filter: `barber_id=eq.${barber.id}`,
-        },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            const row = payload.new as { starts_at: string; ends_at: string };
-            setOccupied((prev) => [
-              ...prev,
-              { starts_at: row.starts_at, ends_at: row.ends_at },
-            ]);
-          } else if (payload.eventType === "DELETE") {
-            const old = payload.old as { starts_at: string; ends_at: string };
-            setOccupied((prev) =>
-              prev.filter(
-                (o) =>
-                  !(o.starts_at === old.starts_at && o.ends_at === old.ends_at)
-              )
-            );
-          }
-        }
-      )
-      .subscribe();
+    const cleanup = fetchSlots();
+    return cleanup;
+  }, [fetchSlots]);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [barber.id, supabase]);
+  // selectedSlot'u slot listesi değişince sıfırla
+  useEffect(() => {
+    setSelectedSlot(null);
+  }, [selectedService, selectedBarber, selectedDate]);
+
+  // Realtime: slot değişince yeniden çek
+  useEffect(() => {
+    if (!selectedService || selectedBarberId === null) return;
+
+    // Hangi usta ID'lerine subscribe olacağız?
+    const targetBarberIds =
+      selectedBarberId === "any"
+        ? barbers.map((b) => b.id)
+        : [selectedBarberId];
+
+    const channel = supabase.channel(`slots:${shop.id}:${selectedBarberId}`);
+
+    for (const bid of targetBarberIds) {
+      channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "appointment_slots", filter: `barber_id=eq.${bid}` },
+        () => fetchSlots()
+      );
+      channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "block_slots", filter: `barber_id=eq.${bid}` },
+        () => fetchSlots()
+      );
+    }
+
+    channel.subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [selectedBarberId, selectedService, barbers, shop.id, supabase, fetchSlots]);
+
+  // serverSlots → Slot[]
+  const slots: Slot[] = useMemo(
+    () =>
+      serverSlots.map((s) => ({
+        startsAt:  new Date(s.starts_at),
+        endsAt:    new Date(s.ends_at),
+        available: s.available,
+      })),
+    [serverSlots]
+  );
 
   const handleBookingSuccess = useCallback(() => {
     setSelectedSlot(null);
-    // Realtime INSERT eventi occupied'ı zaten günceller; ekstra fetch gerekmez
-  }, []);
+    setConfirmOpen(false);
+    fetchSlots();
+  }, [fetchSlots]);
 
-  // F-09: 14 günlük tarih dilimi mount'ta bir kez hesaplanır
+  const today = new Date();
   const dateOptions = useMemo(
-    () =>
-      Array.from({ length: 14 }, (_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() + i);
-        return d.toISOString().split("T")[0]!;
-      }),
+    () => Array.from({ length: 14 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      return d;
+    }),
     []
   );
 
+  const slotTime = selectedSlot
+    ? selectedSlot.startsAt.toLocaleTimeString("tr-TR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: shop.timezone,
+      })
+    : null;
+
   return (
-    <div className="space-y-6">
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">1. Hizmet Seçin</h2>
+    <div className="flex flex-col gap-7">
+
+      {/* Adım 1: Hizmet */}
+      <Section step={1} title="Hizmet Seç">
         <ServiceSelector
           services={services}
           selected={selectedService}
           onSelect={(s) => {
             setSelectedService(s);
-            setSelectedSlot(null);
+            setSelectedBarber(null);
           }}
         />
-      </section>
+      </Section>
 
+      {/* Adım 2: Usta */}
       {selectedService && (
-        <section>
-          <h2 className="mb-3 text-lg font-semibold">2. Tarih Seçin</h2>
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {dateOptions.map((d) => (
-              <button
-                key={d}
-                onClick={() => {
-                  setSelectedDate(d);
-                  setSelectedSlot(null);
-                }}
-                className={`min-w-[72px] rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                  selectedDate === d
-                    ? "border-blue-600 bg-blue-600 text-white"
-                    : "border-gray-200 bg-white hover:border-blue-300"
-                }`}
-              >
-                {new Date(d).toLocaleDateString("tr-TR", {
-                  weekday: "short",
-                  day: "numeric",
-                  month: "short",
-                })}
-              </button>
+        <Section step={2} title="Usta Seç">
+          <div className="flex flex-wrap gap-2">
+            {/* Fark Etmez */}
+            <BarberCard
+              name="Fark Etmez"
+              subtitle="Uygun ustaya atanır"
+              avatarUrl={null}
+              selected={selectedBarber === "any"}
+              onSelect={() => setSelectedBarber("any")}
+              isAny
+            />
+            {barbers.map((b) => (
+              <BarberCard
+                key={b.id}
+                name={b.display_name}
+                avatarUrl={b.avatar_url}
+                selected={selectedBarber !== "any" && selectedBarber?.id === b.id}
+                onSelect={() => setSelectedBarber(b)}
+              />
             ))}
           </div>
-        </section>
+        </Section>
       )}
 
-      {selectedService && (
-        <section>
-          <h2 className="mb-3 text-lg font-semibold">3. Saat Seçin</h2>
+      {/* Adım 3: Tarih */}
+      {selectedService && selectedBarber !== null && (
+        <Section step={3} title="Tarih">
+          <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+            {dateOptions.map((d) => {
+              const sel     = ymd(d) === selectedDate;
+              const isToday = isSameYMD(d, today);
+              return (
+                <button
+                  key={d.toISOString()}
+                  onClick={() => setSelectedDate(ymd(d))}
+                  className={`flex h-[72px] w-14 flex-none flex-col items-center justify-center rounded-cta transition-colors ${
+                    sel
+                      ? "bg-ink text-white shadow-pill"
+                      : isToday
+                      ? "border-[1.5px] border-red bg-surface text-ink"
+                      : "border border-hair bg-surface text-ink"
+                  }`}
+                >
+                  <span className={`text-[10px] font-semibold uppercase tracking-[0.5px] ${sel ? "text-white/70" : "text-muted"}`}>
+                    {TR_DAY_SHORT[d.getDay()]}
+                  </span>
+                  <span className="text-[20px] font-bold">{d.getDate()}</span>
+                  <span className={`text-[9px] ${sel ? "text-white/60" : "text-mutedAlt"}`}>
+                    {TR_MONTH[d.getMonth()]!.slice(0, 3)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </Section>
+      )}
+
+      {/* Adım 4: Saat */}
+      {selectedService && selectedBarber !== null && (
+        <Section step={4} title="Saat">
           <SlotGrid
             slots={slots}
-            timezone={barber.timezone}
+            timezone={shop.timezone}
             isLoading={isLoadingSlots}
             selected={selectedSlot}
             onSelect={setSelectedSlot}
           />
-        </section>
+          <button
+            disabled={!selectedSlot}
+            onClick={() => setConfirmOpen(true)}
+            className={`mt-5 w-full rounded-cta py-4 text-[15px] font-semibold transition-colors ${
+              selectedSlot
+                ? "bg-navy text-white shadow-cta"
+                : "bg-surfaceAlt text-mutedAlt cursor-not-allowed"
+            }`}
+          >
+            {selectedSlot ? `${slotTime}'da Devam Et` : "Saat Seç"}
+          </button>
+        </Section>
       )}
 
-      {selectedSlot && selectedService && (
+      {confirmOpen && selectedSlot && selectedService && (
         <BookingModal
-          barberSlug={barber.slug}
-          barberName={barber.display_name}
+          shopSlug={shop.slug}
+          shopName={shop.display_name}
+          barberId={selectedBarberId === "any" ? null : (selectedBarberId ?? null)}
+          barberName={
+            selectedBarber === "any" || selectedBarber === null
+              ? "Uygun Usta"
+              : selectedBarber.display_name
+          }
           service={selectedService}
           slot={selectedSlot}
-          timezone={barber.timezone}
-          onClose={() => setSelectedSlot(null)}
+          timezone={shop.timezone}
+          onClose={() => setConfirmOpen(false)}
           onSuccess={handleBookingSuccess}
         />
       )}
     </div>
+  );
+}
+
+function BarberCard({
+  name,
+  subtitle,
+  avatarUrl,
+  selected,
+  onSelect,
+  isAny = false,
+}: {
+  name: string;
+  subtitle?: string;
+  avatarUrl: string | null;
+  selected: boolean;
+  onSelect: () => void;
+  isAny?: boolean;
+}) {
+  function initials(n: string) {
+    return n.split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]!.toUpperCase()).join("");
+  }
+
+  return (
+    <button
+      onClick={onSelect}
+      className={`flex items-center gap-3 rounded-cta border px-3.5 py-2.5 transition-colors ${
+        selected
+          ? "border-navy bg-navy text-white shadow-cta"
+          : "border-hair bg-surface text-ink hover:border-navy/40"
+      }`}
+    >
+      {isAny ? (
+        <div className={`flex h-8 w-8 flex-none items-center justify-center rounded-full border-2 border-dashed ${selected ? "border-white/50" : "border-hair"}`}>
+          <span className={`text-[10px] font-bold ${selected ? "text-white/70" : "text-muted"}`}>?</span>
+        </div>
+      ) : avatarUrl ? (
+        <img src={avatarUrl} alt={name} className="h-8 w-8 flex-none rounded-full object-cover" />
+      ) : (
+        <div className={`flex h-8 w-8 flex-none items-center justify-center rounded-full ${selected ? "bg-white/20" : "bg-blue-soft"}`}>
+          <span className={`text-[11px] font-bold ${selected ? "text-white" : "text-navy"}`}>{initials(name)}</span>
+        </div>
+      )}
+      <div className="text-left">
+        <div className="text-[13px] font-semibold leading-tight">{name}</div>
+        {subtitle && (
+          <div className={`text-[11px] ${selected ? "text-white/60" : "text-muted"}`}>{subtitle}</div>
+        )}
+      </div>
+    </button>
+  );
+}
+
+function Section({
+  step,
+  title,
+  children,
+}: {
+  step: number;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-card border border-hair bg-surface p-[22px] shadow-card">
+      <div className="mb-3 flex items-center gap-2.5">
+        <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-navy text-[11px] font-bold text-white">
+          {step}
+        </span>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.6px] text-muted">
+          {title}
+        </span>
+      </div>
+      {children}
+    </section>
   );
 }

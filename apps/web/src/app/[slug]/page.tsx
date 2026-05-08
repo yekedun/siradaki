@@ -12,98 +12,134 @@ interface PageProps {
   params: { slug: string };
 }
 
-// D-03: ISR — sayfa statik render edilir, 60 saniyede bir arka planda yenilenir.
 export const revalidate = 60;
-// Yeni eklenen slug'lar build'de tanımsız; ilk istekte SSR + cache.
 export const dynamicParams = true;
 
-// D-03: build-time'da bilinen tüm berber slug'larını prerender et.
-// Cookie'siz raw client — `cookies()` çağrısı sayfayı dinamik moda zorlar (ISR'i bozar).
-// Env yoksa (lokal build, CI sandbox) sessizce boş dönüp on-demand SSR'a düşer.
 export async function generateStaticParams() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url  = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anon) return [];
   const supabase = createClient<Database>(url, anon);
-  const { data } = await supabase.from("barbers").select("slug");
+  const { data } = await supabase.from("shops").select("slug");
   return (data ?? []).map(({ slug }) => ({ slug }));
 }
 
-// F-01: generateMetadata + sayfa aynı sorguyu paylaşır; ayrıca 60s cache.
-// Cookie'siz raw client — unstable_cache içinde cookies() çağrısı yasak (Next.js kısıtı).
-// Berber profili public data, auth gerektirmiyor.
-const getBarberBySlug = unstable_cache(
+const getShopBySlug = unstable_cache(
   async (slug: string) => {
     const supabase = createClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
     const { data } = await supabase
-      .from("barbers")
+      .from("shops")
       .select("id, slug, display_name, bio, avatar_url, timezone, working_hours")
       .eq("slug", slug)
       .single();
     return data;
   },
-  ["barber-profile"],
-  { revalidate: 60, tags: ["barber-profile"] }
+  ["shop-profile"],
+  { revalidate: 60, tags: ["shop-profile"] }
 );
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
-  const barber = await getBarberBySlug(params.slug);
-  if (!barber) return { title: "Berber bulunamadı" };
-  return { title: `${barber.display_name} — Randevu Al` };
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const shop = await getShopBySlug(params.slug);
+  if (!shop) return { title: "Dükkan bulunamadı" };
+  return { title: `${shop.display_name} — Randevu Al` };
+}
+
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0]!.toUpperCase())
+    .join("");
 }
 
 export default async function BookingPage({ params }: PageProps) {
-  const barber = await getBarberBySlug(params.slug);
-  if (!barber) notFound();
+  const shop = await getShopBySlug(params.slug);
+  if (!shop) notFound();
 
   const supabase = createSupabaseServerClient();
-  const { data: services } = await supabase
-    .from("services")
-    .select("id, barber_id, name, duration_min, price_cents, display_order")
-    .eq("barber_id", barber.id)
-    .eq("is_active", true)
-    .order("display_order");
+
+  const [{ data: services }, { data: barbers }] = await Promise.all([
+    supabase
+      .from("services")
+      .select("id, shop_id, name, duration_min, price_cents, display_order")
+      .eq("shop_id", shop.id)
+      .eq("is_active", true)
+      .order("display_order"),
+    supabase
+      .from("barbers")
+      .select("id, shop_id, display_name, avatar_url, is_active")
+      .eq("shop_id", shop.id)
+      .eq("is_active", true)
+      .order("created_at"),
+  ]);
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="mx-auto max-w-2xl px-4 py-10">
-        <div className="mb-8 flex items-center gap-4">
-          {barber.avatar_url && (
-            <Image
-              src={barber.avatar_url}
-              alt={barber.display_name}
-              width={64}
-              height={64}
-              className="rounded-full object-cover"
-              priority
-            />
-          )}
-          <div>
-            <h1 className="text-2xl font-bold">{barber.display_name}</h1>
-            {barber.bio && (
-              <p className="mt-1 text-sm text-gray-500">{barber.bio}</p>
-            )}
-          </div>
+    <main className="min-h-screen bg-bg">
+      <div className="mx-auto max-w-[1080px] px-4 py-8 md:px-6 md:py-12">
+        <div className="grid gap-6 md:grid-cols-[380px_minmax(0,1fr)] md:gap-8">
+          <ProfileCard
+            name={shop.display_name}
+            bio={shop.bio}
+            avatarUrl={shop.avatar_url}
+          />
+          <BookingFlow
+            shop={{
+              id: shop.id,
+              slug: shop.slug,
+              display_name: shop.display_name,
+              bio: shop.bio,
+              avatar_url: shop.avatar_url,
+              timezone: shop.timezone,
+              working_hours: shop.working_hours as unknown as WorkingHours,
+            }}
+            barbers={barbers ?? []}
+            services={services ?? []}
+          />
         </div>
-
-        <BookingFlow
-          barber={{
-            id: barber.id,
-            slug: barber.slug,
-            display_name: barber.display_name,
-            bio: barber.bio,
-            avatar_url: barber.avatar_url,
-            timezone: barber.timezone,
-            working_hours: barber.working_hours as unknown as WorkingHours,
-          }}
-          services={services ?? []}
-        />
       </div>
     </main>
+  );
+}
+
+function ProfileCard({
+  name,
+  bio,
+  avatarUrl,
+}: {
+  name: string;
+  bio: string | null;
+  avatarUrl: string | null;
+}) {
+  return (
+    <aside className="rounded-card border border-hair bg-surface p-[22px] shadow-card md:sticky md:top-8 md:self-start">
+      <div className="relative mb-[18px] aspect-[4/3] w-full overflow-hidden rounded-card border border-hair">
+        {avatarUrl ? (
+          <Image
+            src={avatarUrl}
+            alt={name}
+            fill
+            sizes="380px"
+            className="object-cover"
+            priority
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-blue-soft">
+            <span className="text-[44px] font-bold text-navy">{initials(name)}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="mb-1 text-[11px] font-semibold uppercase tracking-[1.4px] text-red">
+        BERBER · ONLİNE RANDEVU
+      </div>
+      <h1 className="m-0 text-[30px] font-bold leading-tight tracking-[-0.5px] text-ink">
+        {name}
+      </h1>
+      {bio && <p className="mt-1 text-[13px] text-muted">{bio}</p>}
+    </aside>
   );
 }

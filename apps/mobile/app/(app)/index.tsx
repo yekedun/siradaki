@@ -1,254 +1,908 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
-  FlatList,
   StyleSheet,
   ActivityIndicator,
+  Pressable,
+  ScrollView,
   RefreshControl,
-  TouchableOpacity,
-  Alert,
+  Animated,
+  Easing,
+  type LayoutChangeEvent,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { addDays, startOfDay, startOfWeek, isSameDay } from "date-fns";
 import { supabase } from "../../lib/supabase";
-import type { Database } from "@berber/db/src/database.types";
+import { T, R, Shadow, POLE_COLORS } from "../../lib/theme";
+import { AddAppointmentModal } from "../../components/AddAppointmentModal";
+import { AppointmentDetailSheet } from "../../components/AppointmentDetailSheet";
 
-type Appointment = Database["public"]["Tables"]["appointments"]["Row"] & {
+interface Appointment {
+  id: string;
+  customer_name: string;
+  customer_phone: string | null;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  service_id: string | null;
   services: { name: string; duration_min: number } | null;
-};
+}
+interface Block {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+}
+type TimelineItem =
+  | { kind: "appt"; key: string; starts_at: string; appt: Appointment }
+  | { kind: "block"; key: string; starts_at: string; block: Block };
 
-const STATUS_LABELS: Record<string, string> = {
-  confirmed: "Onaylı",
-  cancelled: "İptal",
-  completed: "Tamamlandı",
-};
+const TZ = "Europe/Istanbul";
+const DAY_NAMES = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+const MONTH_NAMES = [
+  "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
+];
+const APPT_COLS =
+  "id, customer_name, customer_phone, starts_at, ends_at, status, service_id, services(name, duration_min)";
 
-const STATUS_COLORS: Record<string, string> = {
-  confirmed: "#2563eb",
-  cancelled: "#dc2626",
-  completed: "#16a34a",
-};
+// Timeline grid (m3.jsx: 52 | 28 | 1fr; track is 4px wide, centered in 28 column)
+const TIME_COL = 52;
+const TRACK_COL = 28;
+const TRACK_WIDTH = 4;
+const TRACK_LEFT = TIME_COL + TRACK_COL / 2 - TRACK_WIDTH / 2;
+const POLE_STRIPE_H = 6; // each stripe height; 4 stripes = 24px period
+const ROW_DOT_TOP = 16;
+
+function isInDay(iso: string, day: Date): boolean {
+  const t = new Date(iso).getTime();
+  const s = startOfDay(day).getTime();
+  return t >= s && t < s + 24 * 3600 * 1000;
+}
+function sortByStart<T extends { starts_at: string }>(arr: T[]): T[] {
+  return [...arr].sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+}
+function fmtHM(iso: string | Date): string {
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  return d.toLocaleTimeString("tr-TR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: TZ,
+  });
+}
+function durationMin(start: string, end: string): number {
+  return Math.max(0, Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000));
+}
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0]!.toUpperCase())
+    .join("");
+}
 
 export default function AppointmentsScreen() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [blocks, setBlocks] = useState<Block[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [barberId, setBarberId] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<Date>(() => startOfDay(new Date()));
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [editingAppt, setEditingAppt] = useState<Appointment | null>(null);
+  const [detailAppt, setDetailAppt] = useState<Appointment | null>(null);
+  const [now, setNow] = useState<Date>(() => new Date());
 
-  const fetchBarberAndAppointments = useCallback(async () => {
+  const reqIdRef = useRef(0);
+
+  const weekStart = useMemo(
+    () => startOfWeek(selectedDay, { weekStartsOn: 1 }),
+    [selectedDay]
+  );
+  const weekDays = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
+    [weekStart]
+  );
+
+  const [shopId, setShopId] = useState<string | null>(null);
+
+  const fetchBarber = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-
     const { data: barber } = await supabase
       .from("barbers")
-      .select("id")
-      .eq("auth_user_id", user.id)
+      .select("id, shop_id")
+      .eq("user_id", user.id)
       .single();
+    if (barber) {
+      setBarberId(barber.id);
+      setShopId(barber.shop_id);
+    }
+  }, []);
 
-    if (!barber) return;
-    setBarberId(barber.id);
-
-    // F-04: 30 günlük pencere + 100 limit (sayfalandırma için güvenlik şeridi)
-    const today = new Date().toISOString().split("T")[0];
-    const horizon = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-      .toISOString();
-
-    const { data } = await supabase
-      .from("appointments")
-      .select("*, services(name, duration_min)")
-      .eq("barber_id", barber.id)
-      .gte("starts_at", today!)
-      .lte("starts_at", horizon)
-      .order("starts_at", { ascending: true })
-      .limit(100);
-
-    setAppointments((data as unknown as Appointment[]) ?? []);
+  const fetchDay = useCallback(async (bid: string, day: Date) => {
+    const reqId = ++reqIdRef.current;
+    const dayStart = startOfDay(day).toISOString();
+    const dayEnd = addDays(startOfDay(day), 1).toISOString();
+    const [{ data: appts }, { data: blks }] = await Promise.all([
+      supabase
+        .from("appointments")
+        .select(APPT_COLS)
+        .eq("barber_id", bid)
+        .gte("starts_at", dayStart)
+        .lt("starts_at", dayEnd)
+        .order("starts_at", { ascending: true }),
+      supabase
+        .from("blocks")
+        .select("id, starts_at, ends_at")
+        .eq("barber_id", bid)
+        .gte("starts_at", dayStart)
+        .lt("starts_at", dayEnd),
+    ]);
+    if (reqId !== reqIdRef.current) return;
+    setAppointments((appts as unknown as Appointment[]) ?? []);
+    setBlocks((blks as Block[]) ?? []);
     setLoading(false);
     setRefreshing(false);
   }, []);
 
-  useEffect(() => {
-    fetchBarberAndAppointments();
-  }, [fetchBarberAndAppointments]);
+  useEffect(() => { fetchBarber(); }, [fetchBarber]);
 
-  // Realtime: new appointment notification
   useEffect(() => {
     if (!barberId) return;
+    setLoading(true);
+    fetchDay(barberId, selectedDay);
+  }, [barberId, selectedDay, fetchDay]);
 
-    // F-05: INSERT + UPDATE + DELETE — çok cihazlı kullanımda UI tutarlılığı için
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (!barberId) return;
     const channel = supabase
       .channel(`appointments:${barberId}`)
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "appointments",
-          filter: `barber_id=eq.${barberId}`,
-        },
+        { event: "*", schema: "public", table: "appointments", filter: `barber_id=eq.${barberId}` },
         (payload) => {
           if (payload.eventType === "INSERT") {
-            const newAppt = payload.new as Appointment;
+            const row = payload.new as Appointment;
+            if (!isInDay(row.starts_at, selectedDay)) return;
             setAppointments((prev) =>
-              [...prev, newAppt].sort(
-                (a, b) =>
-                  new Date(a.starts_at).getTime() -
-                  new Date(b.starts_at).getTime()
-              )
+              prev.some((a) => a.id === row.id)
+                ? prev
+                : sortByStart([...prev, { ...row, services: row.services ?? null }])
             );
           } else if (payload.eventType === "UPDATE") {
-            const updated = payload.new as Appointment;
-            // Realtime payload `services` join verisini taşımaz; mevcutu koru
+            const row = payload.new as Appointment;
             setAppointments((prev) =>
-              prev.map((a) =>
-                a.id === updated.id
-                  ? { ...updated, services: a.services }
-                  : a
-              )
+              prev.map((a) => (a.id === row.id ? { ...row, services: a.services } : a))
             );
           } else if (payload.eventType === "DELETE") {
-            const deleted = payload.old as { id: string };
-            setAppointments((prev) => prev.filter((a) => a.id !== deleted.id));
+            const id = (payload.old as { id: string }).id;
+            setAppointments((prev) => prev.filter((a) => a.id !== id));
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "blocks", filter: `barber_id=eq.${barberId}` },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const row = payload.new as Block;
+            if (!isInDay(row.starts_at, selectedDay)) return;
+            setBlocks((prev) =>
+              prev.some((b) => b.id === row.id) ? prev : sortByStart([...prev, row])
+            );
+          } else if (payload.eventType === "UPDATE") {
+            const row = payload.new as Block;
+            setBlocks((prev) => prev.map((b) => (b.id === row.id ? row : b)));
+          } else if (payload.eventType === "DELETE") {
+            const id = (payload.old as { id: string }).id;
+            setBlocks((prev) => prev.filter((b) => b.id !== id));
           }
         }
       )
       .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [barberId, selectedDay]);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [barberId]);
+  const timeline: TimelineItem[] = useMemo(() => {
+    const items: TimelineItem[] = [
+      ...appointments
+        .filter((a) => a.status !== "cancelled")
+        .map((a): TimelineItem => ({
+          kind: "appt", key: a.id, starts_at: a.starts_at, appt: a,
+        })),
+      ...blocks.map((b): TimelineItem => ({
+        kind: "block", key: `block-${b.id}`, starts_at: b.starts_at, block: b,
+      })),
+    ];
+    return items.sort((x, y) => x.starts_at.localeCompare(y.starts_at));
+  }, [appointments, blocks]);
 
-  async function handleComplete(appointmentId: string) {
-    const { error } = await supabase
-      .from("appointments")
-      .update({ status: "completed" })
-      .eq("id", appointmentId);
+  const onRefresh = useCallback(() => {
+    if (!barberId) return;
+    setRefreshing(true);
+    fetchDay(barberId, selectedDay);
+  }, [barberId, selectedDay, fetchDay]);
 
-    if (error) {
-      Alert.alert("Hata", error.message);
-      return;
+  const today = new Date();
+  const isViewingToday = isSameDay(selectedDay, today);
+  const dayMode: "past" | "today" | "future" = isViewingToday
+    ? "today"
+    : startOfDay(selectedDay).getTime() < startOfDay(today).getTime()
+    ? "past"
+    : "future";
+  const dateLabel = `${selectedDay.getDate()} ${MONTH_NAMES[selectedDay.getMonth()]} ${selectedDay.getFullYear()}, ${DAY_NAMES[(selectedDay.getDay() + 6) % 7]}`;
+
+  const nowInsertIdx = useMemo(() => {
+    if (!isViewingToday) return -1;
+    const ts = now.getTime();
+    for (let i = 0; i < timeline.length; i++) {
+      if (new Date(timeline[i]!.starts_at).getTime() > ts) return i;
     }
-
-    setAppointments((prev) =>
-      prev.map((a) =>
-        a.id === appointmentId ? { ...a, status: "completed" } : a
-      )
-    );
-  }
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563eb" />
-      </View>
-    );
-  }
-
-  if (appointments.length === 0) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.emptyText}>Yaklaşan randevu yok</Text>
-        <Text style={styles.emptySubtext}>
-          Müşterileriniz randevu aldığında burada görünür.
-        </Text>
-      </View>
-    );
-  }
+    return timeline.length;
+  }, [timeline, now, isViewingToday]);
 
   return (
-    <FlatList
-      data={appointments}
-      keyExtractor={(item) => item.id}
-      contentContainerStyle={styles.list}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => {
-            setRefreshing(true);
-            fetchBarberAndAppointments();
+    <View style={styles.root}>
+      <Header today={today} selected={selectedDay} onSelect={setSelectedDay} weekDays={weekDays} dateLabel={dateLabel} />
+
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={T.navy} />
+        </View>
+      ) : timeline.length === 0 ? (
+        <ScrollView
+          contentContainerStyle={styles.emptyWrap}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.navy} />}
+        >
+          <EmptyDay date={selectedDay} />
+        </ScrollView>
+      ) : (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.navy} />}
+        >
+          <Timeline
+            items={timeline}
+            now={now}
+            nowInsertIdx={nowInsertIdx}
+            dayMode={dayMode}
+            onPressAppt={setDetailAppt}
+          />
+        </ScrollView>
+      )}
+
+      {barberId && (
+        <View style={styles.fabWrap} pointerEvents="box-none">
+          <Pressable
+            style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+            onPress={() => setAddModalVisible(true)}
+          >
+            <Feather name="plus" size={18} color="#fff" />
+            <Text style={styles.fabText}>Yeni Randevu</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {barberId && shopId && (
+        <AddAppointmentModal
+          visible={addModalVisible || !!editingAppt}
+          shopId={shopId}
+          barberId={barberId}
+          initialDate={selectedDay}
+          editingAppt={editingAppt}
+          onClose={() => {
+            setAddModalVisible(false);
+            setEditingAppt(null);
           }}
         />
-      }
-      renderItem={({ item }) => {
-        const date = new Date(item.starts_at);
-        const dateLabel = date.toLocaleDateString("tr-TR", {
-          weekday: "short",
-          day: "numeric",
-          month: "short",
-        });
-        const timeLabel = date.toLocaleTimeString("tr-TR", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
+      )}
 
-        return (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTime}>
-                {dateLabel} · {timeLabel}
+      <AppointmentDetailSheet
+        appt={detailAppt}
+        onClose={() => setDetailAppt(null)}
+        onAction={async (action) => {
+          if (!detailAppt) return;
+          if (action === "complete") {
+            const { error } = await supabase
+              .from("appointments")
+              .update({ status: "completed" })
+              .eq("id", detailAppt.id);
+            if (error) console.warn(error.message);
+            setDetailAppt(null);
+            return;
+          }
+          if (action === "cancel") {
+            const { error } = await supabase
+              .from("appointments")
+              .update({ status: "cancelled" })
+              .eq("id", detailAppt.id);
+            if (error) console.warn(error.message);
+            setDetailAppt(null);
+            return;
+          }
+          if (action === "edit") {
+            const target = detailAppt;
+            setDetailAppt(null);
+            // Slight delay so the detail sheet animates out before edit modal slides in
+            setTimeout(() => setEditingAppt(target), 220);
+          }
+        }}
+      />
+    </View>
+  );
+}
+
+function Header({
+  today, selected, onSelect, weekDays, dateLabel,
+}: {
+  today: Date;
+  selected: Date;
+  onSelect: (d: Date) => void;
+  weekDays: Date[];
+  dateLabel: string;
+}) {
+  return (
+    <View style={styles.header}>
+      <View style={styles.headerInner}>
+        <Text style={styles.eyebrow}>BERBER · DÜKKAN PANELİ</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Randevular</Text>
+          <Text style={styles.dateLabel}>{dateLabel}</Text>
+        </View>
+      </View>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.stripContent}
+      >
+        {weekDays.map((d) => {
+          const isSel = isSameDay(d, selected);
+          const isToday = isSameDay(d, today);
+          return (
+            <Pressable
+              key={d.toISOString()}
+              onPress={() => onSelect(d)}
+              style={({ pressed }) => [
+                styles.day,
+                isSel && styles.daySelected,
+                !isSel && isToday && styles.dayToday,
+                pressed && { transform: [{ scale: 0.985 }] },
+              ]}
+            >
+              <Text style={[styles.dow, isSel && styles.dowSelected]}>
+                {DAY_NAMES[(d.getDay() + 6) % 7]}
               </Text>
-              <Text
-                style={[
-                  styles.cardStatus,
-                  { color: STATUS_COLORS[item.status] ?? "#666" },
-                ]}
-              >
-                {STATUS_LABELS[item.status] ?? item.status}
+              <Text style={[styles.dnum, isSel && styles.dnumSelected]}>
+                {d.getDate()}
               </Text>
-            </View>
-            <Text style={styles.cardName}>{item.customer_name}</Text>
-            {item.services && (
-              <Text style={styles.cardService}>
-                {item.services.name} · {item.services.duration_min} dk
-              </Text>
-            )}
-            {item.customer_phone && (
-              <Text style={styles.cardPhone}>{item.customer_phone}</Text>
-            )}
-            {item.status === "confirmed" && (
-              <TouchableOpacity
-                style={styles.completeBtn}
-                onPress={() => handleComplete(item.id)}
-              >
-                <Text style={styles.completeBtnText}>Tamamlandı İşaretle</Text>
-              </TouchableOpacity>
-            )}
+              {isToday && (
+                <View
+                  style={[styles.todayDot, isSel && styles.todayDotOnSel]}
+                />
+              )}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+function Timeline({
+  items, now, nowInsertIdx, dayMode, onPressAppt,
+}: {
+  items: TimelineItem[];
+  now: Date;
+  nowInsertIdx: number;
+  dayMode: "past" | "today" | "future";
+  onPressAppt: (a: Appointment) => void;
+}) {
+  const [trackHeight, setTrackHeight] = useState(0);
+  const [nowY, setNowY] = useState<number | null>(null);
+  const onLayout = useCallback((e: LayoutChangeEvent) => {
+    setTrackHeight(e.nativeEvent.layout.height);
+  }, []);
+  const onNowLayout = useCallback((e: LayoutChangeEvent) => {
+    setNowY(e.nativeEvent.layout.y + e.nativeEvent.layout.height / 2);
+  }, []);
+
+  const hasNow = nowInsertIdx !== -1 && dayMode === "today";
+  // Past days → full gray, Future days → full barber pole, Today → split at NOW
+  const splitY =
+    dayMode === "past"
+      ? trackHeight
+      : dayMode === "future"
+      ? 0
+      : hasNow && nowY !== null
+      ? nowY
+      : trackHeight;
+  const nowMs = now.getTime();
+
+  return (
+    <View style={styles.timeline} onLayout={onLayout}>
+      {/* Background track: past gray + future barber pole */}
+      <View style={[styles.trackBg, { left: TRACK_LEFT, width: TRACK_WIDTH }]} pointerEvents="none">
+        {splitY > 0 && (
+          <View style={[styles.trackPast, { height: splitY }]} />
+        )}
+        {trackHeight - splitY > 0 && (
+          <View style={[styles.trackFuture, { top: splitY }]}>
+            <BarberPole height={trackHeight - splitY} />
           </View>
-        );
-      }}
-    />
+        )}
+      </View>
+
+      {items.map((item, idx) => (
+        <View key={item.key}>
+          {idx === nowInsertIdx && <NowRow now={now} onLayout={onNowLayout} />}
+          {item.kind === "appt" ? (
+            <ApptRow
+              appt={item.appt}
+              isPast={new Date(item.appt.ends_at).getTime() < nowMs}
+              onPress={() => onPressAppt(item.appt)}
+            />
+          ) : (
+            <BlockRow block={item.block} />
+          )}
+        </View>
+      ))}
+      {nowInsertIdx === items.length && <NowRow now={now} onLayout={onNowLayout} />}
+    </View>
+  );
+}
+
+function BarberPole({ height }: { height: number }) {
+  if (height <= 0) return null;
+  const count = Math.ceil(height / POLE_STRIPE_H) + 1;
+  return (
+    <View style={{ width: TRACK_WIDTH, height, opacity: 0.6, overflow: "hidden" }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <View
+          key={i}
+          style={{
+            height: POLE_STRIPE_H,
+            backgroundColor: POLE_COLORS[i % POLE_COLORS.length]!,
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
+function ApptRow({
+  appt, isPast, onPress,
+}: {
+  appt: Appointment;
+  isPast: boolean;
+  onPress: () => void;
+}) {
+  const isCompleted = appt.status === "completed";
+  const treatAsPast = isCompleted || (isPast && appt.status === "confirmed");
+  if (treatAsPast) return <DoneRow appt={appt} />;
+  return <UpcomingRow appt={appt} onPress={onPress} />;
+}
+
+function TimeColumn({
+  starts_at,
+  ends_at,
+  variant,
+}: {
+  starts_at: string;
+  ends_at: string;
+  variant: "past" | "future" | "block";
+}) {
+  const isPast = variant === "past";
+  return (
+    <View style={styles.timeCol}>
+      <Text style={[styles.timeText, isPast && styles.timePast]}>{fmtHM(starts_at)}</Text>
+      <Text style={[styles.timeEnd, isPast && styles.timePast]}>{fmtHM(ends_at)}</Text>
+    </View>
+  );
+}
+
+function TrackColumn({ variant }: { variant: "past" | "future" | "block" }) {
+  const diamondStyle =
+    variant === "future"
+      ? styles.diamondNavy
+      : variant === "block"
+      ? styles.diamondSlate
+      : styles.diamondPast;
+  return (
+    <View style={styles.trackCol}>
+      <View style={[styles.diamond, diamondStyle]} />
+      <View style={[styles.diamond, diamondStyle]} />
+    </View>
+  );
+}
+
+function DoneRow({ appt }: { appt: Appointment }) {
+  const dur = appt.services?.duration_min ?? durationMin(appt.starts_at, appt.ends_at);
+  return (
+    <View style={styles.row}>
+      <TimeColumn starts_at={appt.starts_at} ends_at={appt.ends_at} variant="past" />
+      <TrackColumn variant="past" />
+      <View style={styles.doneCard}>
+        <View style={styles.doneMain}>
+          <Text style={styles.doneName} numberOfLines={1}>
+            {appt.customer_name}
+          </Text>
+          <Text style={styles.doneSub} numberOfLines={1}>
+            {appt.services?.name ?? "Randevu"} · {dur}dk
+          </Text>
+        </View>
+        <View style={styles.doneCheck}>
+          <Feather name="check" size={11} color={T.muted} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function UpcomingRow({ appt, onPress }: { appt: Appointment; onPress: () => void }) {
+  return (
+    <View style={styles.row}>
+      <TimeColumn starts_at={appt.starts_at} ends_at={appt.ends_at} variant="future" />
+      <TrackColumn variant="future" />
+      <Pressable style={({ pressed }) => [styles.upCard, pressed && { opacity: 0.95 }]} onPress={onPress}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarTxt}>{initials(appt.customer_name) || "?"}</Text>
+        </View>
+        <View style={styles.upMain}>
+          <Text style={styles.upName} numberOfLines={1}>{appt.customer_name}</Text>
+          <Text style={styles.upSub} numberOfLines={1}>{appt.services?.name ?? "Randevu"}</Text>
+        </View>
+        <Feather name="chevron-right" size={16} color={T.muted} />
+      </Pressable>
+    </View>
+  );
+}
+
+function BlockRow({ block }: { block: Block }) {
+  const dur = durationMin(block.starts_at, block.ends_at);
+  return (
+    <View style={styles.row}>
+      <TimeColumn starts_at={block.starts_at} ends_at={block.ends_at} variant="block" />
+      <TrackColumn variant="block" />
+      <View style={styles.blockCard}>
+        <Text style={styles.blockText}>BLOKE · {dur}dk</Text>
+      </View>
+    </View>
+  );
+}
+
+function NowRow({ now, onLayout }: { now: Date; onLayout: (e: LayoutChangeEvent) => void }) {
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(pulse, {
+        toValue: 1,
+        duration: 1600,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  const haloScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 2.7] });
+  const haloOpacity = pulse.interpolate({ inputRange: [0, 0.7, 1], outputRange: [0.55, 0, 0] });
+
+  return (
+    <View style={styles.nowRow} onLayout={onLayout}>
+      <View style={styles.timeCol}>
+        <Text style={styles.nowTime}>{fmtHM(now)}</Text>
+      </View>
+      <View style={styles.trackCol}>
+        <View style={styles.nowDotWrap}>
+          <Animated.View
+            style={[styles.nowHalo, { transform: [{ scale: haloScale }], opacity: haloOpacity }]}
+          />
+          <View style={styles.nowDot} />
+        </View>
+      </View>
+      <View style={styles.nowLine} />
+    </View>
+  );
+}
+
+function EmptyDay({ date }: { date: Date }) {
+  return (
+    <View style={styles.empty}>
+      <View style={styles.emptyIconWrap}>
+        <Feather name="calendar" size={28} color={T.muted} />
+      </View>
+      <Text style={styles.emptyTitle}>Henüz randevu yok</Text>
+      <Text style={styles.emptyBody}>
+        {date.getDate()} {MONTH_NAMES[date.getMonth()]} için randevu bulunmuyor.{"\n"}
+        Yeni Randevu butonuna basarak ekleyebilirsiniz.
+      </Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  emptyText: { fontSize: 17, fontWeight: "600", color: "#374151" },
-  emptySubtext: { marginTop: 6, fontSize: 14, color: "#9ca3af", textAlign: "center" },
-  list: { padding: 16, gap: 12 },
-  card: {
-    backgroundColor: "#fff",
+  root: { flex: 1, backgroundColor: T.bg },
+
+  // Header
+  header: {
+    backgroundColor: T.bg,
+    borderBottomWidth: 1,
+    borderBottomColor: T.line,
+    paddingTop: 56,
+    paddingBottom: 12,
+  },
+  headerInner: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 14 },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    color: T.red,
+    marginBottom: 4,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  title: { fontSize: 30, fontWeight: "700", letterSpacing: -0.5, color: T.ink },
+  dateLabel: { fontSize: 12, color: T.muted, fontWeight: "500" },
+
+  stripContent: { paddingHorizontal: 20, paddingBottom: 4, gap: 8 },
+  day: {
+    width: 48,
+    height: 64,
     borderRadius: 14,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
-  cardTime: { fontSize: 13, color: "#6b7280" },
-  cardStatus: { fontSize: 12, fontWeight: "600" },
-  cardName: { fontSize: 16, fontWeight: "700", color: "#111827" },
-  cardService: { marginTop: 3, fontSize: 13, color: "#6b7280" },
-  cardPhone: { marginTop: 2, fontSize: 13, color: "#6b7280" },
-  completeBtn: {
-    marginTop: 12,
-    backgroundColor: "#f0fdf4",
-    borderRadius: 8,
-    paddingVertical: 8,
-    alignItems: "center",
     borderWidth: 1,
-    borderColor: "#86efac",
+    borderColor: T.line,
+    backgroundColor: T.surface,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  completeBtnText: { fontSize: 13, fontWeight: "600", color: "#16a34a" },
+  dayToday: { borderWidth: 1.5, borderColor: T.red },
+  daySelected: {
+    backgroundColor: T.ink,
+    borderColor: T.ink,
+    ...Shadow.pill,
+  },
+  dow: {
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    color: T.muted,
+    marginBottom: 2,
+  },
+  dowSelected: { color: "rgba(255,255,255,0.7)" },
+  dnum: { fontSize: 20, fontWeight: "700", color: T.ink },
+  dnumSelected: { color: "#fff" },
+  todayDot: {
+    width: 4, height: 4, borderRadius: 4,
+    backgroundColor: T.red,
+    marginTop: 3,
+  },
+  todayDotOnSel: { backgroundColor: "#fff" },
+
+  // Body
+  scroll: { flex: 1, backgroundColor: T.bg },
+  scrollContent: { paddingTop: 6, paddingBottom: 110, paddingHorizontal: 0 },
+
+  // Timeline
+  timeline: { position: "relative" },
+  trackBg: { position: "absolute", top: 0, bottom: 0 },
+  trackPast: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: T.past,
+    borderRadius: 2,
+  },
+  trackFuture: { position: "absolute", left: 0, right: 0, bottom: 0, borderRadius: 2 },
+
+  // Row
+  row: { flexDirection: "row", alignItems: "stretch", paddingHorizontal: 0 },
+  timeCol: {
+    width: TIME_COL,
+    paddingRight: 10,
+    paddingVertical: 12,
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+  },
+  timeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: T.ink,
+    fontVariant: ["tabular-nums"],
+  },
+  timeEnd: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: T.muted,
+    fontVariant: ["tabular-nums"],
+  },
+  timePast: { color: T.mutedAlt, fontWeight: "500" },
+  trackCol: {
+    width: TRACK_COL,
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+  },
+  diamond: {
+    width: 10,
+    height: 10,
+    transform: [{ rotate: "45deg" }],
+    zIndex: 2,
+  },
+  diamondPast: {
+    backgroundColor: T.past,
+    borderWidth: 2,
+    borderColor: T.bg,
+  },
+  diamondNavy: {
+    backgroundColor: T.navy,
+    borderWidth: 2,
+    borderColor: "#fff",
+    ...Shadow.card,
+  },
+  diamondSlate: {
+    backgroundColor: "#94A3B8",
+    borderWidth: 2,
+    borderColor: T.bg,
+  },
+
+  // Done card (past)
+  doneCard: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingRight: 14,
+    paddingBottom: 14,
+  },
+  doneMain: { flex: 1, paddingRight: 10 },
+  doneName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: T.mutedAlt,
+    textDecorationLine: "line-through",
+    textDecorationColor: T.mutedAlt,
+  },
+  doneSub: { fontSize: 12, color: T.mutedAlt, marginTop: 2 },
+  doneCheck: {
+    width: 18, height: 18, borderRadius: 9,
+    backgroundColor: T.line,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // Upcoming card
+  upCard: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: T.surface,
+    borderRadius: R.card,
+    borderWidth: 1,
+    borderColor: T.line,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginRight: 14,
+    marginBottom: 14,
+    ...Shadow.card,
+  },
+  avatar: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: T.avatarFrom,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarTxt: { fontSize: 14, fontWeight: "700", color: T.navy },
+  upMain: { flex: 1, minWidth: 0 },
+  upName: { fontSize: 14, fontWeight: "600", color: T.ink },
+  upSub: { fontSize: 12, color: T.blue, marginTop: 2, fontWeight: "500" },
+
+  // Block card
+  blockCard: {
+    flex: 1,
+    backgroundColor: T.surfaceAlt,
+    borderRadius: R.card,
+    borderWidth: 1,
+    borderColor: T.hairAlt,
+    borderStyle: "dashed",
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginRight: 14,
+    marginBottom: 14,
+    alignItems: "center",
+  },
+  blockText: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 2,
+    color: T.blockInk,
+    textTransform: "uppercase",
+  },
+
+  // Now row
+  nowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 28,
+    marginBottom: 6,
+  },
+  nowTime: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: T.red,
+    fontVariant: ["tabular-nums"],
+  },
+  nowDotWrap: { width: 14, height: 14, alignItems: "center", justifyContent: "center" },
+  nowHalo: {
+    position: "absolute",
+    width: 14, height: 14, borderRadius: 14,
+    backgroundColor: T.red,
+  },
+  nowDot: {
+    width: 14, height: 14, borderRadius: 14,
+    backgroundColor: T.red,
+  },
+  nowLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: T.red,
+    borderRadius: 2,
+    marginRight: 18,
+  },
+
+  // Empty
+  emptyWrap: { flexGrow: 1, justifyContent: "center" },
+  empty: { padding: 60, alignItems: "center" },
+  emptyIconWrap: {
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: T.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  emptyTitle: { fontSize: 16, fontWeight: "600", color: T.ink, marginBottom: 6 },
+  emptyBody: { fontSize: 13, color: T.muted, textAlign: "center", lineHeight: 19 },
+
+  // FAB
+  fabWrap: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    bottom: 24,
+    zIndex: 20,
+  },
+  fab: {
+    width: "100%",
+    paddingVertical: 16,
+    backgroundColor: T.navy,
+    borderRadius: R.fab,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    ...Shadow.cta,
+  },
+  fabPressed: { transform: [{ scale: 0.985 }] },
+  fabText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+
+  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
 });

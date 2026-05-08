@@ -1,0 +1,292 @@
+import { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+import { supabase, SHOP_SLUG } from "../../lib/supabase";
+import { getProfile } from "../../lib/customer-profiles";
+import { T, R, Shadow } from "../../lib/theme";
+
+const TZ = "Europe/Istanbul";
+
+function fTime(iso: string) {
+  return new Intl.DateTimeFormat("tr-TR", {
+    hour: "2-digit", minute: "2-digit", hour12: false, timeZone: TZ,
+  }).format(new Date(iso));
+}
+function fDate(iso: string) {
+  return format(new Date(iso), "d MMMM yyyy, EEEE", { locale: tr });
+}
+function formatPrice(cents: number): string {
+  return cents === 0 ? "Fiyat Sor" : `₺${Math.round(cents / 100)}`;
+}
+
+function SummaryRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
+  return (
+    <View style={styles.row}>
+      <Text style={styles.rowLabel}>{label}</Text>
+      <Text style={[styles.rowValue, valueColor ? { color: valueColor } : null]}>{value}</Text>
+    </View>
+  );
+}
+
+export default function Step4Confirm() {
+  const params = useLocalSearchParams<{
+    sid: string; sname: string; sdur: string; sprice: string;
+    bid: string; bname: string; slot: string;
+  }>();
+  const [loading, setLoading] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState<string | null>(null);
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const profile = await getProfile(user.id);
+      if (profile) {
+        setCustomerName(profile.full_name);
+        setCustomerPhone(profile.phone);
+      }
+    })();
+  }, []);
+
+  async function handleConfirm() {
+    if (!customerName) {
+      Alert.alert("Hata", "Profil bilgileri yüklenemedi. Lütfen tekrar deneyin.");
+      return;
+    }
+    setLoading(true);
+    const { data, error } = await supabase.functions.invoke("customer-book-appointment", {
+      body: {
+        shop_slug: SHOP_SLUG,
+        service_id: params.sid,
+        barber_id: params.bid === "any" ? null : params.bid,
+        starts_at: params.slot,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+      },
+    });
+    setLoading(false);
+
+    if (error) {
+      const msg = (error as { context?: { message?: string }; message?: string })
+        ?.context?.message ?? error.message ?? "Bilinmeyen hata";
+      Alert.alert("Randevu Alınamadı", msg);
+      return;
+    }
+
+    const result = data as { appointment_id: string; barber_display_name: string };
+    router.replace({
+      pathname: "/booking/success",
+      params: {
+        sname: params.sname,
+        bname: result.barber_display_name || params.bname,
+        slot: params.slot,
+        apptId: result.appointment_id,
+      },
+    });
+  }
+
+  const slotDate = params.slot ? new Date(params.slot) : null;
+
+  return (
+    <SafeAreaView style={styles.safe} edges={["top"]}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+          <Ionicons name="arrow-back" size={22} color={T.ink} />
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Onayla</Text>
+          <Text style={styles.headerStep}>4 / 4</Text>
+        </View>
+        <View style={styles.backBtn} />
+      </View>
+      <View style={styles.progressTrack}>
+        <View style={styles.progressFill} />
+      </View>
+
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.title}>Randevu Özeti</Text>
+
+        {/* Hizmet + Usta + Zaman */}
+        <View style={styles.card}>
+          <Text style={styles.cardSection}>HİZMET</Text>
+          <SummaryRow label="Hizmet" value={params.sname} />
+          <SummaryRow label="Süre" value={`${params.sdur} dakika`} />
+          <SummaryRow label="Fiyat" value={formatPrice(Number(params.sprice))} valueColor={T.blue} />
+
+          <View style={styles.separator} />
+
+          <Text style={styles.cardSection}>RANDEVU</Text>
+          <SummaryRow label="Usta" value={params.bname} />
+          {slotDate && (
+            <>
+              <SummaryRow label="Tarih" value={fDate(params.slot)} />
+              <SummaryRow label="Saat" value={fTime(params.slot)} valueColor={T.navy} />
+            </>
+          )}
+        </View>
+
+        {/* Müşteri bilgileri */}
+        <Text style={styles.sectionTitle}>MÜŞTERİ BİLGİLERİ</Text>
+        <View style={styles.card}>
+          <View style={styles.profileRow}>
+            <View style={styles.profileAvatar}>
+              <Ionicons name="person" size={18} color={T.navy} />
+            </View>
+            <View style={styles.profileInfo}>
+              <Text style={styles.profileName}>{customerName || "—"}</Text>
+              {customerPhone ? (
+                <Text style={styles.profilePhone}>{customerPhone}</Text>
+              ) : null}
+            </View>
+          </View>
+        </View>
+
+        <Text style={styles.disclaimer}>
+          Randevunuzu &quot;Randevularım&quot; sekmesinden görüntüleyebilir ve iptal edebilirsiniz.
+        </Text>
+      </ScrollView>
+
+      <View style={[styles.ctaBar, { paddingBottom: insets.bottom + 16 }]}>
+        <TouchableOpacity
+          style={[styles.cta, loading && styles.ctaDisabled]}
+          onPress={handleConfirm}
+          disabled={loading}
+          activeOpacity={0.88}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.ctaText}>Randevuyu Onayla →</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: T.bg },
+
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: T.line,
+    backgroundColor: T.bg,
+  },
+  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  headerCenter: { flex: 1, alignItems: "center" },
+  headerTitle: { fontSize: 15, fontWeight: "700", color: T.ink },
+  headerStep: { fontSize: 11, fontWeight: "600", color: T.muted, marginTop: 1 },
+
+  progressTrack: { height: 3, backgroundColor: T.line },
+  progressFill: { height: 3, backgroundColor: T.navy, width: "100%" },
+
+  content: { paddingHorizontal: 20, paddingTop: 24 },
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: T.ink,
+    letterSpacing: -0.3,
+    marginBottom: 20,
+  },
+
+  card: {
+    backgroundColor: T.surface,
+    borderRadius: R.card,
+    borderWidth: 1,
+    borderColor: T.line,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 20,
+    ...Shadow.card,
+  },
+  cardSection: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: T.mutedAlt,
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    marginBottom: 12,
+  },
+  separator: { height: 1, backgroundColor: T.line, marginVertical: 14 },
+
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  rowLabel: { fontSize: 13, fontWeight: "500", color: T.muted },
+  rowValue: { fontSize: 14, fontWeight: "600", color: T.ink, textAlign: "right", flexShrink: 1, marginLeft: 12 },
+
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: T.muted,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 10,
+  },
+
+  profileRow: { flexDirection: "row", alignItems: "center" },
+  profileAvatar: {
+    width: 40, height: 40, borderRadius: 10,
+    backgroundColor: T.blueSoft,
+    alignItems: "center", justifyContent: "center",
+    marginRight: 14,
+  },
+  profileInfo: { flex: 1 },
+  profileName: { fontSize: 15, fontWeight: "600", color: T.ink },
+  profilePhone: { fontSize: 13, fontWeight: "500", color: T.muted, marginTop: 2 },
+
+  disclaimer: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: T.mutedAlt,
+    textAlign: "center",
+    lineHeight: 17,
+    paddingHorizontal: 8,
+  },
+
+  ctaBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    backgroundColor: T.bg,
+    borderTopWidth: 1,
+    borderTopColor: T.line,
+  },
+  cta: {
+    backgroundColor: T.navy,
+    borderRadius: R.cta,
+    paddingVertical: 16,
+    alignItems: "center",
+    ...Shadow.cta,
+  },
+  ctaDisabled: { opacity: 0.5, elevation: 0, shadowOpacity: 0 },
+  ctaText: { fontSize: 15, fontWeight: "700", color: "#fff" },
+});

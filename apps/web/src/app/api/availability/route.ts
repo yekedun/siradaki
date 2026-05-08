@@ -5,79 +5,147 @@ import type { WorkingHours } from "@berber/shared/types";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const slug = searchParams.get("slug");
-  const date = searchParams.get("date");
-  const serviceId = searchParams.get("service_id");
+  const shopSlug      = searchParams.get("shop_slug");
+  const date          = searchParams.get("date");
+  const serviceId     = searchParams.get("service_id");
+  // barber_id = UUID → belirli usta | "any" veya yoksa → en az 1 usta müsait slot
+  const barberIdParam = searchParams.get("barber_id");
 
-  if (!slug || !date || !serviceId) {
+  if (!shopSlug || !date || !serviceId) {
     return NextResponse.json(
-      { error: "slug, date, service_id zorunlu" },
+      { error: "shop_slug, date, service_id zorunlu" },
       { status: 400 }
     );
   }
 
   const supabase = createSupabaseServerClient();
 
-  const { data: barber } = await supabase
-    .from("barbers")
+  const { data: shop } = await supabase
+    .from("shops")
     .select("id, timezone, working_hours")
-    .eq("slug", slug)
+    .eq("slug", shopSlug)
     .single();
 
-  if (!barber) {
-    return NextResponse.json({ error: "Berber bulunamadı" }, { status: 404 });
+  if (!shop) {
+    return NextResponse.json({ error: "Dükkan bulunamadı" }, { status: 404 });
   }
 
   const { data: service } = await supabase
     .from("services")
     .select("duration_min")
     .eq("id", serviceId)
-    .eq("barber_id", barber.id)
+    .eq("shop_id", shop.id)
+    .eq("is_active", true)
     .single();
 
   if (!service) {
     return NextResponse.json({ error: "Hizmet bulunamadı" }, { status: 404 });
   }
 
-  // F-11: RPC hatasını sessizce yutma
-  const { data: occupied, error: rpcError } = await supabase.rpc(
-    "get_occupied_ranges",
-    { p_barber_id: barber.id, p_date: date }
-  );
+  const workingHours = shop.working_hours as unknown as WorkingHours;
+  const timezone     = shop.timezone;
 
-  if (rpcError) {
-    console.error("get_occupied_ranges RPC failed:", rpcError);
+  // Belirli usta
+  if (barberIdParam && barberIdParam !== "any") {
+    const { data: barber } = await supabase
+      .from("barbers")
+      .select("id")
+      .eq("id", barberIdParam)
+      .eq("shop_id", shop.id)
+      .eq("is_active", true)
+      .single();
+
+    if (!barber) {
+      return NextResponse.json({ error: "Usta bulunamadı" }, { status: 404 });
+    }
+
+    const { data: occupied, error: rpcError } = await supabase.rpc(
+      "get_occupied_ranges",
+      { p_barber_id: barber.id, p_date: date }
+    );
+
+    if (rpcError) {
+      console.error("get_occupied_ranges RPC failed:", rpcError);
+      return NextResponse.json(
+        { error: "Müsaitlik bilgisi alınamadı" },
+        { status: 500 }
+      );
+    }
+
+    const slots = computeAvailableSlots({
+      date: new Date(date),
+      durationMin: service.duration_min,
+      workingHours,
+      occupied: occupied ?? [],
+      timezone,
+    });
+
     return NextResponse.json(
-      { error: "Müsaitlik bilgisi alınamadı" },
-      { status: 500 }
+      {
+        barber_id: barber.id,
+        occupied: occupied ?? [],
+        slots: slots.map((s) => ({
+          starts_at: s.startsAt.toISOString(),
+          ends_at:   s.endsAt.toISOString(),
+          available: s.available,
+        })),
+      },
+      { headers: { "Cache-Control": "no-store" } }
     );
   }
 
-  const occupiedRanges = occupied ?? [];
+  // "Fark Etmez": slot müsait = en az 1 usta müsait
+  const { data: barbers } = await supabase
+    .from("barbers")
+    .select("id")
+    .eq("shop_id", shop.id)
+    .eq("is_active", true);
 
-  const slots = computeAvailableSlots({
-    date: new Date(date),
-    durationMin: service.duration_min,
-    workingHours: barber.working_hours as unknown as WorkingHours,
-    occupied: occupiedRanges,
-    timezone: barber.timezone,
-  });
+  if (!barbers || barbers.length === 0) {
+    return NextResponse.json(
+      { error: "Dükkanda aktif usta yok" },
+      { status: 404 }
+    );
+  }
 
-  // F-07: Realtime zaten anlık güncellemeleri taşıyor; API yalnızca initial state.
-  // 30s edge cache + 60s SWR makul.
-  return NextResponse.json(
-    {
-      occupied: occupiedRanges,
-      slots: slots.map((s) => ({
-        starts_at: s.startsAt.toISOString(),
-        ends_at: s.endsAt.toISOString(),
-        available: s.available,
-      })),
-    },
-    {
-      headers: {
-        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
-      },
+  const occupiedPerBarber = await Promise.all(
+    barbers.map(async (b) => {
+      const { data } = await supabase.rpc("get_occupied_ranges", {
+        p_barber_id: b.id,
+        p_date: date,
+      });
+      return data ?? [];
+    })
+  );
+
+  const slotMap = new Map<string, { available: boolean; ends_at: string }>();
+
+  for (const occupied of occupiedPerBarber) {
+    const slots = computeAvailableSlots({
+      date: new Date(date),
+      durationMin: service.duration_min,
+      workingHours,
+      occupied,
+      timezone,
+    });
+
+    for (const slot of slots) {
+      const key      = slot.startsAt.toISOString();
+      const existing = slotMap.get(key);
+      if (!existing) {
+        slotMap.set(key, { available: slot.available, ends_at: slot.endsAt.toISOString() });
+      } else if (slot.available) {
+        slotMap.set(key, { ...existing, available: true });
+      }
     }
+  }
+
+  const slots = Array.from(slotMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([starts_at, { ends_at, available }]) => ({ starts_at, ends_at, available }));
+
+  return NextResponse.json(
+    { barber_id: "any", slots },
+    { headers: { "Cache-Control": "no-store" } }
   );
 }

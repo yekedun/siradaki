@@ -1,37 +1,45 @@
 import { Tabs } from "expo-router";
-import { Text } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { T } from "../../lib/theme";
 
 export default function AppLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#2563eb",
-        headerStyle: { backgroundColor: "#fff" },
-        headerShadowVisible: false,
+        headerShown: false,
+        tabBarActiveTintColor: T.navy,
+        tabBarInactiveTintColor: T.muted,
+        tabBarStyle: {
+          backgroundColor: T.bg,
+          borderTopColor: T.line,
+          borderTopWidth: 1,
+          paddingTop: 8,
+          paddingBottom: 28,
+          height: 76,
+          elevation: 0,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "500", marginTop: 2 },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: "Randevular",
-          tabBarLabel: "Randevular",
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>📅</Text>,
+          tabBarIcon: ({ color }) => <Feather name="calendar" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="block"
         options={{
-          title: "Blok Ekle",
-          tabBarLabel: "Blok",
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>⛔</Text>,
+          title: "Blok",
+          tabBarIcon: ({ color }) => <Feather name="slash" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: "Ayarlar",
-          tabBarLabel: "Ayarlar",
-          tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>⚙️</Text>,
+          tabBarIcon: ({ color }) => <Feather name="settings" size={22} color={color} />,
         }}
       />
     </Tabs>

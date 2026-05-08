@@ -9,11 +9,10 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions();
   if (req.method !== "POST") return error("Method not allowed", 405);
 
-  // Requires barber JWT auth
+  // Dükkan sahibinin JWT'si gerekli
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) return error("Authorization header eksik", 401);
 
-  // Verify JWT with anon client
   const anonClient = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_ANON_KEY")!
@@ -26,26 +25,25 @@ serve(async (req) => {
 
   const supabase = createAdminClient();
 
-  // Get barber record
-  const { data: barber } = await supabase
-    .from("barbers")
+  // Dükkan sahibi mi?
+  const { data: shop } = await supabase
+    .from("shops")
     .select("id")
-    .eq("auth_user_id", user.id)
+    .eq("owner_user_id", user.id)
     .single();
 
-  if (!barber) return error("Berber profili bulunamadı", 404);
+  if (!shop) return error("Dükkan profili bulunamadı", 404);
 
   const body = await req.json().catch(() => ({}));
   const label = body.label || "Telefon Widget";
 
-  // Generate a cryptographically random token
-  const rawToken = crypto.randomUUID() + "-" + crypto.randomUUID();
+  const rawToken  = crypto.randomUUID() + "-" + crypto.randomUUID();
   const tokenHash = await sha256(rawToken);
 
   const { data: token, error: insertError } = await supabase
     .from("widget_tokens")
     .insert({
-      barber_id: barber.id,
+      shop_id: shop.id,
       token_hash: tokenHash,
       label,
     })
@@ -57,6 +55,6 @@ serve(async (req) => {
     return error("Token oluşturulamadı", 500);
   }
 
-  // Return the raw token ONCE — it will never be shown again
+  // raw_token bir kez gösterilir, bir daha alınamaz
   return json({ ...token, raw_token: rawToken }, 201);
 });

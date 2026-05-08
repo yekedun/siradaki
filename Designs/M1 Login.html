@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>M1 · Giriş Yap</title>
+<link rel="stylesheet" href="tokens.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body class="preview-stage">
+<div id="root"></div>
+
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel">
+const { useState } = React;
+
+const inputStyle = {
+  width: '100%',
+  padding: '14px 14px',
+  background: 'var(--bg)',
+  border: '1.5px solid var(--hair)',
+  borderRadius: 'var(--r-input)',
+  fontSize: 14, color: 'var(--ink)',
+  outline: 'none', boxSizing: 'border-box',
+};
+const labelStyle = {
+  fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+  textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6, display: 'block',
+};
+
+function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const submit = (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setTimeout(() => setLoading(false), 1200);
+  };
+
+  return (
+    <div style={{
+      width: '100%', height: '100%',
+      display: 'flex', flexDirection: 'column',
+      background: 'var(--bg)',
+      padding: '88px 24px 24px', boxSizing: 'border-box',
+    }}>
+      {/* Brand mark — placeholder navy square w/ red stripe */}
+      <div style={{
+        width: 56, height: 56, borderRadius: 14,
+        background: 'var(--navy)',
+        position: 'relative', overflow: 'hidden',
+        marginBottom: 24,
+        boxShadow: 'var(--shadow-cta)',
+      }}>
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'repeating-linear-gradient(135deg, transparent 0 8px, rgba(220,38,38,0.85) 8px 12px, transparent 12px 20px)',
+        }} />
+      </div>
+
+      <div className="eyebrow" style={{ marginBottom: 6 }}>BERBER · DÜKKAN PANELİ</div>
+      <h1 style={{
+        margin: '0 0 8px', fontSize: 30, fontWeight: 700,
+        letterSpacing: -0.5, color: 'var(--ink)',
+      }}>Giriş Yap</h1>
+      <div style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 32, lineHeight: 1.5 }}>
+        Randevu panelini açmak için hesabına giriş yap.
+      </div>
+
+      <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <label>
+          <span style={labelStyle}>Email</span>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                 placeholder="berber@dukkan.com" style={inputStyle} required />
+        </label>
+        <label>
+          <span style={labelStyle}>Şifre</span>
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                 placeholder="••••••••" style={inputStyle} required />
+        </label>
+
+        <button type="submit" disabled={loading} style={{
+          marginTop: 8, width: '100%', padding: 16,
+          background: 'var(--navy)', color: '#fff',
+          border: 'none', borderRadius: 'var(--r-cta)',
+          fontSize: 15, fontWeight: 600, cursor: 'pointer',
+          boxShadow: 'var(--shadow-cta)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          opacity: loading ? 0.85 : 1,
+        }}>
+          {loading && (
+            <span style={{
+              width: 16, height: 16, borderRadius: 16,
+              border: '2px solid rgba(255,255,255,0.4)',
+              borderTopColor: '#fff',
+              animation: 'spin 0.7s linear infinite',
+              display: 'inline-block',
+            }} />
+          )}
+          {loading ? 'Giriş yapılıyor…' : 'Giriş Yap'}
+        </button>
+      </form>
+
+      <div style={{ flex: 1 }} />
+
+      <div style={{
+        textAlign: 'center', fontSize: 13, color: 'var(--muted)',
+        paddingBottom: 16,
+      }}>
+        Hesabın yok mu?{' '}
+        <a href="#" style={{ color: 'var(--navy)', fontWeight: 600, textDecoration: 'none' }}>
+          Kayıt ol
+        </a>
+      </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <IOSDevice width={390} height={844}><Login /></IOSDevice>
+);
+</script>
+</body>
+</html>

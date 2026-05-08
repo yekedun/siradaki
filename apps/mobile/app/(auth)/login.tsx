@@ -11,6 +11,7 @@ import {
   Alert,
 } from "react-native";
 import { supabase } from "../../lib/supabase";
+import { T, R, Shadow } from "../../lib/theme";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -20,45 +21,56 @@ export default function LoginScreen() {
   async function handleLogin() {
     if (!email || !password) return;
     setLoading(true);
-
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      Alert.alert("Giriş Başarısız", error.message);
-    }
-    // On success, _layout.tsx auth listener handles navigation
+    if (error) Alert.alert("Giriş Başarısız", error.message);
     setLoading(false);
   }
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <View style={styles.card}>
-        <Text style={styles.title}>Berber Girişi</Text>
+      <View style={styles.inner}>
+        <BrandMark />
 
-        <TextInput
-          style={styles.input}
-          placeholder="E-posta"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoCorrect={false}
-        />
+        <Text style={styles.eyebrow}>BERBER · DÜKKAN PANELİ</Text>
+        <Text style={styles.title}>Giriş Yap</Text>
+        <Text style={styles.lead}>
+          Randevu panelini açmak için hesabına giriş yap.
+        </Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Şifre"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+        <View style={styles.field}>
+          <Text style={styles.label}>EMAIL</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="berber@dukkan.com"
+            placeholderTextColor={T.mutedAlt}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            autoCorrect={false}
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>ŞİFRE</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="••••••••"
+            placeholderTextColor={T.mutedAlt}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+        </View>
 
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[styles.button, (loading || !email || !password) && styles.buttonDisabled]}
           onPress={handleLogin}
           disabled={loading || !email || !password}
+          activeOpacity={0.9}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
@@ -66,57 +78,135 @@ export default function LoginScreen() {
             <Text style={styles.buttonText}>Giriş Yap</Text>
           )}
         </TouchableOpacity>
+
+        <View style={styles.spacer} />
+
+        <Text style={styles.footer}>
+          Hesabın yok mu? <Text style={styles.footerLink}>Kayıt ol</Text>
+        </Text>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
+function BrandMark() {
+  // 56×56 navy square with diagonal red stripe overlay
+  return (
+    <View style={brandStyles.outer}>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <View
+          key={i}
+          style={[
+            brandStyles.stripe,
+            { left: -20 + i * 14, transform: [{ rotate: "135deg" }] },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
+const brandStyles = StyleSheet.create({
+  outer: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: T.navy,
+    overflow: "hidden",
+    marginBottom: 24,
+    position: "relative",
+    ...Shadow.cta,
+  },
+  stripe: {
+    position: "absolute",
+    top: -20,
+    width: 4,
+    height: 96,
+    backgroundColor: "rgba(220,38,38,0.85)",
+  },
+});
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    backgroundColor: "#f9fafb",
-    padding: 24,
+    backgroundColor: T.bg,
   },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+  inner: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 88,
+    paddingBottom: 24,
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    color: T.red,
+    marginBottom: 6,
   },
   title: {
-    fontSize: 22,
+    fontSize: 30,
     fontWeight: "700",
-    marginBottom: 24,
-    color: "#111827",
+    letterSpacing: -0.5,
+    color: T.ink,
+    marginBottom: 8,
+  },
+  lead: {
+    fontSize: 14,
+    color: T.muted,
+    lineHeight: 21,
+    marginBottom: 32,
+  },
+  field: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 0.6,
+    color: T.muted,
+    textTransform: "uppercase",
+    marginBottom: 6,
   },
   input: {
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 10,
+    width: "100%",
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    marginBottom: 14,
-    backgroundColor: "#fff",
+    paddingVertical: 14,
+    backgroundColor: T.bg,
+    borderWidth: 1.5,
+    borderColor: T.line,
+    borderRadius: R.input,
+    fontSize: 14,
+    color: T.ink,
   },
   button: {
-    backgroundColor: "#2563eb",
-    borderRadius: 10,
-    paddingVertical: 14,
+    marginTop: 8,
+    width: "100%",
+    paddingVertical: 16,
+    backgroundColor: T.navy,
+    borderRadius: R.cta,
     alignItems: "center",
-    marginTop: 4,
+    justifyContent: "center",
+    ...Shadow.cta,
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
   buttonText: {
     color: "#fff",
     fontWeight: "600",
     fontSize: 15,
+  },
+  spacer: { flex: 1 },
+  footer: {
+    textAlign: "center",
+    fontSize: 13,
+    color: T.muted,
+    paddingBottom: 16,
+  },
+  footerLink: {
+    color: T.navy,
+    fontWeight: "600",
   },
 });

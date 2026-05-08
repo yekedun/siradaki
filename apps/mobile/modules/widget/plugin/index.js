@@ -129,6 +129,7 @@ function withWidgetAndroidSources(config) {
         "BarberWidgetProvider.kt",
         "BlockActionReceiver.kt",
         "NativeWidgetModule.kt",
+        "BarberWidgetPackage.kt",
       ]) {
         const from = path.join(srcDir, file);
         if (fs.existsSync(from)) {
@@ -139,6 +140,74 @@ function withWidgetAndroidSources(config) {
       // res/ alt-klasörlerini birleştir
       copyDir(path.join(srcDir, "res"), resDir);
 
+      return cfg;
+    },
+  ]);
+}
+
+// ─────────────────────────────────────────────
+// Android: MainApplication.kt'ye BarberWidgetPackage register et
+// ─────────────────────────────────────────────
+function withWidgetAndroidPackageRegister(config) {
+  return withDangerousMod(config, [
+    "android",
+    async (cfg) => {
+      const candidates = [
+        "app/src/main/java/com/berberapp/MainApplication.kt",
+        "app/src/main/java/com/berberapp/MainApplication.java",
+      ];
+      let target = null;
+      for (const c of candidates) {
+        const p = path.join(cfg.modRequest.platformProjectRoot, c);
+        if (fs.existsSync(p)) { target = p; break; }
+      }
+      if (!target) {
+        console.warn("[withBarberWidget] MainApplication not found — skipping package register");
+        return cfg;
+      }
+
+      let src = fs.readFileSync(target, "utf8");
+      const isKotlin = target.endsWith(".kt");
+
+      const importLine = isKotlin
+        ? "import com.berberapp.widget.BarberWidgetPackage"
+        : "import com.berberapp.widget.BarberWidgetPackage;";
+
+      // Import ekle (yoksa)
+      if (!src.includes("BarberWidgetPackage")) {
+        // Son `import` satırından sonraya ekle
+        src = src.replace(
+          /((?:^|\n)import [^\n]+\n)(?!.*^import)/s,
+          `$1${importLine}\n`
+        );
+      }
+
+      // getPackages() listesine ekle
+      // Kotlin: PackageList(this).packages.apply { add(BarberWidgetPackage()) }
+      // Java:   List<ReactPackage> packages = new PackageList(this).getPackages(); packages.add(new BarberWidgetPackage());
+      if (!src.includes("BarberWidgetPackage()")) {
+        if (isKotlin) {
+          src = src.replace(
+            /(PackageList\(this\)\.packages)/,
+            "$1.apply { add(BarberWidgetPackage()) }"
+          );
+          // Eğer .apply zaten varsa (örn. `.packages.apply { ... }`), o bloğa ekle
+          if (!src.includes("BarberWidgetPackage()")) {
+            src = src.replace(
+              /(PackageList\(this\)\.packages\.apply\s*\{)/,
+              "$1\n          add(BarberWidgetPackage())"
+            );
+          }
+        } else {
+          // Java
+          src = src.replace(
+            /(List<ReactPackage>\s+packages\s*=\s*new\s+PackageList\(this\)\.getPackages\(\);)/,
+            "$1\n      packages.add(new BarberWidgetPackage());"
+          );
+        }
+      }
+
+      fs.writeFileSync(target, src, "utf8");
       return cfg;
     },
   ]);
@@ -206,6 +275,7 @@ module.exports = function withBarberWidget(config) {
   config = withWidgetAndroidManifest(config);
   config = withWidgetAndroidGradle(config);
   config = withWidgetAndroidSources(config);
+  config = withWidgetAndroidPackageRegister(config);
   config = withWidgetIosEntitlements(config);
   config = withWidgetIosSources(config);
   return config;

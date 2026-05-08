@@ -16,6 +16,7 @@
       "bundleIdentifier": "com.berberapp",
       "entitlements": {
         "com.apple.security.application-groups": [
+          "group.com.berberapp",
           "group.com.berberapp"
         ]
       }
@@ -43,6 +44,12 @@
         "projectId": "25ac450c-8b07-4703-805f-3d4fea1b8db7"
       }
     },
-    "owner": "yekedun"
+    "owner": "yekedun",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/25ac450c-8b07-4703-805f-3d4fea1b8db7"
+    }
   }
 }

@@ -846,3 +846,290 @@ const channel = supabase
 ---
 
 *Bu dosya yalnızca denetim bulgularını içermektedir. Herhangi bir kod değişikliği yapılmamıştır.*
+
+---
+---
+
+# Audit #2 — 2026-05-07 (Post-Track-2 / calendar-kit migration)
+
+> Track 2 migration sonrası (mobile agenda → `@howljs/calendar-kit`, custom date picker → `@react-native-community/datetimepicker`, `date-fns` adoption) yapılan ikinci optimizasyon denetimi. Bazı eski bulgular (F-04 mobile limit, F-05 mobile UPDATE Realtime) Track 2 yeniden yazımında REGRESYONA uğradı — tekrar listeleniyor. Yeni bulgular kit ile gelen kalıpların etkisiyle.
+
+## A2-1) Optimization Summary (yeni bulgular)
+
+**Genel sağlık (post-Track-2):** Calendar-kit migration'ı kullanıcı UX'ini büyük ölçüde geliştirdi (drag-drop, pinch-zoom, native pickers). Ancak yeniden-yazımda 2026-05-05 audit'inde uygulanan iki performans iyileştirmesi geri alındı; 1 yeni medium-severity issue eklendi (remount stratejisi). Dev experience yan etkiler (dead code, unused imports) hâlâ duruyor.
+
+**Top 3 yeni yüksek-etki:**
+
+1. **F-2A · Mobile fetch range 37 gün → 1 gün** — Track 2 yeniden yazımında 2026-05-05 audit'inin F-04 (limit + 30 gün pencere) iyileştirmesi geri döndü. Şu anda `addDays(today, -7)` → `addDays(today, +30)` arası tüm randevular her Realtime event'inde yeniden çekiliyor. Tek-gün UI ile 37x bandwidth + DB read fazlalığı.
+2. **F-2B · CalendarContainer remount tüm gün-değişiminde** — Defansif olarak `key={selectedDay.toISOString()}` konuldu; calendar-kit non-trivial component (reanimated worklets + N provider). Pinch-zoom level + scroll position state kaybı + 50-150ms render maliyeti. Remount sebebi crash şüphesi → defansif fix uygulandı, ama kalıcı olmamalı.
+3. **F-2C · `database.types.ts` ikiz drift** — `packages/db/src/database.types.ts` (428) ile `supabase/functions/_shared/database.types.ts` (428) elle senkron. 2026-05-05 audit'inde D-01 olarak nominate edilmiş ama uygulanmamış. Migration sırasında kaçırılma riski.
+
+## A2-2) Findings (yeni)
+
+### F-2A · Mobile: 37-günlük fetch + tek-gün UI (REGRESYON)
+
+- **Category:** Network / DB
+- **Severity:** High
+- **Impact:** Bandwidth ~37x, latency artar, DB read CPU
+- **Evidence:** `apps/mobile/app/(app)/index.tsx:96-110` post-Track-2. `fetchRange` her gün-değişiminde + her Realtime event'inde 37 günü çekiyor. `.limit()` kalkmış.
+- **Why it's inefficient:** UI sadece 1 gün gösteriyor; kalan 36 gün boş yere parse + serialize ediliyor. Realtime event'lerinde full re-fetch (delta merge yok).
+- **Recommended fix:**
+  ```ts
+  const fetchDay = useCallback(async (bid: string, day: Date) => {
+    const dayStart = startOfDay(day).toISOString();
+    const dayEnd = addDays(startOfDay(day), 1).toISOString();
+    const [{ data: appts }, { data: blks }] = await Promise.all([
+      supabase
+        .from("appointments")
+        .select("id, customer_name, customer_phone, starts_at, ends_at, status, service_id, services(name, duration_min)")
+        .eq("barber_id", bid)
+        .gte("starts_at", dayStart)
+        .lt("starts_at", dayEnd)
+        .order("starts_at"),
+      supabase
+        .from("blocks")
+        .select("id, starts_at, ends_at")
+        .eq("barber_id", bid)
+        .gte("starts_at", dayStart)
+        .lt("starts_at", dayEnd),
+    ]);
+    setAppointments((appts as unknown as Appointment[]) ?? []);
+    setBlocks((blks as BlockSlot[]) ?? []);
+    setLoading(false);
+  }, []);
+  ```
+  Plus: Realtime callback'lerini delta-merge yap (full fetchDay yerine payload'tan tek satır apply et).
+- **Tradeoff:** Realtime payload'ında `services` join verisi yok — UPDATE'de mevcut state'ten korumak gerek (eski impl'da örneği vardı).
+- **Expected impact:** %95+ ağ trafiği azalır; gün-swipe latency'si network-bound olmaktan çıkar.
+- **Removal Safety:** Likely Safe (eski impl'da çalışıyordu).
+- **Reuse Scope:** local file.
+
+### F-2B · Mobile: CalendarContainer `key={selectedDay}` ile her gün remount
+
+- **Category:** Frontend / CPU
+- **Severity:** Medium
+- **Impact:** Render latency 50-150ms, kullanıcı state kaybı (zoom, scroll pos)
+- **Evidence:** `apps/mobile/app/(app)/index.tsx:236` `<CalendarContainer key={selectedDay.toISOString()}>`.
+- **Why it's inefficient:** Calendar-kit non-trivial: reanimated SharedValue'lar, multiple Provider'lar, gesture-handler bind. Defansif olarak konuldu (build #4'te crash sebebini izole etmek için), kalıcı değil.
+- **Recommended fix:** Build #4 stabilse `useRef<CalendarKitHandle>(null)` ile ref tut, `useEffect` içinde `calRef.current?.goToDate({ date: selectedDay, animatedDate: false })`. Remount kaldır.
+- **Tradeoff:** Crash şüphesi remount'la kapalıydı; ref restore edildiğinde crash dönebilir. Kit'in `unavailableHours` shape veya `eventContainerStyle.borderLeftWidth` çelişkisi olasıydı (defansif fix bunları zaten kaldırdı).
+- **Expected impact:** Gün-swipe ~50-150ms hızlanır; UX akıcı.
+- **Removal Safety:** Needs Verification (build #4 sonucundan sonra).
+- **Reuse Scope:** local file.
+
+### F-2C · `database.types.ts` ikiz drift (kalıcı, henüz uygulanmamış)
+
+- **Category:** Maintainability / Build
+- **Severity:** Medium
+- **Impact:** Schema migration'da iki dosya elle senkron, drift'te silent contract violation
+- **Evidence:** `packages/db/src/database.types.ts` (428) + `supabase/functions/_shared/database.types.ts` (428). Audit #1'de D-01 olarak nominate, uygulanmadı.
+- **Recommended fix (basit yol):**
+  ```sh
+  # supabase/functions/_sync-types.sh
+  #!/bin/bash
+  set -e
+  cp packages/db/src/database.types.ts supabase/functions/_shared/database.types.ts
+  echo "✓ database.types synced"
+  ```
+  `package.json`: `"db:sync": "bash supabase/functions/_sync-types.sh"`. Deploy öncesi çağır. CI'da `cmp -s` ile drift gate.
+- **Tradeoff:** Tek satır kopya; daha kalıcı çözüm `npm:` specifier (D-01).
+- **Expected impact:** Drift bug-prevention.
+- **Removal Safety:** Safe.
+- **Reuse Scope:** repo-wide.
+
+### F-2D · Mobile: `Clipboard` import edildi ama kullanılmıyor
+
+- **Category:** Dead Code
+- **Severity:** Low
+- **Evidence:** `apps/mobile/app/(app)/settings.tsx:11` `import { Clipboard } from "react-native"` — dosyada hiç kullanılmıyor.
+- **Why:** RN core `Clipboard` deprecated, console warning üretir.
+- **Recommended fix:** İmportu sil. İleride gerekirse `expo-clipboard`.
+- **Removal Safety:** Safe.
+- **Reuse Scope:** local.
+
+### F-2E · Mobile: `select("*")` randevular için aşırı kolon
+
+- **Category:** Network / DB
+- **Severity:** Low (F-2A ile birleşince Medium)
+- **Evidence:** `apps/mobile/app/(app)/index.tsx:99` `.select("*, services(name, duration_min)")`.
+- **Why:** UI sadece id/customer_name/customer_phone/starts_at/ends_at/status + services join kullanıyor. `notes`, `created_via`, `created_at`, `updated_at` boşa geliyor.
+- **Recommended fix:** Açıkça listele (F-2A patch'inde dahil edildi).
+- **Expected impact:** ~30-40% daha az JSON payload.
+- **Removal Safety:** Safe.
+- **Reuse Scope:** local.
+
+### F-2F · Mobile: `block_slots` üzerinden okuma — `blocks` daha doğru
+
+- **Category:** Architecture
+- **Severity:** Low
+- **Evidence:** `apps/mobile/app/(app)/index.tsx` `block_slots` SELECT (anon-readable mirror, public booking widget için), oysa mobile authenticated barber → `blocks` direkt sorgu.
+- **Why:** Tutarsız okuma/yazma (insert `blocks`'a yapılıyor zaten). Realtime abonesi de `blocks`'a olabilir (RLS + own-row).
+- **Recommended fix:** Mobile referansları `block_slots` → `blocks`. RLS policy'sinin barber-self-select açık olduğunu doğrula.
+- **Removal Safety:** Needs Verification.
+- **Reuse Scope:** local.
+
+### F-2G · BookingFlow: appointment_slots UPDATE handler eksik (Audit #1'den kalmış)
+
+- **Category:** Reliability
+- **Severity:** Medium
+- **Impact:** Web booking widget randevu reschedule'da stale data → kullanıcı dolu saati boş görür → exclusion violation
+- **Evidence:** `apps/web/src/app/[slug]/BookingFlow.tsx:127-150` — appointment_slots için sadece INSERT + DELETE handler. blocks için UPDATE var, appointment_slots'ta yok. Tutarsız.
+- **Recommended fix:** UPDATE handler ekle (block_slots'taki örneğin aynısı, id-bazlı filter).
+- **Removal Safety:** Safe.
+- **Reuse Scope:** local.
+
+### F-2H · BookingFlow: blocks UPDATE handler key olarak `(starts_at, ends_at)` kullanıyor
+
+- **Category:** Reliability (corner case)
+- **Severity:** Low
+- **Evidence:** `apps/web/src/app/[slug]/BookingFlow.tsx:109-122`. Filter `o.starts_at === oldRow.starts_at && o.ends_at === oldRow.ends_at`.
+- **Why:** Primary key (`block_id`) kullanılmıyor. Aynı starts_at + ends_at değerlerine sahip iki blok varsa UPDATE her ikisini de filter-out eder.
+- **Recommended fix:** `OccupiedRange` tipine opsiyonel `id` ekle, payload'tan `block_id`'yi taşı, filter id-bazlı yap.
+- **Removal Safety:** Likely Safe.
+- **Reuse Scope:** module (`@berber/shared/types`).
+
+### F-2I · Edge fn `book-appointment`: ardışık iki SELECT
+
+- **Category:** DB
+- **Severity:** Low
+- **Evidence:** `supabase/functions/book-appointment/index.ts:30-50`. `barbers` SELECT → `services` SELECT ardışık.
+- **Why:** Aynı bağlantı üstünde join ile tek roundtrip mümkün; ya da `Promise.all` (ama service barber.id'ye bağlı, paralelleşmez — join doğru cevap).
+- **Recommended fix:**
+  ```ts
+  const { data: row } = await supabase
+    .from("services")
+    .select("id, duration_min, barbers!inner(id, display_name, timezone, working_hours, slug)")
+    .eq("id", service_id)
+    .eq("is_active", true)
+    .eq("barbers.slug", slug)
+    .single();
+  ```
+- **Tradeoff:** Hata mesajı daha az spesifik ("berber veya hizmet bulunamadı").
+- **Expected impact:** ~30-50ms p50.
+- **Removal Safety:** Likely Safe.
+- **Reuse Scope:** local.
+
+### F-2J · Mobile: `slot-utils.ts` `Intl.DateTimeFormat` her çağrıda yeni instance
+
+- **Category:** CPU (micro)
+- **Severity:** Low
+- **Evidence:** `packages/shared/src/slot-utils.ts:84` `localTimeToUTC` her çağrıda new Intl.DateTimeFormat.
+- **Recommended fix:** Module-level `Map<timezone, Intl.DateTimeFormat>` cache.
+- **Expected impact:** Marginal (~%5-10 slot hesabı). Yüksek-traffic'te kümülatif.
+- **Removal Safety:** Safe.
+- **Reuse Scope:** module (`@berber/shared`).
+
+### F-2K · Mobile: login/settings/block hâlâ blue (#2563eb), V5 değil
+
+- **Category:** UI Consistency / Maintainability
+- **Severity:** Low
+- **Evidence:** `apps/mobile/app/(auth)/login.tsx`, `apps/mobile/app/(app)/settings.tsx`, `apps/mobile/app/(app)/block.tsx` — eski blue accent. Tutarsızlık. T tokens object'i shared edilmemiş, her dosyada inline.
+- **Recommended fix:** `apps/mobile/lib/theme.ts` token export'u, tüm mobile dosyalarından import. Renkleri V5'e (terracotta #C2410C) çevir.
+- **Removal Safety:** Safe (visual review gerek).
+- **Reuse Scope:** mobile-wide.
+
+### F-2L · Mobile: `fetchRange` race guard yok
+
+- **Category:** Concurrency
+- **Severity:** Low (rare)
+- **Evidence:** Cancellation token'ı yok; eski (slow) cevap geç gelirse yeni state'i (Realtime ile gelmiş) override edebilir.
+- **Recommended fix:** `useRef<number>(0)` request-id, response geldiğinde id eşleşmiyorsa drop. F-2A delta-merge'e geçince zaten azalan risk.
+- **Removal Safety:** Safe.
+- **Reuse Scope:** local.
+
+### F-2M · BookingFlow: Realtime block_slots vs appointment_slots — kod duplikasyonu
+
+- **Category:** Code Reuse
+- **Severity:** Low
+- **Evidence:** `apps/web/src/app/[slug]/BookingFlow.tsx:83-152` — iki tablo için neredeyse aynı INSERT/DELETE handler.
+- **Recommended fix:** `subscribeToOccupied(supabase, channel, table, barberId, setOccupied)` helper.
+- **Reuse Scope:** local.
+
+### F-2N · Push notification yok (product-level gap)
+
+- **Category:** Reliability / UX
+- **Severity:** Medium (product)
+- **Impact:** Realtime sadece app foreground'dayken. Müşteri web'den booking aldığında barber'ın haberi yok.
+- **Recommended fix:** `expo-notifications` + push token register on login + book-appointment edge fn'sında push gönder. ~1 günlük iş.
+- **Reuse Scope:** mobile + edge fn.
+
+## A2-3) Quick Wins (yeni — bu audit için)
+
+| # | Bulgu | Süre | ROI |
+|---|---|---|---|
+| 1 | F-2D — Unused Clipboard import sil | 1 dk | ⭐ |
+| 2 | F-2E — Explicit select kolonları | 10 dk | ⭐⭐⭐ |
+| 3 | F-2C — database.types sync script | 10 dk | ⭐⭐⭐⭐ |
+| 4 | F-2J — Intl.DateTimeFormat cache | 5 dk | ⭐ |
+| 5 | F-2A — Mobile fetch range 1 güne (REGRESYON FIX) | 30-45 dk | ⭐⭐⭐⭐⭐ |
+| 6 | F-2K — Theme tokens unify (V5 mobile-wide) | 30 dk | ⭐⭐⭐ |
+| 7 | F-2I — book-appointment join | 15 dk | ⭐⭐⭐ |
+
+**Toplam:** ~2 saat, etkin ROI sıralı.
+
+## A2-4) Deeper (bu audit için)
+
+1. **F-2B** — Build #4 stabilse remount→ref dönüşü.
+2. **F-2N** — Push notifications.
+3. **F-2G + F-2H** — BookingFlow Realtime correctness fix.
+4. **F-2M** — Realtime helper extract.
+
+## A2-5) Validation Plan (yeni bulgular için)
+
+**F-2A doğrulama:**
+- Network panel: Day-strip swipe x10, her tıklama 1 fetch (sadece o gün).
+- Realtime smoke: Web'den booking → mobile'da fetch tetiklenmemeli, tek satır listeye düşmeli.
+- Profile: Hardcoded gün için fetch latency before/after. Beklenen: %95+ azalma.
+
+**F-2B doğrulama (build #4 sonrası):**
+- Pinch-zoom yap → günü değiştir → eski güne dön. Zoom level korunmalı.
+- React DevTools Profiler ile gün-swipe render süresi (5-10ms hedef).
+
+**F-2C doğrulama:**
+- Schema migration sonrası `db:sync` çalıştır, `cmp -s` her iki dosya eşit.
+- Pre-commit hook'una `cmp` koy.
+
+**F-2I doğrulama:**
+- Supabase Edge Function Insights → `book-appointment` average duration (100-150ms → 50-80ms hedef).
+
+## A2-6) Önerilen sıra (Audit #2)
+
+Build #4 doğrulaması ile paralel:
+F-2D → F-2E → F-2C → F-2J → F-2A → F-2K → F-2I → (build #4 stable) → F-2B → F-2G/F-2H → F-2M → F-2N.
+
+---
+
+*Audit #2 yalnızca denetim bulgularını içermektedir. Kod değişikliği yapılmamıştır.*
+
+---
+
+## A2-7) Audit #2 Uygulama Özeti — 2026-05-07
+
+Aşağıdaki bulgular bu denetimde uygulandı. `pnpm type-check` üç workspace'te de yeşil:
+
+| ID | Durum | Dosya(lar) |
+|---|---|---|
+| F-2A | ✅ UYGULANDI | `apps/mobile/app/(app)/index.tsx` — `fetchDay()` 1 güne indirildi, Realtime delta-merge (full re-fetch yok) |
+| F-2C | ✅ UYGULANDI | `supabase/functions/_sync-types.sh` (yeni), `package.json` `db:sync` + `db:check` script'leri |
+| F-2D | ✅ UYGULANDI | `apps/mobile/app/(app)/settings.tsx` — unused `Clipboard` import silindi |
+| F-2E | ✅ UYGULANDI | `apps/mobile/app/(app)/index.tsx` — `select("*")` → explicit `APPT_COLS` |
+| F-2F | ✅ UYGULANDI | `apps/mobile/app/(app)/index.tsx` — `block_slots` → `blocks` (mobile authenticated path için doğru tablo) |
+| F-2G | ✅ UYGULANDI | `apps/web/src/app/[slug]/BookingFlow.tsx` — `appointment_slots` için UPDATE handler eklendi |
+| F-2H | ✅ UYGULANDI | `apps/web/src/app/[slug]/BookingFlow.tsx` + `packages/shared/src/types.ts` — UPDATE/DELETE filter id-bazlı (`OccupiedRange.id?`) |
+| F-2I | ✅ UYGULANDI | `supabase/functions/book-appointment/index.ts` — barbers + services tek `inner` join'de |
+| F-2J | ✅ UYGULANDI | `packages/shared/src/slot-utils.ts` — module-level `Intl.DateTimeFormat` cache (timezone-keyed). Edge fn'lar `import_map.json` ile aynı kaynaktan import ettiği için Deno tarafına da yansır |
+| F-2K | ✅ UYGULANDI | `apps/mobile/lib/theme.ts` (yeni) — `T` token export. login/settings/block/(app)/_layout.tsx tüm mobil ekranlar V5 token'larına geçirildi |
+| F-2L | ✅ UYGULANDI | `apps/mobile/app/(app)/index.tsx` — `reqIdRef` ile fetch race guard |
+| F-2M | ✅ UYGULANDI | `apps/web/src/app/[slug]/BookingFlow.tsx` — `subscribeOccupied()` helper (block_slots + appointment_slots tek pattern'de) |
+| **F-2B** | ⏳ Bekliyor | Build #4 stabilse `key={selectedDay}` remount kaldırılıp ref + `goToDate()` pattern'ine dönülecek |
+| **F-2N** | ⏳ Bekliyor | Push notifications — ~1 günlük iş, ayrı sprint |
+
+### Audit #1'den hâlâ bekleyenler
+
+- **D-01** — Slot algoritması ortak kaynak: araştırma sırasında ortaya çıktı ki Audit #1'in varsaydığı duplicate `slot-utils.ts` yok. Edge fn'lar `supabase/functions/import_map.json` ile zaten `packages/shared/src/slot-utils.ts`'i direkt import ediyor → tek kaynak. Sadece `database.types.ts` ikiz idi, o da F-2C ile çözüldü.
+
+### Doğrulama
+
+- **Workspace type-check:** `pnpm type-check` — 3 paket başarılı (1.9s).
+- **db:sync sanity:** `pnpm db:check` — şu an in-sync ✓.
+- **Build #3 / #4:** Native dep değişikliği yok (sadece JS), bir sonraki APK için **OTA push yeterli** olacak (build #4 expo-updates içeriyorsa). Aksi halde build #5 gerek.

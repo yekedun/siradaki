@@ -18,11 +18,11 @@ export function SlotGrid({
 }: SlotGridProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+      <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
         {Array.from({ length: 12 }).map((_, i) => (
           <div
             key={i}
-            className="h-10 animate-pulse rounded-lg bg-gray-200"
+            className="h-11 animate-pulse rounded-input bg-hair opacity-50"
           />
         ))}
       </div>
@@ -33,7 +33,7 @@ export function SlotGrid({
 
   if (slots.length === 0) {
     return (
-      <p className="text-sm text-gray-400">
+      <p className="text-sm text-mutedAlt">
         Bu gün için çalışma saati tanımlanmamış.
       </p>
     );
@@ -41,14 +41,14 @@ export function SlotGrid({
 
   if (available.length === 0) {
     return (
-      <p className="text-sm text-gray-400">
+      <p className="text-sm text-mutedAlt">
         Bu günde müsait saat kalmadı. Başka bir gün seçin.
       </p>
     );
   }
 
   return (
-    <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+    <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
       {slots.map((slot) => {
         const timeLabel = formatSlotTime(slot.startsAt, timezone);
         const isSelected =
@@ -59,7 +59,7 @@ export function SlotGrid({
           return (
             <div
               key={slot.startsAt.toISOString()}
-              className="flex h-10 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400 line-through"
+              className="flex h-11 items-center justify-center rounded-input bg-surfaceAlt text-[13px] font-semibold tabular-nums text-mutedAlt line-through"
               title="Dolu"
             >
               {timeLabel}
@@ -71,10 +71,10 @@ export function SlotGrid({
           <button
             key={slot.startsAt.toISOString()}
             onClick={() => onSelect(slot)}
-            className={`flex h-10 items-center justify-center rounded-lg text-xs font-medium transition-all ${
+            className={`flex h-11 items-center justify-center rounded-input border text-[13px] tabular-nums transition-colors ${
               isSelected
-                ? "bg-blue-600 text-white ring-2 ring-blue-400"
-                : "bg-white border border-gray-200 text-gray-800 hover:border-blue-400 hover:bg-blue-50"
+                ? "border-navy bg-navy font-bold text-white"
+                : "border-hair bg-surface font-semibold text-ink hover:border-navy/40"
             }`}
           >
             {timeLabel}

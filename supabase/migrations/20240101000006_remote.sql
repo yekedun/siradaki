@@ -1,0 +1,2 @@
+-- Bu migration remote veritabanında zaten uygulanmış durumdadır.
+-- supabase migration repair ile history senkronize edilmiştir.
