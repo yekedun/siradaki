@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import type {
   ShopPublic,
-  BarberPublic,
+  StaffPublic,
   ServicePublic,
   Slot,
 } from "@berber/shared/types";
@@ -14,11 +14,11 @@ import { BookingModal } from "@/components/BookingModal";
 
 interface BookingFlowProps {
   shop: ShopPublic;
-  barbers: BarberPublic[];
+  staff: StaffPublic[];
   services: ServicePublic[];
 }
 
-type BarberSelection = BarberPublic | "any";
+type StaffSelection = StaffPublic | "any";
 
 interface SlotItem {
   starts_at: string;
@@ -42,9 +42,9 @@ function initials(name: string): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]!.toUpperCase()).join("");
 }
 
-export function BookingFlow({ shop, barbers, services }: BookingFlowProps) {
+export function BookingFlow({ shop, staff, services }: BookingFlowProps) {
   const [selectedService, setSelectedService]     = useState<ServicePublic | null>(null);
-  const [selectedBarber, setSelectedBarber]       = useState<BarberSelection | null>(null);
+  const [selectedStaff, setSelectedStaff]         = useState<StaffSelection | null>(null);
   const [selectedDate, setSelectedDate]           = useState<string>(() => ymd(new Date()));
   const [serverSlots, setServerSlots]             = useState<SlotItem[]>([]);
   const [selectedSlot, setSelectedSlot]           = useState<Slot | null>(null);
@@ -53,22 +53,22 @@ export function BookingFlow({ shop, barbers, services }: BookingFlowProps) {
 
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
-  const selectedBarberId = selectedBarber === null
+  const selectedStaffId = selectedStaff === null
     ? null
-    : selectedBarber === "any"
+    : selectedStaff === "any"
     ? "any"
-    : selectedBarber.id;
+    : selectedStaff.id;
 
   // Slot'ları sunucudan çek
   const fetchSlots = useCallback(() => {
-    if (!selectedService || selectedBarberId === null) return;
+    if (!selectedService || selectedStaffId === null) return;
     let cancelled = false;
     setIsLoadingSlots(true);
     const params = new URLSearchParams({
       shop_slug:  shop.slug,
       date:       selectedDate,
       service_id: selectedService.id,
-      barber_id:  selectedBarberId,
+      staff_id:   selectedStaffId ?? "",
     });
     fetch(`/api/availability?${params}`)
       .then((r) => r.json())
@@ -79,7 +79,7 @@ export function BookingFlow({ shop, barbers, services }: BookingFlowProps) {
       .catch(() => { if (!cancelled) setServerSlots([]); })
       .finally(() => { if (!cancelled) setIsLoadingSlots(false); });
     return () => { cancelled = true; };
-  }, [selectedService, selectedBarberId, selectedDate, shop.slug]);
+  }, [selectedService, selectedStaffId, selectedDate, shop.slug]);
 
   useEffect(() => {
     const cleanup = fetchSlots();
@@ -89,36 +89,36 @@ export function BookingFlow({ shop, barbers, services }: BookingFlowProps) {
   // selectedSlot'u slot listesi değişince sıfırla
   useEffect(() => {
     setSelectedSlot(null);
-  }, [selectedService, selectedBarber, selectedDate]);
+  }, [selectedService, selectedStaff, selectedDate]);
 
   // Realtime: slot değişince yeniden çek
   useEffect(() => {
-    if (!selectedService || selectedBarberId === null) return;
+    if (!selectedService || selectedStaffId === null) return;
 
     // Hangi usta ID'lerine subscribe olacağız?
-    const targetBarberIds =
-      selectedBarberId === "any"
-        ? barbers.map((b) => b.id)
-        : [selectedBarberId];
+    const targetStaffIds =
+      selectedStaffId === "any"
+        ? staff.map((b) => b.id)
+        : [selectedStaffId];
 
-    const channel = supabase.channel(`slots:${shop.id}:${selectedBarberId}`);
+    const channel = supabase.channel(`slots:${shop.id}:${selectedStaffId}`);
 
-    for (const bid of targetBarberIds) {
+    for (const bid of targetStaffIds) {
       channel.on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "appointment_slots", filter: `barber_id=eq.${bid}` },
+        { event: "*", schema: "public", table: "appointment_slots", filter: `staff_id=eq.${bid}` },
         () => fetchSlots()
       );
       channel.on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "block_slots", filter: `barber_id=eq.${bid}` },
+        { event: "*", schema: "public", table: "block_slots", filter: `staff_id=eq.${bid}` },
         () => fetchSlots()
       );
     }
 
     channel.subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [selectedBarberId, selectedService, barbers, shop.id, supabase, fetchSlots]);
+  }, [selectedStaffId, selectedService, staff, shop.id, supabase, fetchSlots]);
 
   // serverSlots → Slot[]
   const slots: Slot[] = useMemo(
@@ -165,7 +165,7 @@ export function BookingFlow({ shop, barbers, services }: BookingFlowProps) {
           selected={selectedService}
           onSelect={(s) => {
             setSelectedService(s);
-            setSelectedBarber(null);
+            setSelectedStaff(null);
           }}
         />
       </Section>
@@ -175,21 +175,21 @@ export function BookingFlow({ shop, barbers, services }: BookingFlowProps) {
         <Section step={2} title="Usta Seç">
           <div className="flex flex-wrap gap-2">
             {/* Fark Etmez */}
-            <BarberCard
+            <StaffCard
               name="Fark Etmez"
-              subtitle="Uygun ustaya atanır"
+              subtitle="Uygun personele atanır"
               avatarUrl={null}
-              selected={selectedBarber === "any"}
-              onSelect={() => setSelectedBarber("any")}
+              selected={selectedStaff === "any"}
+              onSelect={() => setSelectedStaff("any")}
               isAny
             />
-            {barbers.map((b) => (
-              <BarberCard
+            {staff.map((b) => (
+              <StaffCard
                 key={b.id}
-                name={b.display_name}
-                avatarUrl={b.avatar_url}
-                selected={selectedBarber !== "any" && selectedBarber?.id === b.id}
-                onSelect={() => setSelectedBarber(b)}
+                name={b.name}
+                avatarUrl={null}
+                selected={selectedStaff !== "any" && selectedStaff?.id === b.id}
+                onSelect={() => setSelectedStaff(b)}
               />
             ))}
           </div>
@@ -197,7 +197,7 @@ export function BookingFlow({ shop, barbers, services }: BookingFlowProps) {
       )}
 
       {/* Adım 3: Tarih */}
-      {selectedService && selectedBarber !== null && (
+      {selectedService && selectedStaff !== null && (
         <Section step={3} title="Tarih">
           <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
             {dateOptions.map((d) => {
@@ -230,7 +230,7 @@ export function BookingFlow({ shop, barbers, services }: BookingFlowProps) {
       )}
 
       {/* Adım 4: Saat */}
-      {selectedService && selectedBarber !== null && (
+      {selectedService && selectedStaff !== null && (
         <Section step={4} title="Saat">
           <SlotGrid
             slots={slots}
@@ -257,11 +257,11 @@ export function BookingFlow({ shop, barbers, services }: BookingFlowProps) {
         <BookingModal
           shopSlug={shop.slug}
           shopName={shop.display_name}
-          barberId={selectedBarberId === "any" ? null : (selectedBarberId ?? null)}
-          barberName={
-            selectedBarber === "any" || selectedBarber === null
-              ? "Uygun Usta"
-              : selectedBarber.display_name
+          staffId={selectedStaffId === "any" ? null : (selectedStaffId ?? null)}
+          staffName={
+            selectedStaff === "any" || selectedStaff === null
+              ? "Uygun Personel"
+              : selectedStaff.name
           }
           service={selectedService}
           slot={selectedSlot}
@@ -274,7 +274,7 @@ export function BookingFlow({ shop, barbers, services }: BookingFlowProps) {
   );
 }
 
-function BarberCard({
+function StaffCard({
   name,
   subtitle,
   avatarUrl,

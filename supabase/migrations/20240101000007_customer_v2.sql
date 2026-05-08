@@ -7,7 +7,7 @@
 ALTER TABLE public.barbers
   ADD COLUMN IF NOT EXISTS shop_slug TEXT;
 
-UPDATE public.barbers SET shop_slug = slug WHERE shop_slug IS NULL;
+--UPDATE public.barbers SET shop_slug = slug WHERE shop_slug IS NULL;
 
 -- is_active kolonu ekle (yoksa)
 ALTER TABLE public.barbers
@@ -32,18 +32,23 @@ CREATE TABLE IF NOT EXISTS public.customer_profiles (
 
 ALTER TABLE public.customer_profiles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "customer_profiles_own_read" ON public.customer_profiles;
 CREATE POLICY "customer_profiles_own_read"   ON public.customer_profiles
   FOR SELECT USING (user_id = auth.uid());
+DROP POLICY IF EXISTS "customer_profiles_own_insert" ON public.customer_profiles;
 CREATE POLICY "customer_profiles_own_insert" ON public.customer_profiles
   FOR INSERT WITH CHECK (user_id = auth.uid());
+DROP POLICY IF EXISTS "customer_profiles_own_update" ON public.customer_profiles;
 CREATE POLICY "customer_profiles_own_update" ON public.customer_profiles
   FOR UPDATE USING (user_id = auth.uid());
 
 -- 4. Randevu RLS: müşteri sadece kendi randevularını okuyabilir
+DROP POLICY IF EXISTS "appointments_customer_select" ON public.appointments;
 CREATE POLICY "appointments_customer_select" ON public.appointments
   FOR SELECT USING (customer_user_id = auth.uid());
 
 -- 5. Randevu RLS: müşteri onaylı+gelecekteki randevusunu iptal edebilir
+DROP POLICY IF EXISTS "appointments_customer_cancel" ON public.appointments;
 CREATE POLICY "appointments_customer_cancel" ON public.appointments
   FOR UPDATE
   USING (
@@ -60,6 +65,7 @@ BEGIN
     SELECT 1 FROM pg_policies
     WHERE tablename = 'barbers' AND policyname = 'barbers_public_read'
   ) THEN
+    DROP POLICY IF EXISTS "barbers_public_read" ON public.barbers;
     CREATE POLICY "barbers_public_read" ON public.barbers
       FOR SELECT USING (true);
   END IF;
@@ -72,6 +78,7 @@ BEGIN
     SELECT 1 FROM pg_policies
     WHERE tablename = 'services' AND policyname = 'services_public_read_active'
   ) THEN
+    DROP POLICY IF EXISTS "services_public_read_active" ON public.services;
     CREATE POLICY "services_public_read_active" ON public.services
       FOR SELECT USING (is_active = true);
   END IF;

@@ -26,9 +26,9 @@ function durationMin(start: string, end: string): number {
   return Math.max(0, Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000));
 }
 
-interface Barber { id: string; display_name: string }
+interface Staff { id: string; name: string }
 interface Appt {
-  id: string; barber_id: string;
+  id: string; staff_id: string;
   customer_name: string; starts_at: string; ends_at: string;
   status: string;
   services: { name: string } | null;
@@ -36,12 +36,12 @@ interface Appt {
 
 export default function OwnerAgenda() {
   const { shopId } = useUserRole();
-  const [barbers, setBarbers]   = useState<Barber[]>([]);
+  const [staff, setStaff]       = useState<Staff[]>([]);
   const [appts, setAppts]       = useState<Appt[]>([]);
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date>(() => startOfDay(new Date()));
-  const [modalBarber, setModalBarber] = useState<Barber | null>(null);
+  const [modalStaff, setModalStaff] = useState<Staff | null>(null);
 
   const weekStart = useMemo(() => startOfWeek(selectedDay, { weekStartsOn: 1 }), [selectedDay]);
   const weekDays  = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
@@ -51,20 +51,18 @@ export default function OwnerAgenda() {
     const dayStart = startOfDay(selectedDay).toISOString();
     const dayEnd   = addDays(startOfDay(selectedDay), 1).toISOString();
 
-    const { data: barberList } = await supabase
-      .from("barbers")
-      .select("id, display_name")
-      .eq("shop_id", shopId)
-      .eq("is_active", true)
-      .order("created_at");
+    const { data: staffData } = await supabase
+      .from("staff")
+      .select("id, name")
+      .eq("shop_id", shopId);
 
-    if (!barberList) { setLoading(false); return; }
-    setBarbers(barberList);
+    if (!staffData) { setLoading(false); return; }
+    setStaff(staffData);
 
     const { data: apptList } = await supabase
       .from("appointments")
-      .select("id, barber_id, customer_name, starts_at, ends_at, status, services(name)")
-      .in("barber_id", barberList.map((b) => b.id))
+      .select("id, staff_id, customer_name, starts_at, ends_at, status, services(name)")
+      .in("staff_id", staffData.map((b) => b.id))
       .gte("starts_at", dayStart)
       .lt("starts_at", dayEnd)
       .neq("status", "cancelled")
@@ -111,23 +109,23 @@ export default function OwnerAgenda() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.navy} />}
           contentContainerStyle={styles.columnsContainer}
         >
-          {barbers.map((barber) => {
-            const barberAppts = appts.filter((a) => a.barber_id === barber.id);
+          {staff.map((st) => {
+            const staffAppts = appts.filter((a) => a.staff_id === st.id);
             return (
-              <View key={barber.id} style={styles.column}>
+              <View key={st.id} style={styles.column}>
                 {/* Usta başlığı */}
                 <View style={styles.colHeader}>
-                  <Text style={styles.colName} numberOfLines={1}>{barber.display_name}</Text>
-                  <Text style={styles.colCount}>{barberAppts.length} randevu</Text>
+                  <Text style={styles.colName} numberOfLines={1}>{st.name}</Text>
+                  <Text style={styles.colCount}>{staffAppts.length} randevu</Text>
                 </View>
 
                 {/* Randevular */}
-                {barberAppts.length === 0 ? (
+                {staffAppts.length === 0 ? (
                   <View style={styles.emptyCol}>
                     <Text style={styles.emptyTxt}>Randevu yok</Text>
                   </View>
                 ) : (
-                  barberAppts.map((a) => (
+                  staffAppts.map((a) => (
                     <View key={a.id} style={styles.apptCard}>
                       <Text style={styles.apptTime}>{fmtHM(a.starts_at)} · {durationMin(a.starts_at, a.ends_at)} dk</Text>
                       <Text style={styles.apptName} numberOfLines={1}>{a.customer_name}</Text>
@@ -138,7 +136,7 @@ export default function OwnerAgenda() {
 
                 {/* Manuel randevu ekle */}
                 <Pressable
-                  onPress={() => setModalBarber(barber)}
+                  onPress={() => setModalStaff(st)}
                   style={({ pressed }) => [styles.addBtn, pressed && { opacity: 0.7 }]}
                 >
                   <Text style={styles.addBtnTxt}>+ Randevu Ekle</Text>
@@ -150,13 +148,13 @@ export default function OwnerAgenda() {
       )}
 
       {/* Manuel randevu modal */}
-      {modalBarber && shopId && (
+      {modalStaff && shopId && (
         <AddAppointmentModal
-          visible={!!modalBarber}
+          visible={!!modalStaff}
           shopId={shopId}
-          barberId={modalBarber.id}
+          staffId={modalStaff.id}
           initialDate={selectedDay}
-          onClose={() => { setModalBarber(null); load(); }}
+          onClose={() => { setModalStaff(null); load(); }}
         />
       )}
     </View>

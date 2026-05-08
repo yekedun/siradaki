@@ -19,7 +19,7 @@ interface DayStats {
   total: number;
   completed: number;
   cancelled: number;
-  barberStats: { name: string; count: number }[];
+  staffStats: { name: string; count: number }[];
 }
 
 function fmtDate(d: Date): string {
@@ -39,33 +39,32 @@ export default function OwnerDashboard() {
     const dayEnd   = addDays(today, 1).toISOString();
 
     // Tüm ustaları al
-    const { data: barbers } = await supabase
-      .from("barbers")
-      .select("id, display_name")
-      .eq("shop_id", shopId)
-      .eq("is_active", true);
+    const { data: staff } = await supabase
+      .from("staff")
+      .select("id, name")
+      .eq("shop_id", shopId);
 
-    if (!barbers) { setLoading(false); return; }
+    if (!staff) { setLoading(false); return; }
 
     // Bugünün randevularını al
     const { data: appts } = await supabase
       .from("appointments")
-      .select("id, barber_id, status")
-      .in("barber_id", barbers.map((b) => b.id))
+      .select("id, staff_id, status")
+      .in("staff_id", staff.map((b) => b.id))
       .gte("starts_at", dayStart)
       .lt("starts_at", dayEnd);
 
     const list = appts ?? [];
-    const barberStats = barbers.map((b) => ({
-      name: b.display_name,
-      count: list.filter((a) => a.barber_id === b.id && a.status !== "cancelled").length,
+    const staffStats = staff.map((b) => ({
+      name: b.name,
+      count: list.filter((a) => a.staff_id === b.id && a.status !== "cancelled").length,
     }));
 
     setStats({
       total:     list.filter((a) => a.status !== "cancelled").length,
       completed: list.filter((a) => a.status === "completed").length,
       cancelled: list.filter((a) => a.status === "cancelled").length,
-      barberStats,
+      staffStats,
     });
     setLoading(false);
     setRefreshing(false);
@@ -97,7 +96,7 @@ export default function OwnerDashboard() {
             </View>
 
             <Text style={styles.sectionLabel}>USTA BAZINDA</Text>
-            {stats.barberStats.map((b) => (
+            {stats.staffStats.map((b) => (
               <View key={b.name} style={styles.barberRow}>
                 <View style={styles.barberDot} />
                 <Text style={styles.barberName}>{b.name}</Text>

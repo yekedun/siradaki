@@ -62,7 +62,7 @@ export default async function BookingPage({ params }: PageProps) {
 
   const supabase = createSupabaseServerClient();
 
-  const [{ data: services }, { data: barbers }] = await Promise.all([
+  const [{ data: services }, { data: staff }] = await Promise.all([
     supabase
       .from("services")
       .select("id, shop_id, name, duration_min, price_cents, display_order")
@@ -70,10 +70,9 @@ export default async function BookingPage({ params }: PageProps) {
       .eq("is_active", true)
       .order("display_order"),
     supabase
-      .from("barbers")
-      .select("id, shop_id, display_name, avatar_url, is_active")
+      .from("staff")
+      .select("id, shop_id, name, role")
       .eq("shop_id", shop.id)
-      .eq("is_active", true)
       .order("created_at"),
   ]);
 
@@ -96,7 +95,7 @@ export default async function BookingPage({ params }: PageProps) {
               timezone: shop.timezone,
               working_hours: shop.working_hours as unknown as WorkingHours,
             }}
-            barbers={barbers ?? []}
+            staff={staff ?? []}
             services={services ?? []}
           />
         </div>

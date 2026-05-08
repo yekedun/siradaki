@@ -31,13 +31,12 @@ export interface ShopPublic {
   working_hours: WorkingHours;
 }
 
-// Usta: müşteri usta seçim adımında kullanılır
-export interface BarberPublic {
+// Usta/Personel: müşteri seçim adımında kullanılır
+export interface StaffPublic {
   id: string;
   shop_id: string;
-  display_name: string;
-  avatar_url: string | null;
-  is_active: boolean;
+  name: string;
+  role: string;
 }
 
 // Hizmet: dükkan düzeyinde
@@ -51,7 +50,7 @@ export interface ServicePublic {
 }
 
 export interface BlockWalkinRequest {
-  barber_id: string;
+  staff_id: string;
   duration_min: number;
   reason?: "walkin" | "break" | "personal";
 }
@@ -59,8 +58,8 @@ export interface BlockWalkinRequest {
 export interface BookAppointmentRequest {
   shop_slug: string;
   service_id: string;
-  // barber_id = null → "Fark Etmez", assign_any_barber çağrılır
-  barber_id: string | null;
+  // staff_id = null → "Fark Etmez", assign_any_staff çağrılır
+  staff_id: string | null;
   starts_at: string;
   customer_name: string;
   customer_phone?: string;
@@ -70,6 +69,6 @@ export interface BookAppointmentResponse {
   appointment_id: string;
   starts_at: string;
   ends_at: string;
-  barber_display_name: string;
+  staff_name: string;
   service_name: string | null;
 }

@@ -11,8 +11,8 @@ import type {
 interface BookingModalProps {
   shopSlug: string;
   shopName: string;
-  barberId: string | null;   // null = "Fark Etmez", sunucu atar
-  barberName: string;
+  staffId: string | null;   // null = "Fark Etmez", sunucu atar
+  staffName: string;
   service: ServicePublic;
   slot: Slot;
   timezone: string;
@@ -25,8 +25,8 @@ type Step = "form" | "loading" | "success" | "error";
 export function BookingModal({
   shopSlug,
   shopName,
-  barberId,
-  barberName,
+  staffId,
+  staffName,
   service,
   slot,
   timezone,
@@ -48,7 +48,7 @@ export function BookingModal({
     timeZone: timezone,
   });
 
-  const barberLabel = barberId === null ? "Uygun Usta" : barberName;
+  const staffLabel = staffId === null ? "Uygun Personel" : staffName;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,7 +66,7 @@ export function BookingModal({
           body: JSON.stringify({
             shop_slug:      shopSlug,
             service_id:     service.id,
-            barber_id:      barberId,   // null → assign_any_barber
+            staff_id:      staffId,   // null → assign_any_staff
             starts_at:      slot.startsAt.toISOString(),
             customer_name:  name.trim(),
             customer_phone: phone.trim() || undefined,
@@ -102,7 +102,7 @@ export function BookingModal({
                 Randevuyu Onayla
               </h2>
               <p className="mt-1.5 text-[13px] text-muted">
-                {barberLabel} · {service.name} · {dateLabel}, {timeLabel}
+                {staffLabel} · {service.name} · {dateLabel}, {timeLabel}
               </p>
             </div>
             <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 p-[22px]">
@@ -171,7 +171,7 @@ export function BookingModal({
               Randevunuz alındı
             </h3>
             <p className="mt-2 text-[14px] leading-6 text-muted">
-              {confirmation.barber_display_name} · {confirmation.service_name}
+              {confirmation.staff_name} · {confirmation.service_name}
               <br />
               {new Date(confirmation.starts_at).toLocaleDateString("tr-TR", {
                 weekday: "long",

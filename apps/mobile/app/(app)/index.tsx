@@ -87,7 +87,7 @@ export default function AppointmentsScreen() {
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [barberId, setBarberId] = useState<string | null>(null);
+  const [staffId, setStaffId] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<Date>(() => startOfDay(new Date()));
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [editingAppt, setEditingAppt] = useState<Appointment | null>(null);
@@ -107,17 +107,17 @@ export default function AppointmentsScreen() {
 
   const [shopId, setShopId] = useState<string | null>(null);
 
-  const fetchBarber = useCallback(async () => {
+  const fetchStaff = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data: barber } = await supabase
-      .from("barbers")
+    const { data: staff } = await supabase
+      .from("staff")
       .select("id, shop_id")
       .eq("user_id", user.id)
       .single();
-    if (barber) {
-      setBarberId(barber.id);
-      setShopId(barber.shop_id);
+    if (staff) {
+      setStaffId(staff.id);
+      setShopId(staff.shop_id);
     }
   }, []);
 
@@ -129,14 +129,14 @@ export default function AppointmentsScreen() {
       supabase
         .from("appointments")
         .select(APPT_COLS)
-        .eq("barber_id", bid)
+        .eq("staff_id", bid)
         .gte("starts_at", dayStart)
         .lt("starts_at", dayEnd)
         .order("starts_at", { ascending: true }),
       supabase
         .from("blocks")
         .select("id, starts_at, ends_at")
-        .eq("barber_id", bid)
+        .eq("staff_id", bid)
         .gte("starts_at", dayStart)
         .lt("starts_at", dayEnd),
     ]);
@@ -147,13 +147,13 @@ export default function AppointmentsScreen() {
     setRefreshing(false);
   }, []);
 
-  useEffect(() => { fetchBarber(); }, [fetchBarber]);
+  useEffect(() => { fetchStaff(); }, [fetchStaff]);
 
   useEffect(() => {
-    if (!barberId) return;
+    if (!staffId) return;
     setLoading(true);
-    fetchDay(barberId, selectedDay);
-  }, [barberId, selectedDay, fetchDay]);
+    fetchDay(staffId, selectedDay);
+  }, [staffId, selectedDay, fetchDay]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000);
@@ -161,12 +161,12 @@ export default function AppointmentsScreen() {
   }, []);
 
   useEffect(() => {
-    if (!barberId) return;
+    if (!staffId) return;
     const channel = supabase
-      .channel(`appointments:${barberId}`)
+      .channel(`appointments:${staffId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "appointments", filter: `barber_id=eq.${barberId}` },
+        { event: "*", schema: "public", table: "appointments", filter: `staff_id=eq.${staffId}` },
         (payload) => {
           if (payload.eventType === "INSERT") {
             const row = payload.new as Appointment;
@@ -189,7 +189,7 @@ export default function AppointmentsScreen() {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "blocks", filter: `barber_id=eq.${barberId}` },
+        { event: "*", schema: "public", table: "blocks", filter: `staff_id=eq.${staffId}` },
         (payload) => {
           if (payload.eventType === "INSERT") {
             const row = payload.new as Block;
@@ -208,7 +208,7 @@ export default function AppointmentsScreen() {
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [barberId, selectedDay]);
+  }, [staffId, selectedDay]);
 
   const timeline: TimelineItem[] = useMemo(() => {
     const items: TimelineItem[] = [
@@ -225,10 +225,10 @@ export default function AppointmentsScreen() {
   }, [appointments, blocks]);
 
   const onRefresh = useCallback(() => {
-    if (!barberId) return;
+    if (!staffId) return;
     setRefreshing(true);
-    fetchDay(barberId, selectedDay);
-  }, [barberId, selectedDay, fetchDay]);
+    fetchDay(staffId, selectedDay);
+  }, [staffId, selectedDay, fetchDay]);
 
   const today = new Date();
   const isViewingToday = isSameDay(selectedDay, today);
@@ -280,7 +280,7 @@ export default function AppointmentsScreen() {
         </ScrollView>
       )}
 
-      {barberId && (
+      {staffId && (
         <View style={styles.fabWrap} pointerEvents="box-none">
           <Pressable
             style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
@@ -292,11 +292,11 @@ export default function AppointmentsScreen() {
         </View>
       )}
 
-      {barberId && shopId && (
+      {staffId && shopId && (
         <AddAppointmentModal
           visible={addModalVisible || !!editingAppt}
           shopId={shopId}
-          barberId={barberId}
+          staffId={staffId}
           initialDate={selectedDay}
           editingAppt={editingAppt}
           onClose={() => {

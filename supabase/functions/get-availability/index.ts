@@ -11,8 +11,8 @@ serve(async (req) => {
   const shopSlug  = url.searchParams.get("shop_slug");
   const date      = url.searchParams.get("date");
   const serviceId = url.searchParams.get("service_id");
-  // barber_id = UUID → belirli usta | "any" veya yoksa → en az 1 usta müsait slot
-  const barberIdParam = url.searchParams.get("barber_id");
+  // staff_id = UUID → belirli personel | "any" veya yoksa → en az 1 personel müsait slot
+  const staffIdParam = url.searchParams.get("staff_id");
 
   if (!shopSlug || !date || !serviceId) {
     return error("shop_slug, date, service_id zorunlu");
@@ -43,21 +43,20 @@ serve(async (req) => {
   const workingHours = shop.working_hours as WorkingHours;
   const timezone     = shop.timezone;
 
-  // Belirli usta seçildiyse: sadece o ustayla hesapla
-  if (barberIdParam && barberIdParam !== "any") {
-    const { data: barber } = await supabase
-      .from("barbers")
+  // Belirli personel seçildiyse: sadece o personelle hesapla
+  if (staffIdParam && staffIdParam !== "any") {
+    const { data: staffMember } = await supabase
+      .from("staff")
       .select("id")
-      .eq("id", barberIdParam)
+      .eq("id", staffIdParam)
       .eq("shop_id", shop.id)
-      .eq("is_active", true)
       .single();
 
-    if (!barber) return error("Usta bulunamadı", 404);
+    if (!staffMember) return error("Personel bulunamadı", 404);
 
     const { data: occupied, error: rpcError } = await supabase.rpc(
       "get_occupied_ranges",
-      { p_barber_id: barber.id, p_date: date }
+      { p_staff_id: staffMember.id, p_date: date }
     );
 
     if (rpcError) {
@@ -74,7 +73,7 @@ serve(async (req) => {
     });
 
     return json({
-      barber_id: barber.id,
+      staff_id: staffMember.id,
       occupied: occupied ?? [],
       slots: slots.map((s) => ({
         starts_at: s.startsAt.toISOString(),
@@ -84,32 +83,31 @@ serve(async (req) => {
     });
   }
 
-  // "Fark Etmez" (any): slot müsait = en az 1 usta müsait
-  const { data: barbers } = await supabase
-    .from("barbers")
+  // "Fark Etmez" (any): slot müsait = en az 1 personel müsait
+  const { data: staffList } = await supabase
+    .from("staff")
     .select("id")
-    .eq("shop_id", shop.id)
-    .eq("is_active", true);
+    .eq("shop_id", shop.id);
 
-  if (!barbers || barbers.length === 0) {
-    return error("Dükkanda aktif usta yok", 404);
+  if (!staffList || staffList.length === 0) {
+    return error("Dükkanda aktif personel yok", 404);
   }
 
-  // Her usta için occupied ranges al — paralel
-  const occupiedPerBarber = await Promise.all(
-    barbers.map(async (b) => {
+  // Her personel için occupied ranges al — paralel
+  const occupiedPerStaff = await Promise.all(
+    staffList.map(async (b) => {
       const { data } = await supabase.rpc("get_occupied_ranges", {
-        p_barber_id: b.id,
+        p_staff_id: b.id,
         p_date: date,
       });
       return data ?? [];
     })
   );
 
-  // Slot bazında union: en az 1 usta müsaitse available = true
+  // Slot bazında union: en az 1 personel müsaitse available = true
   const slotMap = new Map<string, { available: boolean; ends_at: string }>();
 
-  for (const occupied of occupiedPerBarber) {
+  for (const occupied of occupiedPerStaff) {
     const slots = computeAvailableSlots({
       date: new Date(date),
       durationMin: service.duration_min,
@@ -127,7 +125,7 @@ serve(async (req) => {
           ends_at: slot.endsAt.toISOString(),
         });
       } else if (slot.available) {
-        // En az 1 usta müsaitse available = true
+        // En az 1 personel müsaitse available = true
         slotMap.set(key, { ...existing, available: true });
       }
     }
@@ -137,5 +135,5 @@ serve(async (req) => {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([starts_at, { ends_at, available }]) => ({ starts_at, ends_at, available }));
 
-  return json({ barber_id: "any", slots });
+  return json({ staff_id: "any", slots });
 });

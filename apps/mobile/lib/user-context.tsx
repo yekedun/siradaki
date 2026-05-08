@@ -8,12 +8,12 @@ import {
 } from "react";
 import { supabase } from "./supabase";
 
-export type UserRole = "owner" | "barber" | null;
+export type UserRole = "owner" | "staff" | null;
 
 interface UserContextValue {
   role: UserRole;
   shopId: string | null;
-  barberId: string | null;
+  staffId: string | null;
   loading: boolean;
   reload: () => void;
 }
@@ -21,7 +21,7 @@ interface UserContextValue {
 const UserContext = createContext<UserContextValue>({
   role: null,
   shopId: null,
-  barberId: null,
+  staffId: null,
   loading: true,
   reload: () => {},
 });
@@ -29,7 +29,7 @@ const UserContext = createContext<UserContextValue>({
 export function UserProvider({ children }: { children: ReactNode }) {
   const [role, setRole]       = useState<UserRole>(null);
   const [shopId, setShopId]   = useState<string | null>(null);
-  const [barberId, setBarberId] = useState<string | null>(null);
+  const [staffId, setStaffId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [tick, setTick]       = useState(0);
 
@@ -46,33 +46,33 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const { data: shop } = await supabase
         .from("shops")
         .select("id")
-        .eq("owner_user_id", user.id)
+        .eq("owner_id", user.id)
         .single();
 
       if (shop && !cancelled) {
         setRole("owner");
         setShopId(shop.id);
-        setBarberId(null);
+        setStaffId(null);
         setLoading(false);
         return;
       }
 
       // Usta mı?
-      const { data: barber } = await supabase
-        .from("barbers")
+      const { data: staff } = await supabase
+        .from("staff")
         .select("id, shop_id")
         .eq("user_id", user.id)
         .single();
 
       if (!cancelled) {
-        if (barber) {
-          setRole("barber");
-          setBarberId(barber.id);
-          setShopId(barber.shop_id);
+        if (staff) {
+          setRole("staff");
+          setStaffId(staff.id);
+          setShopId(staff.shop_id);
         } else {
           setRole(null);
           setShopId(null);
-          setBarberId(null);
+          setStaffId(null);
         }
         setLoading(false);
       }
@@ -90,7 +90,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [reload]);
 
   return (
-    <UserContext.Provider value={{ role, shopId, barberId, loading, reload }}>
+    <UserContext.Provider value={{ role, shopId, staffId, loading, reload }}>
       {children}
     </UserContext.Provider>
   );

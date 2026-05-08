@@ -40,7 +40,7 @@ interface EditingAppt {
 interface AddAppointmentModalProps {
   visible: boolean;
   shopId: string;
-  barberId: string;
+  staffId: string;
   initialDate?: Date;
   editingAppt?: EditingAppt | null;
   onClose: () => void;
@@ -90,7 +90,7 @@ function buildInitialStartsAt(initialDate: Date | undefined): Date {
 export function AddAppointmentModal({
   visible,
   shopId,
-  barberId,
+  staffId,
   initialDate,
   editingAppt,
   onClose,
@@ -200,7 +200,7 @@ export function AddAppointmentModal({
 
     setLoading(true);
     const payload = {
-      barber_id: barberId,
+      staff_id: staffId,
       service_id: serviceId,
       customer_name: name.trim(),
       customer_phone: phone.trim() || null,

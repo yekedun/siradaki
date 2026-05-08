@@ -8,8 +8,8 @@ export async function GET(request: NextRequest) {
   const shopSlug      = searchParams.get("shop_slug");
   const date          = searchParams.get("date");
   const serviceId     = searchParams.get("service_id");
-  // barber_id = UUID → belirli usta | "any" veya yoksa → en az 1 usta müsait slot
-  const barberIdParam = searchParams.get("barber_id");
+  // staff_id = UUID → belirli personel | "any" veya yoksa → en az 1 personel müsait slot
+  const staffIdParam = searchParams.get("staff_id");
 
   if (!shopSlug || !date || !serviceId) {
     return NextResponse.json(
@@ -45,23 +45,22 @@ export async function GET(request: NextRequest) {
   const workingHours = shop.working_hours as unknown as WorkingHours;
   const timezone     = shop.timezone;
 
-  // Belirli usta
-  if (barberIdParam && barberIdParam !== "any") {
-    const { data: barber } = await supabase
-      .from("barbers")
+  // Belirli personel
+  if (staffIdParam && staffIdParam !== "any") {
+    const { data: staffMember } = await supabase
+      .from("staff")
       .select("id")
-      .eq("id", barberIdParam)
+      .eq("id", staffIdParam)
       .eq("shop_id", shop.id)
-      .eq("is_active", true)
       .single();
 
-    if (!barber) {
-      return NextResponse.json({ error: "Usta bulunamadı" }, { status: 404 });
+    if (!staffMember) {
+      return NextResponse.json({ error: "Personel bulunamadı" }, { status: 404 });
     }
 
     const { data: occupied, error: rpcError } = await supabase.rpc(
       "get_occupied_ranges",
-      { p_barber_id: barber.id, p_date: date }
+      { p_staff_id: staffMember.id, p_date: date }
     );
 
     if (rpcError) {
@@ -82,7 +81,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       {
-        barber_id: barber.id,
+        staff_id: staffMember.id,
         occupied: occupied ?? [],
         slots: slots.map((s) => ({
           starts_at: s.startsAt.toISOString(),
@@ -94,24 +93,23 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // "Fark Etmez": slot müsait = en az 1 usta müsait
-  const { data: barbers } = await supabase
-    .from("barbers")
+  // "Fark Etmez": slot müsait = en az 1 personel müsait
+  const { data: staff } = await supabase
+    .from("staff")
     .select("id")
-    .eq("shop_id", shop.id)
-    .eq("is_active", true);
+    .eq("shop_id", shop.id);
 
-  if (!barbers || barbers.length === 0) {
+  if (!staff || staff.length === 0) {
     return NextResponse.json(
-      { error: "Dükkanda aktif usta yok" },
+      { error: "Dükkanda personel yok" },
       { status: 404 }
     );
   }
 
-  const occupiedPerBarber = await Promise.all(
-    barbers.map(async (b) => {
+  const occupiedPerStaff = await Promise.all(
+    staff.map(async (b) => {
       const { data } = await supabase.rpc("get_occupied_ranges", {
-        p_barber_id: b.id,
+        p_staff_id: b.id,
         p_date: date,
       });
       return data ?? [];
@@ -120,7 +118,7 @@ export async function GET(request: NextRequest) {
 
   const slotMap = new Map<string, { available: boolean; ends_at: string }>();
 
-  for (const occupied of occupiedPerBarber) {
+  for (const occupied of occupiedPerStaff) {
     const slots = computeAvailableSlots({
       date: new Date(date),
       durationMin: service.duration_min,
@@ -145,7 +143,7 @@ export async function GET(request: NextRequest) {
     .map(([starts_at, { ends_at, available }]) => ({ starts_at, ends_at, available }));
 
   return NextResponse.json(
-    { barber_id: "any", slots },
+    { staff_id: "any", slots },
     { headers: { "Cache-Control": "no-store" } }
   );
 }

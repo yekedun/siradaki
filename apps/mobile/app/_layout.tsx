@@ -16,9 +16,9 @@ function RouterGuard({ session }: { session: Session | null | undefined }) {
   useEffect(() => {
     if (session === undefined || loading) return;
 
-    const inAuth  = segments[0] === "(auth)";
-    const inApp   = segments[0] === "(app)";
-    const inOwner = segments[0] === "(owner)";
+    const inAuth  = (segments[0] as string) === "(auth)";
+    const inApp   = (segments[0] as string) === "(app)";
+    const inOwner = (segments[0] as string) === "(owner)";
 
     if (!session) {
       if (!inAuth) router.replace("/(auth)/login");
@@ -26,9 +26,9 @@ function RouterGuard({ session }: { session: Session | null | undefined }) {
     }
 
     if (role === "owner" && !inOwner) {
-      router.replace("/(owner)");
-    } else if (role === "barber" && !inApp) {
-      router.replace("/(app)");
+      router.replace("/(owner)" as any);
+    } else if (role === "staff" && !inApp) {
+      router.replace("/(app)" as any);
     }
     // role === null → loading veya tanımsız kullanıcı (oturum açık ama DB'de yok)
   }, [session, role, loading, segments, router]);
