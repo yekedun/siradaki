@@ -70,7 +70,7 @@ export function BookingModal({
             starts_at:      slot.startsAt.toISOString(),
             customer_name:  name.trim(),
             customer_phone: phone.trim() || undefined,
-            notes:          note.trim() || undefined,
+            customer_notes: note.trim() || undefined,
           }),
         }
       );

@@ -56,3 +56,7 @@ import_map = "./functions/import_map.json"
 [functions.create-widget-token]
 verify_jwt = true
 import_map = "./functions/import_map.json"
+
+[functions.customer-cancel-appointment]
+verify_jwt = false
+import_map = "./functions/import_map.json"

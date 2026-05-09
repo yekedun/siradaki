@@ -18,7 +18,7 @@ serve(async (req) => {
     return error("Geçersiz JSON");
   }
 
-  const { shop_slug, service_id, staff_id, starts_at, customer_name, customer_phone } = body;
+  const { shop_slug, service_id, staff_id, starts_at, customer_name, customer_phone, customer_notes } = body;
 
   if (!shop_slug || !service_id || !starts_at || !customer_name) {
     return error("shop_slug, service_id, starts_at, customer_name zorunlu");
@@ -122,6 +122,7 @@ serve(async (req) => {
       service_id: service.id,
       customer_name: customer_name.trim(),
       customer_phone: customer_phone?.trim() || null,
+      customer_notes: customer_notes?.trim() || null,
       starts_at,
       ends_at: endsAt,
     })

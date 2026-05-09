@@ -63,6 +63,7 @@ export interface BookAppointmentRequest {
   starts_at: string;
   customer_name: string;
   customer_phone?: string;
+  customer_notes?: string;
 }
 
 export interface BookAppointmentResponse {

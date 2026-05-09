@@ -4,6 +4,12 @@ export const DEFAULT_TIMEZONE = "Europe/Istanbul";
 
 export const BOOKING_GRACE_PERIOD_MIN = 5;
 
+export const MIN_BOOKING_NOTICE_MINUTES = 60; // 1 saat
+export const MAX_BOOKING_DAYS = 30; // 30 gün
+export const MIN_CANCEL_NOTICE_MINUTES = 120; // 2 saat
+
+
+
 export const DEFAULT_WORKING_HOURS = {
   mon: { open: "09:00", close: "19:00", enabled: true },
   tue: { open: "09:00", close: "19:00", enabled: true },

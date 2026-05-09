@@ -1,6 +1,8 @@
 import {
   SLOT_GRANULARITY_MIN,
   BOOKING_GRACE_PERIOD_MIN,
+  MIN_BOOKING_NOTICE_MINUTES,
+  MAX_BOOKING_DAYS,
   DAY_KEYS,
 } from "./constants.ts";
 import type { OccupiedRange, Slot, WorkingHours } from "./types.ts";
@@ -35,7 +37,10 @@ export function computeAvailableSlots(params: {
   }));
 
   const slots: Slot[] = [];
-  const graceCutoffMs = Date.now() - BOOKING_GRACE_PERIOD_MIN * 60_000;
+  const nowMs = Date.now();
+  const minAllowedMs = nowMs + MIN_BOOKING_NOTICE_MINUTES * 60_000;
+  const maxAllowedMs = nowMs + MAX_BOOKING_DAYS * 24 * 60 * 60 * 1000;
+
   const durationMs = durationMin * 60_000;
   // Step = service duration so adjacent slots don't pre-overlap.
   // Floor to SLOT_GRANULARITY_MIN to keep round times when service < granularity.
@@ -46,7 +51,8 @@ export function computeAvailableSlots(params: {
   while (cursorMs + durationMs <= closeMs) {
     const slotEndMs = cursorMs + durationMs;
 
-    if (cursorMs >= graceCutoffMs) {
+    // Check if slot falls within allowed booking window
+    if (cursorMs >= minAllowedMs && cursorMs <= maxAllowedMs) {
       const available = !occupiedMs.some(
         (o) => cursorMs < o.end && slotEndMs > o.start
       );
