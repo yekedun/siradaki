@@ -135,10 +135,9 @@ export default function AppointmentsScreen() {
           text: "İptal Et",
           style: "destructive",
           onPress: async () => {
-            const { error } = await supabase
-              .from("appointments")
-              .update({ status: "cancelled" } as never)
-              .eq("id", apptId);
+            const { error } = await supabase.functions.invoke("customer-cancel-appointment", {
+              body: { appointment_id: apptId },
+            });
             if (error) {
               Alert.alert("Hata", "Randevu iptal edilemedi. Lütfen tekrar deneyin.");
             } else {

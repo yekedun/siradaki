@@ -366,6 +366,7 @@ BEGIN
   WHERE (p_shop_id IS NOT NULL AND id = p_shop_id)
      OR (p_shop_id IS NULL AND slug = p_shop_slug)
   LIMIT 1;
+
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Dükkan bulunamadı' USING ERRCODE = 'P0002';
   END IF;
@@ -447,6 +448,7 @@ AS $$
 DECLARE
   v_service public.services%ROWTYPE;
   v_ends_at timestamptz;
+  v_updated int;
 BEGIN
   SELECT srv.* INTO v_service
   FROM public.services srv
@@ -466,6 +468,8 @@ BEGIN
     RAISE EXCEPTION 'Bu saat artık müsait değil' USING ERRCODE = 'P0001';
   END IF;
 
+  PERFORM set_config('app.scheduling_rpc', 'on', true);
+
   UPDATE public.appointments
      SET staff_id = p_staff_id,
          service_id = p_service_id,
@@ -477,7 +481,10 @@ BEGIN
          status = 'confirmed'
    WHERE id = p_appointment_id;
 
-  IF NOT FOUND THEN
+  GET DIAGNOSTICS v_updated = ROW_COUNT;
+  PERFORM set_config('app.scheduling_rpc', 'off', true);
+
+  IF v_updated = 0 THEN
     RAISE EXCEPTION 'Randevu bulunamadı' USING ERRCODE = 'P0002';
   END IF;
 

@@ -78,6 +78,8 @@ BEGIN
     END IF;
   END IF;
 
+  PERFORM set_config('app.scheduling_rpc', 'on', true);
+
   INSERT INTO public.appointments (
     staff_id, service_id, customer_name, customer_phone, customer_notes,
     customer_user_id, starts_at, ends_at, status
@@ -88,6 +90,8 @@ BEGIN
     p_starts_at, v_ends_at, 'confirmed'
   )
   RETURNING id INTO v_appointment_id;
+
+  PERFORM set_config('app.scheduling_rpc', 'off', true);
 
   SELECT name INTO v_staff_name FROM public.staff WHERE id = v_staff_id;
 

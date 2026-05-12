@@ -134,6 +134,7 @@ declare
   v json;
   v_conflict boolean;
   v_count int;
+  v_affected int;
   v_slot_count int;
   v_customer_visible int;
   v_other_visible int;
@@ -501,6 +502,61 @@ begin
   if v_other_visible <> 0 then
     raise exception 'other customer could read someone else appointments';
   end if;
+
+  perform set_config('request.jwt.claim.sub', ids.owner_id::text, true);
+  execute 'set local role authenticated';
+  begin
+    insert into public.appointments (
+      staff_id,
+      service_id,
+      customer_name,
+      starts_at,
+      ends_at,
+      status
+    ) values (
+      ids.staff_a,
+      ids.service_30,
+      'Direct Insert',
+      '2026-05-18 16:00 Europe/Istanbul',
+      '2026-05-18 16:30 Europe/Istanbul',
+      'confirmed'
+    );
+    raise exception 'direct authenticated appointment insert unexpectedly succeeded';
+  exception
+    when insufficient_privilege then null;
+  end;
+  begin
+    update public.appointments
+       set starts_at = '2026-05-18 16:00 Europe/Istanbul',
+           ends_at = '2026-05-18 16:30 Europe/Istanbul'
+     where staff_id = ids.staff_a
+       and customer_name = 'Proof Rebook Updated';
+    get diagnostics v_affected = row_count;
+    if v_affected <> 0 then
+      raise exception 'direct authenticated appointment reschedule unexpectedly mutated rows';
+    end if;
+  exception
+    when insufficient_privilege then null;
+  end;
+  begin
+    delete from public.appointments
+     where staff_id = ids.staff_a
+       and customer_name = 'Proof Rebook Updated';
+    get diagnostics v_affected = row_count;
+    if v_affected <> 0 then
+      raise exception 'direct authenticated appointment delete unexpectedly mutated rows';
+    end if;
+  exception
+    when insufficient_privilege then null;
+  end;
+  update public.appointments
+     set status = 'cancelled'
+   where staff_id = ids.staff_a
+     and customer_name = 'Proof Back To Back';
+  if not found then
+    raise exception 'owner status-only appointment cancellation was unexpectedly blocked';
+  end if;
+  execute 'reset role';
 
   begin
     perform public.get_commission_report(ids.shop_id, '2026-05-01', '2026-05-31', null);

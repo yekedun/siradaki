@@ -7,6 +7,10 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions();
   if (req.method !== "POST") return error("Method not allowed", 405);
 
+  const authHeader = req.headers.get("Authorization");
+  const token = authHeader?.replace("Bearer ", "");
+  if (!token) return error("Oturum gerekli", 401);
+
   let body: { appointment_id: string };
   try {
     body = await req.json();
@@ -19,13 +23,17 @@ serve(async (req) => {
 
   const supabase = createAdminClient();
 
+  const { data: userData, error: userError } = await supabase.auth.getUser(token);
+  if (userError || !userData.user) return error("Oturum doğrulanamadı", 401);
+
   const { data: appointment } = await supabase
     .from("appointments")
-    .select("starts_at, status")
+    .select("starts_at, status, customer_user_id")
     .eq("id", appointment_id)
     .single();
 
   if (!appointment) return error("Randevu bulunamadı", 404);
+  if (appointment.customer_user_id !== userData.user.id) return error("Randevu bulunamadı", 404);
   if (appointment.status === "cancelled") return error("Randevu zaten iptal edilmiş", 400);
 
   const slotDate = new Date(appointment.starts_at);
