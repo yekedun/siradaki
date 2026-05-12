@@ -141,6 +141,11 @@ export function BookingFlow({ shop, staff, services }: BookingFlowProps) {
     fetchSlots();
   }, [fetchSlots]);
 
+  const handleBookingConflict = useCallback(() => {
+    setSelectedSlot(null);
+    fetchSlots();
+  }, [fetchSlots]);
+
   const today = new Date();
   const dateOptions = useMemo(
     () => Array.from({ length: 14 }, (_, i) => {
@@ -272,6 +277,7 @@ export function BookingFlow({ shop, staff, services }: BookingFlowProps) {
           timezone={shop.timezone}
           onClose={() => setConfirmOpen(false)}
           onSuccess={handleBookingSuccess}
+          onConflict={handleBookingConflict}
         />
       )}
     </div>

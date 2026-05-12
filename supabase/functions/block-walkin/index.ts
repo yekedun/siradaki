@@ -2,8 +2,9 @@ import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createAdminClient, sha256 } from "../_shared/supabase-admin.ts";
 import { corsOptions, error, json } from "../_shared/cors.ts";
 
-type BlockWalkinRequest = {
+type LegacyBlockWalkinRequest = {
   staff_id?: string;
+  barber_id?: string;
   duration_min: number;
   reason?: "walkin" | "break" | "personal";
 };
@@ -31,19 +32,30 @@ serve(async (req) => {
     return error("Token suresi dolmus", 401);
   }
 
-  let body: BlockWalkinRequest;
+  let body: LegacyBlockWalkinRequest;
   try {
     body = await req.json();
   } catch {
     return error("Gecersiz JSON");
   }
 
-  const { duration_min, reason = "walkin", staff_id } = body;
-
-  if (!staff_id) return error("staff_id zorunlu");
+  const { duration_min, reason = "walkin" } = body;
+  let staff_id = body.staff_id ?? body.barber_id;
 
   if (!duration_min || duration_min < 5 || duration_min > 480) {
     return error("duration_min 5-480 dakika arasinda olmali");
+  }
+
+  if (!staff_id) {
+    const { data: activeStaff } = await supabase
+      .from("staff")
+      .select("id")
+      .eq("shop_id", widgetToken.shop_id)
+      .eq("is_active", true);
+
+    if (!activeStaff || activeStaff.length === 0) return error("Aktif personel bulunamadi", 404);
+    if (activeStaff.length > 1) return error("staff_id zorunlu", 400);
+    staff_id = activeStaff[0]!.id;
   }
 
   const { data: staff } = await supabase

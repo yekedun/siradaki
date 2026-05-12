@@ -103,10 +103,44 @@ export default function Step4Confirm() {
     setLoading(false);
 
     if (error) {
+      const err = error as {
+        context?: {
+          message?: string;
+          error?: string;
+          code?: string;
+          should_refetch_availability?: boolean;
+        };
+        message?: string;
+      };
       const msg =
-        (error as { context?: { message?: string }; message?: string })?.context?.message ??
-        error.message ??
+        err.context?.error ??
+        err.context?.message ??
+        err.message ??
         "Bilinmeyen hata";
+      const shouldRefetch =
+        err.context?.code === "BOOKING_CONFLICT" || err.context?.should_refetch_availability;
+
+      if (shouldRefetch) {
+        Alert.alert("Saat doldu", msg, [
+          {
+            text: "Yeni saat seç",
+            onPress: () =>
+              router.replace({
+                pathname: "/booking/step3-slot",
+                params: {
+                  sid: params.sid,
+                  sname: params.sname,
+                  sdur: params.sdur,
+                  sprice: params.sprice,
+                  bid: params.bid,
+                  bname: params.bname,
+                },
+              }),
+          },
+        ]);
+        return;
+      }
+
       Alert.alert("Randevu alınamadı", msg);
       return;
     }

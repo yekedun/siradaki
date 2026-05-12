@@ -54,16 +54,6 @@ const TRACK_COL = 28;
 const TRACK_WIDTH = 4;
 const TRACK_LEFT = TIME_COL + TRACK_COL / 2 - TRACK_WIDTH / 2;
 const POLE_STRIPE_H = 6; // each stripe height; 4 stripes = 24px period
-const ROW_DOT_TOP = 16;
-
-function isInDay(iso: string, day: Date): boolean {
-  const t = new Date(iso).getTime();
-  const { start, end } = getDayBoundsUTC(day, TZ);
-  return t >= start.getTime() && t < end.getTime();
-}
-function sortByStart<T extends { starts_at: string }>(arr: T[]): T[] {
-  return [...arr].sort((a, b) => a.starts_at.localeCompare(b.starts_at));
-}
 function fmtHM(iso: string | Date): string {
   const d = typeof iso === "string" ? new Date(iso) : iso;
   return d.toLocaleTimeString("tr-TR", {
@@ -177,20 +167,8 @@ export default function AppointmentsScreen() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "blocks", filter: `staff_id=eq.${staffId}` },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            const row = payload.new as Block;
-            if (!isInDay(row.starts_at, selectedDay)) return;
-            setBlocks((prev) =>
-              prev.some((b) => b.id === row.id) ? prev : sortByStart([...prev, row])
-            );
-          } else if (payload.eventType === "UPDATE") {
-            const row = payload.new as Block;
-            setBlocks((prev) => prev.map((b) => (b.id === row.id ? row : b)));
-          } else if (payload.eventType === "DELETE") {
-            const id = (payload.old as { id: string }).id;
-            setBlocks((prev) => prev.filter((b) => b.id !== id));
-          }
+        () => {
+          void fetchDay(staffId, selectedDay);
         }
       )
       .subscribe();

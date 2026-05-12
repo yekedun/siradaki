@@ -10,9 +10,8 @@ import {
   Animated,
   Easing,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
-import { supabase } from "../../lib/supabase";
 import { T, R, Shadow } from "../../lib/theme";
+import { supabase } from "../../lib/supabase";
 
 const DURATIONS = [15, 30, 45, 60, 90, 120] as const;
 
@@ -23,8 +22,13 @@ const REASONS = [
 ];
 
 const TZ = "Europe/Istanbul";
+
 function fmtNow(d: Date): string {
-  return d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
+  return d.toLocaleTimeString("tr-TR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: TZ,
+  });
 }
 
 export default function BlockScreen() {
@@ -38,38 +42,50 @@ export default function BlockScreen() {
     return () => clearInterval(id);
   }, []);
 
-  async function insertBlock(staffId: string, startsAt: Date, endsAt: Date) {
-    const durationMin = Math.max(5, Math.round((endsAt.getTime() - startsAt.getTime()) / 60000));
+  async function insertBlock(staffId: string) {
     const { error } = await supabase.functions.invoke("create-manual-block", {
       body: {
         staff_id: staffId,
-        duration_min: durationMin,
+        duration_min: dur,
         reason,
       },
     });
+
     if (error) {
-      Alert.alert(error.code === "P0001" ? "Çakışma" : "Hata", error.message);
+      let message = error.message;
+      const response = (error as { context?: Response }).context;
+      if (response) {
+        try {
+          const payload = await response.json() as { error?: string };
+          if (payload.error) message = payload.error;
+        } catch {
+          // Keep the SDK error message if the response body is unavailable.
+        }
+      }
+      Alert.alert(message.includes("zaten") ? "Çakışma" : "Hata", message);
       return;
     }
+
     Alert.alert("Blok Eklendi", `${dur} dakikalık blok eklendi.`);
   }
 
   async function handleBlock() {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Oturum bulunamadı");
+
       const { data: staff } = await supabase
         .from("staff")
         .select("id")
         .eq("user_id", user.id)
         .single();
+
       if (!staff) throw new Error("Personel profili bulunamadı");
 
-      const startsAt = new Date();
-      const endsAt = new Date(startsAt.getTime() + dur * 60_000);
-
-      await insertBlock(staff.id, startsAt, endsAt);
+      await insertBlock(staff.id);
     } catch (err) {
       Alert.alert("Hata", (err as Error).message);
     } finally {
@@ -149,11 +165,7 @@ export default function BlockScreen() {
           onPress={handleBlock}
           disabled={loading}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.fabText}>Bloğu Ekle</Text>
-          )}
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.fabText}>Bloğu Ekle</Text>}
         </Pressable>
       </View>
     </View>
@@ -166,20 +178,29 @@ function SectionTitle({ children }: { children: string }) {
 
 function NowBadge({ now }: { now: Date }) {
   const pulse = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     const loop = Animated.loop(
-      Animated.timing(pulse, { toValue: 1, duration: 1600, easing: Easing.out(Easing.ease), useNativeDriver: true })
+      Animated.timing(pulse, {
+        toValue: 1,
+        duration: 1600,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
     );
     loop.start();
     return () => loop.stop();
   }, [pulse]);
+
   const haloScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 2.7] });
   const haloOpacity = pulse.interpolate({ inputRange: [0, 0.7, 1], outputRange: [0.55, 0, 0] });
 
   return (
     <View style={styles.nowBadge}>
       <View style={styles.nowDotWrap}>
-        <Animated.View style={[styles.nowHalo, { transform: [{ scale: haloScale }], opacity: haloOpacity }]} />
+        <Animated.View
+          style={[styles.nowHalo, { transform: [{ scale: haloScale }], opacity: haloOpacity }]}
+        />
         <View style={styles.nowDot} />
       </View>
       <View style={{ flex: 1 }}>
@@ -194,7 +215,14 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scrollContent: { paddingTop: 64, paddingHorizontal: 20, paddingBottom: 120 },
 
-  eyebrow: { fontSize: 11, fontWeight: "600", letterSpacing: 1.4, textTransform: "uppercase", color: T.red, marginBottom: 6 },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    color: T.red,
+    marginBottom: 6,
+  },
   title: { fontSize: 30, fontWeight: "700", letterSpacing: -0.5, color: T.ink, marginBottom: 8 },
   lead: { fontSize: 14, color: T.muted, lineHeight: 21 },
 
@@ -254,7 +282,9 @@ const styles = StyleSheet.create({
   },
   reasonRowSel: { borderColor: T.navy, backgroundColor: T.blueSoft },
   radio: {
-    width: 20, height: 20, borderRadius: 20,
+    width: 20,
+    height: 20,
+    borderRadius: 20,
     borderWidth: 2,
     borderColor: T.hairAlt,
     alignItems: "center",

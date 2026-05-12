@@ -79,6 +79,24 @@ status: completed
 - [x] run web booking smoke through public `book-appointment` edge path and clean test appointment
 - [x] run Android owner smoke for settings toggle, team commission gate, and commission modal
 
+## TASK-020
+
+```md
+id: TASK-020
+depends_on:
+  - TASK-019
+priority: critical
+status: completed
+```
+
+- [x] keep commission rules per staff member, with shop toggle only as module gate
+- [x] switch customer booking picker from legacy `barbers` to active `staff`
+- [x] ensure owner lookup handles both `owner_user_id` and `owner_id`
+- [x] add owner-staff invariant migration for new/existing shops
+- [x] fix local Supabase config duplicate function table
+- [x] update backend proof fixture for owner staff in any-staff pool
+- [x] run `pnpm turbo type-check`, `supabase db reset`, and `pnpm backend:proof`
+
 # Rotation Rule
 
 If `in-progress.md` exceeds 30 tasks:

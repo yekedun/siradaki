@@ -14,7 +14,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { addDays, startOfDay, format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { SHOP_SLUG, SUPABASE_URL, SUPABASE_ANON_KEY, supabase } from "../../lib/supabase";
+import { SHOP_SLUG, SUPABASE_URL, SUPABASE_ANON_KEY } from "../../lib/supabase";
 import { T, R } from "../../lib/theme";
 
 interface SlotItem {

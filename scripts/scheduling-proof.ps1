@@ -167,11 +167,20 @@ insert into public.shops (
 ) on conflict (id) do update set working_hours = excluded.working_hours;
 
 insert into public.staff (id, shop_id, user_id, name, role, is_active)
-values (
+values
+(
   '00000000-0000-4000-8000-100000000201',
   '00000000-0000-4000-8000-100000000101',
   null,
   'Proof Race Staff',
+  'staff'::public.staff_role,
+  true
+),
+(
+  '00000000-0000-4000-8000-000000000202',
+  '00000000-0000-4000-8000-100000000101',
+  null,
+  'Proof Race Staff B',
   'staff'::public.staff_role,
   true
 ) on conflict (id) do update set is_active = true;
@@ -189,8 +198,18 @@ values (
 
 insert into public.staff_schedules (
   staff_id, day_of_week, is_working, work_start, work_end, break_start, break_end
-) values (
+) values
+(
   '00000000-0000-4000-8000-100000000201',
+  1,
+  true,
+  '09:00',
+  '19:00',
+  null,
+  null
+),
+(
+  '00000000-0000-4000-8000-000000000202',
   1,
   true,
   '09:00',
@@ -264,7 +283,11 @@ delete from public.staff where id = '00000000-0000-4000-8000-100000000201';
 delete from public.shops where id = '00000000-0000-4000-8000-100000000101';
 "@ | Set-Content -Path $cleanupSql -Encoding UTF8
 
+$commonRaceSetup = Get-Content -Path $setupSql -Raw
+
 @"
+$commonRaceSetup
+
 delete from public.appointments
 where staff_id = '00000000-0000-4000-8000-100000000201'
   and starts_at = '2026-05-18 15:00 Europe/Istanbul';
@@ -386,8 +409,9 @@ where staff_id = '00000000-0000-4000-8000-100000000201'
 @"
 delete from public.appointments
 where staff_id in (
-  '00000000-0000-4000-8000-100000000201',
-  '00000000-0000-4000-8000-000000000202'
+  select id
+  from public.staff
+  where shop_id = '00000000-0000-4000-8000-100000000101'
 )
 and starts_at = '2026-05-18 09:30 Europe/Istanbul';
 "@ | Set-Content -Path $anyStaffSetupSql -Encoding UTF8
@@ -430,8 +454,9 @@ begin
   from public.appointments
   where starts_at = '2026-05-18 09:30 Europe/Istanbul'
     and staff_id in (
-      '00000000-0000-4000-8000-100000000201',
-      '00000000-0000-4000-8000-000000000202'
+      select id
+      from public.staff
+      where shop_id = '00000000-0000-4000-8000-100000000101'
     )
     and status = 'confirmed';
 
@@ -439,8 +464,9 @@ begin
   from public.appointments
   where starts_at = '2026-05-18 09:30 Europe/Istanbul'
     and staff_id in (
-      '00000000-0000-4000-8000-100000000201',
-      '00000000-0000-4000-8000-000000000202'
+      select id
+      from public.staff
+      where shop_id = '00000000-0000-4000-8000-100000000101'
     )
     and status = 'confirmed';
 
@@ -459,8 +485,9 @@ select 'scheduling-any-staff-race-ok' as result;
 @"
 delete from public.appointments
 where staff_id in (
-  '00000000-0000-4000-8000-100000000201',
-  '00000000-0000-4000-8000-000000000202'
+  select id
+  from public.staff
+  where shop_id = '00000000-0000-4000-8000-100000000101'
 )
 and starts_at = '2026-05-18 09:30 Europe/Istanbul';
 "@ | Set-Content -Path $anyStaffCleanupSql -Encoding UTF8

@@ -17,3 +17,7 @@
  GET /api/availability?shop_slug=test-berber&date=2026-05-13&service_id=44444444-4444-4444-4444-444444444444&staff_id=33333333-3333-3333-3333-333333333333 200 in 2218ms
  GET /api/availability?shop_slug=test-berber&date=2026-05-13&service_id=44444444-4444-4444-4444-444444444444&staff_id=33333333-3333-3333-3333-333333333333 200 in 1543ms
  ✓ Compiled in 330ms (336 modules)
+ ✓ Compiled in 450ms (322 modules)
+ ✓ Compiled in 292ms (336 modules)
+ ✓ Compiled in 119ms (336 modules)
+ ✓ Compiled in 184ms (336 modules)

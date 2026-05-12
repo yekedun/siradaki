@@ -11,13 +11,14 @@ import type {
 interface BookingModalProps {
   shopSlug: string;
   shopName: string;
-  staffId: string | null;   // null = "Fark Etmez", sunucu atar
+  staffId: string | null;
   staffName: string;
   service: ServicePublic;
   slot: Slot;
   timezone: string;
   onClose: () => void;
   onSuccess: () => void;
+  onConflict: () => void;
 }
 
 type Step = "form" | "loading" | "success" | "error";
@@ -32,12 +33,13 @@ export function BookingModal({
   timezone,
   onClose,
   onSuccess,
+  onConflict,
 }: BookingModalProps) {
-  const [name, setName]           = useState("");
-  const [phone, setPhone]         = useState("");
-  const [note, setNote]           = useState("");
-  const [step, setStep]           = useState<Step>("form");
-  const [errorMsg, setErrorMsg]   = useState("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [note, setNote] = useState("");
+  const [step, setStep] = useState<Step>("form");
+  const [errorMsg, setErrorMsg] = useState("");
   const [confirmation, setConfirmation] = useState<BookAppointmentResponse | null>(null);
 
   const timeLabel = formatSlotTime(slot.startsAt, timezone);
@@ -64,11 +66,11 @@ export function BookingModal({
             apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
           },
           body: JSON.stringify({
-            shop_slug:      shopSlug,
-            service_id:     service.id,
-            staff_id:      staffId,   // null → assign_any_staff
-            starts_at:      slot.startsAt.toISOString(),
-            customer_name:  name.trim(),
+            shop_slug: shopSlug,
+            service_id: service.id,
+            staff_id: staffId,
+            starts_at: slot.startsAt.toISOString(),
+            customer_name: name.trim(),
             customer_phone: phone.trim() || undefined,
             customer_notes: note.trim() || undefined,
           }),
@@ -76,6 +78,9 @@ export function BookingModal({
       );
       const data = await res.json();
       if (!res.ok) {
+        if (res.status === 409 || data?.should_refetch_availability) {
+          onConflict();
+        }
         setErrorMsg(data.error ?? "Randevu oluşturulamadı.");
         setStep("error");
         return;
@@ -98,9 +103,7 @@ export function BookingModal({
         {step === "form" && (
           <>
             <div className="border-b border-hair px-[22px] pb-2 pt-5">
-              <h2 className="m-0 text-[20px] font-bold text-ink">
-                Randevuyu Onayla
-              </h2>
+              <h2 className="m-0 text-[20px] font-bold text-ink">Randevuyu Onayla</h2>
               <p className="mt-1.5 text-[13px] text-muted">
                 {staffLabel} · {service.name} · {dateLabel}, {timeLabel}
               </p>
@@ -167,9 +170,7 @@ export function BookingModal({
             <span className="mb-3 inline-block rounded-full bg-blue-soft px-3 py-1 text-[11px] font-bold uppercase tracking-[1.2px] text-navy">
               Onaylandı
             </span>
-            <h3 className="m-0 text-[24px] font-bold text-ink">
-              Randevunuz alındı
-            </h3>
+            <h3 className="m-0 text-[24px] font-bold text-ink">Randevunuz alındı</h3>
             <p className="mt-2 text-[14px] leading-6 text-muted">
               {confirmation.staff_name} · {confirmation.service_name}
               <br />

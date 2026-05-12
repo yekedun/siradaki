@@ -48,14 +48,20 @@ serve(async (req) => {
 
   const { data: staff } = await supabase
     .from("staff")
-    .select("id, user_id, role, shops!inner(owner_id)")
+    .select("id, user_id, shop_id")
     .eq("id", staffId)
     .eq("is_active", true)
     .single();
 
   if (!staff) return error("Personel bulunamadı", 404);
 
-  const isOwner = staff.shops.owner_id === user.id;
+  const { data: shop } = await supabase
+    .from("shops")
+    .select("owner_id")
+    .eq("id", staff.shop_id)
+    .single();
+
+  const isOwner = shop?.owner_id === user.id;
   const isSelf = staff.user_id === user.id;
 
   if (!isOwner && !isSelf) {

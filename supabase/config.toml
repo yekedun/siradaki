@@ -53,6 +53,11 @@ import_map = "./functions/import_map.json"
 verify_jwt = false
 import_map = "./functions/import_map.json"
 
+[functions.create-manual-block]
+verify_jwt = true
+import_map = "./functions/import_map.json"
+
+
 [functions.create-widget-token]
 verify_jwt = true
 import_map = "./functions/import_map.json"
@@ -62,9 +67,5 @@ verify_jwt = false
 import_map = "./functions/import_map.json"
 
 [functions.customer-book-appointment]
-verify_jwt = true
-import_map = "./functions/import_map.json"
-
-[functions.create-manual-block]
 verify_jwt = true
 import_map = "./functions/import_map.json"

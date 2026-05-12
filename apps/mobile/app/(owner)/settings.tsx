@@ -50,7 +50,7 @@ export default function OwnerSettingsScreen() {
     const { data: shop } = await supabase
       .from("shops")
       .select("display_name, commission_enabled")
-      .eq("owner_user_id", user.id)
+      .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
       .single();
     setAccount({ name: shop?.display_name ?? "Dükkan", email: user.email ?? "" });
     setCommissionEnabled(Boolean(shop?.commission_enabled));
