@@ -70,7 +70,11 @@ export function BookingFlow({ shop, staff, services }: BookingFlowProps) {
       service_id: selectedService.id,
       staff_id:   selectedStaffId ?? "",
     });
-    fetch(`/api/availability?${params}`)
+    fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/get-availability?${params}`, {
+      headers: {
+        apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      },
+    })
       .then((r) => r.json())
       .then((data: { slots: SlotItem[] }) => {
         if (cancelled) return;

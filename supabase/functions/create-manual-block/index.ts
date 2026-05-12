@@ -5,7 +5,6 @@ import { corsOptions, error, json } from "../_shared/cors.ts";
 
 interface CreateManualBlockRequest {
   staff_id?: string;
-  barber_id?: string;
   duration_min?: number;
   reason?: "walkin" | "break" | "personal";
 }
@@ -36,7 +35,7 @@ serve(async (req) => {
     return error("Geçersiz JSON");
   }
 
-  const staffId = body.staff_id ?? body.barber_id;
+  const staffId = body.staff_id;
   const durationMin = body.duration_min;
   const reason = body.reason ?? "break";
 

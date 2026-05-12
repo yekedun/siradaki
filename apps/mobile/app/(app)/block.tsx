@@ -39,13 +39,14 @@ export default function BlockScreen() {
   }, []);
 
   async function insertBlock(staffId: string, startsAt: Date, endsAt: Date) {
-    const { error } = await supabase.rpc("create_block_atomic" as never, {
-      p_staff_id: staffId,
-      p_starts_at: startsAt.toISOString(),
-      p_ends_at: endsAt.toISOString(),
-      p_reason: reason,
-      p_created_via: "app",
-    } as never);
+    const durationMin = Math.max(5, Math.round((endsAt.getTime() - startsAt.getTime()) / 60000));
+    const { error } = await supabase.functions.invoke("create-manual-block", {
+      body: {
+        staff_id: staffId,
+        duration_min: durationMin,
+        reason,
+      },
+    });
     if (error) {
       Alert.alert(error.code === "P0001" ? "Çakışma" : "Hata", error.message);
       return;

@@ -7,7 +7,6 @@ interface BookRequest {
   shop_slug: string;
   service_id: string;
   staff_id?: string | null;
-  barber_id?: string | null;
   starts_at: string;
   customer_name: string;
   customer_phone?: string | null;
@@ -46,7 +45,7 @@ serve(async (req) => {
   }
 
   const { shop_slug, service_id, starts_at, customer_name, customer_phone } = body;
-  const staff_id = body.staff_id ?? body.barber_id ?? null;
+  const staff_id = body.staff_id ?? null;
 
   if (!shop_slug || !service_id || !starts_at || !customer_name) {
     return error("shop_slug, service_id, starts_at, customer_name zorunlu");

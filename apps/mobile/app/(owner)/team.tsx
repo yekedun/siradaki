@@ -65,10 +65,6 @@ export default function TeamScreen() {
 
   useEffect(() => { load(); }, [load]);
 
-      "Personelin Adı Soyadı",
-      
-        if (!name || name.trim().length < 2) {
-          Alert.alert("Geçersiz", "Geçerli bir ad gir.");
   async function handleAddStaff(name: string): Promise<boolean> {
     setInviting(true);
     try {

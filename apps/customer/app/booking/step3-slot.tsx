@@ -130,20 +130,18 @@ export default function Step3Slot() {
       setSelectedSlot(null);
       const id = ++reqRef.current;
 
-      const url = new URL(`${SUPABASE_URL}/functions/v1/customer-get-availability`);
+      const url = new URL(`${SUPABASE_URL}/functions/v1/get-availability`);
       url.searchParams.set("shop_slug", SHOP_SLUG);
       url.searchParams.set("date", day.iso);
       url.searchParams.set("service_id", params.sid);
       if (params.bid !== "any") url.searchParams.set("staff_id", params.bid);
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const authHeader = session ? `Bearer ${session.access_token}` : `Bearer ${SUPABASE_ANON_KEY}`;
-
       try {
         const res = await fetch(url.toString(), {
-          headers: { Authorization: authHeader, "Content-Type": "application/json" },
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            "Content-Type": "application/json",
+          },
         });
         if (id !== reqRef.current) return;
 
