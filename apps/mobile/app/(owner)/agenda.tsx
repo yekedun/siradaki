@@ -9,12 +9,14 @@ import {
   Pressable,
 } from "react-native";
 import { addDays, startOfDay, startOfWeek, isSameDay } from "date-fns";
+import { DEFAULT_TIMEZONE } from "@berber/shared/constants";
+import { getDayBoundsUTC } from "@berber/shared/slot-utils";
 import { supabase } from "../../lib/supabase";
 import { useUserRole } from "../../lib/user-context";
 import { AddAppointmentModal } from "../../components/AddAppointmentModal";
 import { T, R, Shadow } from "../../lib/theme";
 
-const TZ = "Europe/Istanbul";
+const TZ = DEFAULT_TIMEZONE;
 const DAY_SHORT = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 const MONTH_SHORT = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
 const CARD_WIDTH = 200;
@@ -45,11 +47,25 @@ export default function OwnerAgenda() {
 
   const weekStart = useMemo(() => startOfWeek(selectedDay, { weekStartsOn: 1 }), [selectedDay]);
   const weekDays  = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
+  const selectedDayKey = useMemo(() => selectedDay.toISOString(), [selectedDay]);
+  const apptsByStaff = useMemo(() => {
+    const grouped = new Map<string, Appt[]>();
+    for (const appt of appts) {
+      const group = grouped.get(appt.staff_id);
+      if (group) {
+        group.push(appt);
+      } else {
+        grouped.set(appt.staff_id, [appt]);
+      }
+    }
+    return grouped;
+  }, [appts]);
 
   const load = useCallback(async () => {
     if (!shopId) return;
-    const dayStart = startOfDay(selectedDay).toISOString();
-    const dayEnd   = addDays(startOfDay(selectedDay), 1).toISOString();
+    const { start, end } = getDayBoundsUTC(selectedDay, TZ);
+    const dayStart = start.toISOString();
+    const dayEnd = end.toISOString();
 
     const { data: staffData } = await supabase
       .from("staff")
@@ -74,6 +90,26 @@ export default function OwnerAgenda() {
   }, [shopId, selectedDay]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!shopId || staff.length === 0) return;
+
+    let channel = supabase.channel(`owner-agenda:${shopId}:${selectedDayKey}`);
+    for (const member of staff) {
+      channel = channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "appointment_slots", filter: `staff_id=eq.${member.id}` },
+        () => {
+          void load();
+        }
+      );
+    }
+    channel.subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [shopId, staff, selectedDayKey, load]);
 
   function onRefresh() { setRefreshing(true); load(); }
 
@@ -110,7 +146,7 @@ export default function OwnerAgenda() {
           contentContainerStyle={styles.columnsContainer}
         >
           {staff.map((st) => {
-            const staffAppts = appts.filter((a) => a.staff_id === st.id);
+            const staffAppts = apptsByStaff.get(st.id) ?? [];
             return (
               <View key={st.id} style={styles.column}>
                 {/* Usta başlığı */}

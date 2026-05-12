@@ -16,10 +16,11 @@ export interface CustomerProfile {
 const t = () => (supabase as any).from("customer_profiles");
 
 export async function getProfile(userId: string): Promise<CustomerProfile | null> {
-  const { data } = await t()
+  const { data, error } = await t()
     .select("user_id, full_name, phone, created_at, updated_at")
     .eq("user_id", userId)
     .maybeSingle();
+  if (error) throw error;
   return (data as CustomerProfile) ?? null;
 }
 
@@ -27,10 +28,11 @@ export async function upsertProfile(
   userId: string,
   fields: { full_name: string; phone?: string | null }
 ): Promise<void> {
-  await t().upsert({
+  const { error } = await t().upsert({
     user_id: userId,
     full_name: fields.full_name,
     phone: fields.phone ?? null,
     updated_at: new Date().toISOString(),
   });
+  if (error) throw error;
 }

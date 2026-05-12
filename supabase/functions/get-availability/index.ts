@@ -2,7 +2,11 @@ import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createAdminClient } from "../_shared/supabase-admin.ts";
 import { corsOptions, error, json } from "../_shared/cors.ts";
 import { computeAvailableSlots } from "@berber/shared/slot-utils";
-import type { WorkingHours } from "@berber/shared/types";
+
+type WorkingHours = Record<
+  "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat",
+  { open: string | null; close: string | null; enabled: boolean }
+>;
 
 // ── Yardımcı: personelin o gün kendi schedule'ını çek ─────────────────────────
 // staff_schedules kaydı varsa work_start/work_end'i kullan;

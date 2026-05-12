@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#F8FAFC" />
+<title>Mert'in Yeri · Online Randevu</title>
+<link rel="stylesheet" href="tokens.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button { font-family: inherit; }
+  button:active { transform: scale(0.985); }
+  button { transition: transform 0.08s ease, background 0.15s ease, border-color 0.15s ease; }
+
+  /* Desktop layout */
+  .stage {
+    min-height: 100vh; min-height: 100dvh;
+    padding: 32px 24px;
+    padding-bottom: calc(32px + env(safe-area-inset-bottom));
+  }
+  .container { max-width: 1080px; margin: 0 auto; }
+  .grid { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 28px; align-items: start; }
+
+  .sidebar { position: sticky; top: 24px; }
+
+  /* Tablet */
+  @media (max-width: 880px) {
+    .stage { padding: 0 0 80px; }
+    .grid { grid-template-columns: 1fr; gap: 0; }
+    .sidebar { position: static; top: auto; }
+  }
+
+  /* Mobile */
+  @media (max-width: 640px) {
+    .hide-mobile { display: none !important; }
+  }
+  @media (min-width: 641px) {
+    .only-mobile { display: none !important; }
+  }
+
+  .no-scrollbar::-webkit-scrollbar { width: 0; height: 0; }
+  .no-scrollbar { scrollbar-width: none; }
+
+  /* Eyebrow */
+  .eyebrow {
+    font-size: 11px; font-weight: 600; color: var(--red);
+    letter-spacing: 1.4px; text-transform: uppercase;
+  }
+
+  /* Hero photo */
+  .hero-photo {
+    width: 100%; aspect-ratio: 4/3;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(255,255,255,0.5), transparent 50%),
+      repeating-linear-gradient(135deg, #DBEAFE 0 14px, #EFF6FF 14px 28px);
+    position: relative; overflow: hidden;
+  }
+  .hero-photo::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 55%, rgba(15,23,42,0.35) 100%);
+  }
+  .hero-photo .tag {
+    position: absolute; left: 14px; bottom: 14px;
+    font-family: ui-monospace, Menlo, monospace; font-size: 10px;
+    color: #fff; background: rgba(15,23,42,0.6); backdrop-filter: blur(6px);
+    padding: 4px 8px; border-radius: 6px; letter-spacing: 0.4px;
+    z-index: 1;
+  }
+
+  /* Sheet animation */
+  @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  @keyframes fade-in  { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pop-in   { from { transform: translate(-50%, -46%); opacity: 0; } to { transform: translate(-50%, -50%); opacity: 1; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const TR_DAY_SHORT = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
+const TR_MONTH = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+const TR_MONTH_SHORT = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+
+const services = [
+  { id: 's1', name: 'Saç Kesimi',    dur: 30, price: 250 },
+  { id: 's2', name: 'Sakal Tıraşı',  dur: 20, price: 150 },
+  { id: 's3', name: 'Saç + Sakal',   dur: 60, price: 380 },
+  { id: 's4', name: 'Yıkama + Stil', dur: 25, price: 180 },
+];
+
+const allSlots = [
+  '09:00','09:30','10:00','10:30','11:00','11:30',
+  '12:00','12:30','13:00','13:30','14:00','14:30',
+  '15:00','15:30','16:00','16:30','17:00','17:30','18:00','18:30',
+];
+const fullSlots = new Set(['09:30','11:00','12:30','14:00','15:30','17:00']);
+
+function buildDays(start, n) {
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(start); d.setDate(start.getDate() + i); return d;
+  });
+}
+const sameDay = (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+
+// ─── Track viewport (mobile-aware decisions in JS) ─────────────────
+function useIsMobile(bp = 640) {
+  const [m, setM] = useState(() => typeof window !== 'undefined' && window.innerWidth <= bp);
+  useEffect(() => {
+    const onR = () => setM(window.innerWidth <= bp);
+    window.addEventListener('resize', onR);
+    return () => window.removeEventListener('resize', onR);
+  }, [bp]);
+  return m;
+}
+
+// ─── Mobile sticky header (compact brand bar) ──────────────────────
+function MobileHeader() {
+  return (
+    <header className="only-mobile" style={{
+      position: 'sticky', top: 0, zIndex: 30,
+      background: 'rgba(248,250,252,0.85)',
+      backdropFilter: 'saturate(180%) blur(14px)',
+      borderBottom: '1px solid var(--hair)',
+      padding: 'calc(env(safe-area-inset-top) + 10px) 16px 10px',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: 8, background: 'var(--navy)',
+          position: 'relative', overflow: 'hidden',
+        }}>
+          <div style={{ position: 'absolute', inset: 0,
+            background: 'repeating-linear-gradient(135deg, transparent 0 5px, rgba(220,38,38,0.85) 5px 8px, transparent 8px 13px)' }}/>
+        </div>
+        <div style={{ fontSize: 14, fontWeight: 700, letterSpacing: -0.2 }}>Mert'in Yeri</div>
+      </div>
+      <a href="tel:+902165550042" style={{
+        padding: '6px 12px', background: 'var(--blueSoft)', color: 'var(--navy)',
+        borderRadius: 100, fontSize: 12, fontWeight: 600, textDecoration: 'none',
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+      }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+          <path d="M5 4.5h3l1.5 4-2 1.5a11 11 0 0 0 6 6l1.5-2 4 1.5V19a1.5 1.5 0 0 1-1.5 1.5C9.5 20.5 3.5 14.5 3.5 6A1.5 1.5 0 0 1 5 4.5z"
+            stroke="#1E3A8A" strokeWidth="1.8" strokeLinejoin="round"/>
+        </svg>
+        Ara
+      </a>
+    </header>
+  );
+}
+
+// ─── Profile card (responsive) ─────────────────────────────────────
+function ProfileCard({ mobile }) {
+  return (
+    <aside className="sidebar" style={{
+      background: 'var(--surface)',
+      border: mobile ? 'none' : '1px solid var(--hair)',
+      borderBottom: mobile ? '1px solid var(--hair)' : '1px solid var(--hair)',
+      borderRadius: mobile ? 0 : 'var(--r-card)',
+      boxShadow: mobile ? 'none' : 'var(--shadow-card)',
+      padding: 0, overflow: 'hidden',
+    }}>
+      <div className="hero-photo" style={{ aspectRatio: mobile ? '16/10' : '4/3' }}>
+        <div className="tag">// dükkan vitrini</div>
+      </div>
+
+      <div style={{ padding: mobile ? '18px 16px' : '20px 22px' }}>
+        <div className="eyebrow hide-mobile" style={{ marginBottom: 4 }}>BERBER · ONLİNE RANDEVU</div>
+        <h1 style={{ margin: '0 0 4px',
+          fontSize: mobile ? 24 : 28, fontWeight: 700, letterSpacing: -0.4 }}>Mert'in Yeri</h1>
+        <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>Mert Yıldız · 12 yıllık usta</div>
+
+        {/* Quick chips (mobile) */}
+        <div className="only-mobile" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+          {['4.9 ★', '320+ müşteri', 'Açık · 09–19'].map(c => (
+            <span key={c} style={{
+              padding: '5px 10px', background: 'var(--blueSoft)', color: 'var(--navy)',
+              borderRadius: 100, fontSize: 11, fontWeight: 600,
+            }}>{c}</span>
+          ))}
+        </div>
+
+        <div className="hide-mobile" style={{ display: 'flex', flexDirection: 'column',
+          gap: 10, fontSize: 13, color: 'var(--ink)' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flex: '0 0 auto', marginTop: 2 }}>
+              <path d="M12 21s-7-7.5-7-12a7 7 0 0 1 14 0c0 4.5-7 12-7 12z" stroke="#6B7280" strokeWidth="1.6"/>
+              <circle cx="12" cy="9" r="2.5" stroke="#6B7280" strokeWidth="1.6"/>
+            </svg>
+            <div>Bağdat Cad. No: 142/3<br/><span style={{ color: 'var(--muted)' }}>Kadıköy, İstanbul</span></div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flex: '0 0 auto' }}>
+              <path d="M5 4.5h3l1.5 4-2 1.5a11 11 0 0 0 6 6l1.5-2 4 1.5V19a1.5 1.5 0 0 1-1.5 1.5C9.5 20.5 3.5 14.5 3.5 6A1.5 1.5 0 0 1 5 4.5z" stroke="#6B7280" strokeWidth="1.6" strokeLinejoin="round"/>
+            </svg>
+            <a href="tel:+902165550042" style={{ color: 'var(--navy)', fontWeight: 600, textDecoration: 'none' }}>
+              +90 (216) 555 00 42
+            </a>
+          </div>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flex: '0 0 auto' }}>
+              <circle cx="12" cy="12" r="8.5" stroke="#6B7280" strokeWidth="1.6"/>
+              <path d="M12 7.5V12l3 2" stroke="#6B7280" strokeWidth="1.6" strokeLinecap="round"/>
+            </svg>
+            Pzt–Cmt · 09:00–19:00
+          </div>
+        </div>
+
+        <div className="hide-mobile" style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--hair)',
+          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+          {[
+            { k: '4.9', l: 'Puan' },
+            { k: '320+', l: 'Müşteri' },
+            { k: '12y', l: 'Tecrübe' },
+          ].map(s => (
+            <div key={s.l} style={{ padding: '10px 8px', background: 'var(--surfaceAlt)', borderRadius: 10, textAlign: 'center' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--navy)' }}>{s.k}</div>
+              <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2,
+                textTransform: 'uppercase', letterSpacing: 0.6, fontWeight: 600 }}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function ServiceSelector({ value, onChange, mobile }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr' : '1fr 1fr', gap: 10 }}>
+      {services.map(s => {
+        const sel = value === s.id;
+        return (
+          <button key={s.id} onClick={() => onChange(s.id)} style={{
+            padding: 14, textAlign: 'left',
+            background: sel ? 'var(--blueSoft)' : 'var(--surface)',
+            border: `1.5px solid ${sel ? 'var(--navy)' : 'var(--hair)'}`,
+            borderRadius: 'var(--r-card)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            <div style={{
+              width: 18, height: 18, borderRadius: 18, flex: '0 0 auto',
+              border: `2px solid ${sel ? 'var(--navy)' : 'var(--hair)'}`,
+              background: sel ? 'var(--navy)' : 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>{sel && <div style={{ width: 7, height: 7, borderRadius: 7, background: '#fff' }}/>}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: sel ? 'var(--navy)' : 'var(--ink)' }}>{s.name}</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{s.dur} dakika</div>
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}>
+              ₺{s.price}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function DateStrip({ today, value, onChange }) {
+  const days = buildDays(today, 14);
+  return (
+    <div style={{ display: 'flex', gap: 8, overflowX: 'auto',
+      paddingBottom: 4, margin: '0 -2px', paddingLeft: 2, paddingRight: 2,
+      WebkitOverflowScrolling: 'touch', scrollSnapType: 'x proximity' }} className="no-scrollbar">
+      {days.map((d, i) => {
+        const sel = sameDay(d, value);
+        const isToday = sameDay(d, today);
+        return (
+          <button key={i} onClick={() => onChange(d)} style={{
+            flex: '0 0 auto', width: 56, height: 72, borderRadius: 14,
+            scrollSnapAlign: 'start',
+            border: isToday && !sel ? '1.5px solid var(--red)' : `1px solid ${sel ? 'var(--ink)' : 'var(--hair)'}`,
+            background: sel ? 'var(--ink)' : 'var(--surface)',
+            color: sel ? '#fff' : 'var(--ink)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', padding: 0,
+            boxShadow: sel ? 'var(--shadow-pill)' : 'none',
+          }}>
+            <div style={{
+              fontSize: 10, fontWeight: 600, letterSpacing: 0.5,
+              color: sel ? 'rgba(255,255,255,0.7)' : 'var(--muted)',
+              textTransform: 'uppercase', marginBottom: 2,
+            }}>{TR_DAY_SHORT[d.getDay()]}</div>
+            <div style={{ fontSize: 20, fontWeight: 700 }}>{d.getDate()}</div>
+            <div style={{ fontSize: 9, color: sel ? 'rgba(255,255,255,0.6)' : 'var(--mutedAlt)', marginTop: 2 }}>
+              {TR_MONTH_SHORT[d.getMonth()]}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function SlotGrid({ value, onChange, loading, mobile }) {
+  const cols = mobile ? 3 : 4;
+  if (loading) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 8 }}>
+        {Array.from({ length: cols * 3 }, (_, i) => (
+          <div key={i} style={{
+            height: 48, borderRadius: 'var(--r-input)',
+            background: 'var(--hair)', opacity: 0.5,
+            animation: 'skeleton 1.4s ease-in-out infinite',
+          }} />
+        ))}
+        <style>{`@keyframes skeleton { 0%,100% { opacity: 0.4 } 50% { opacity: 0.7 } }`}</style>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 8 }}>
+      {allSlots.map(s => {
+        const sel = value === s;
+        const full = fullSlots.has(s);
+        return (
+          <button key={s} disabled={full} onClick={() => onChange(s)} style={{
+            height: 48, borderRadius: 'var(--r-input)',
+            background: sel ? 'var(--navy)' : (full ? 'var(--surfaceAlt)' : 'var(--surface)'),
+            border: `1px solid ${sel ? 'var(--navy)' : 'var(--hair)'}`,
+            color: sel ? '#fff' : (full ? 'var(--mutedAlt)' : 'var(--ink)'),
+            fontSize: 14, fontWeight: sel ? 700 : 600,
+            cursor: full ? 'not-allowed' : 'pointer',
+            fontVariantNumeric: 'tabular-nums',
+            textDecoration: full ? 'line-through' : 'none',
+            textDecorationColor: 'var(--mutedAlt)',
+          }}>{s}</button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Booking modal: bottom-sheet on mobile, centered on desktop ────
+function BookingModal({ open, onClose, summary, onConfirm, mobile }) {
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [note, setNote] = useState('');
+  useEffect(() => { if (!open) { setName(''); setPhone(''); setNote(''); } }, [open]);
+
+  // Lock body scroll
+  useEffect(() => {
+    if (open) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = prev; };
+    }
+  }, [open]);
+
+  if (!open) return null;
+  const inputStyle = {
+    width: '100%', padding: '12px 14px',
+    background: 'var(--bg)', border: '1.5px solid var(--hair)',
+    borderRadius: 'var(--r-input)', fontSize: 16, color: 'var(--ink)',
+    outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
+  };
+  const labelStyle = {
+    fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+    textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6, display: 'block',
+  };
+
+  const body = (
+    <>
+      {mobile && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 4px' }}>
+          <div style={{ width: 40, height: 4, borderRadius: 4, background: 'var(--hair)' }}/>
+        </div>
+      )}
+      <div style={{
+        padding: mobile ? '8px 20px 12px' : '20px 22px 12px',
+        borderBottom: '1px solid var(--hair)',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12,
+      }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Randevuyu Onayla</h2>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>{summary}</div>
+        </div>
+        <button onClick={onClose} aria-label="Kapat" style={{
+          width: 32, height: 32, borderRadius: 16, background: 'var(--surfaceAlt)',
+          border: 'none', cursor: 'pointer', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', flex: '0 0 auto',
+        }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M3 3l10 10M13 3L3 13" stroke="#6B7280" strokeWidth="1.6" strokeLinecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div style={{ padding: mobile ? '16px 20px' : 22, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <label><span style={labelStyle}>Ad Soyad</span>
+          <input value={name} onChange={e=>setName(e.target.value)} placeholder="örn. Ahmet Yılmaz" style={inputStyle}/></label>
+        <label><span style={labelStyle}>Telefon</span>
+          <input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="0(5xx) xxx xx xx" inputMode="tel" style={inputStyle}/></label>
+        <label><span style={labelStyle}>Not (opsiyonel)</span>
+          <textarea value={note} onChange={e=>setNote(e.target.value)} rows={2}
+            placeholder="Saç uzunluğu, tercih, vs." style={{ ...inputStyle, resize: 'none' }}/></label>
+      </div>
+      <div style={{ padding: mobile ? '0 20px calc(20px + env(safe-area-inset-bottom))' : '0 22px 22px',
+        display: 'flex', gap: 8 }}>
+        {!mobile && (
+          <button onClick={onClose} style={{
+            flex: 1, padding: 14, background: 'var(--surfaceAlt)', color: 'var(--ink)',
+            border: 'none', borderRadius: 'var(--r-cta)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+          }}>İptal</button>
+        )}
+        <button onClick={() => onConfirm({ name: name || 'Müşteri', phone })} style={{
+          flex: mobile ? 1 : 2, padding: 16, background: 'var(--navy)', color: '#fff',
+          border: 'none', borderRadius: 'var(--r-cta)', fontSize: 15, fontWeight: 600, cursor: 'pointer',
+          boxShadow: 'var(--shadow-cta)',
+        }}>Randevuyu Onayla</button>
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      <div onClick={onClose} style={{
+        position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 50,
+        animation: 'fade-in 200ms ease',
+      }}/>
+      {mobile ? (
+        <div style={{
+          position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 60,
+          background: 'var(--surface)',
+          borderTopLeftRadius: 'var(--r-sheet)', borderTopRightRadius: 'var(--r-sheet)',
+          maxHeight: '92dvh', overflowY: 'auto',
+          boxShadow: '0 -10px 40px rgba(15,23,42,0.2)',
+          animation: 'slide-up 280ms cubic-bezier(.4,0,.2,1)',
+        }}>{body}</div>
+      ) : (
+        <div style={{
+          position: 'fixed', left: '50%', top: '50%', zIndex: 60,
+          transform: 'translate(-50%, -50%)',
+          width: 'min(440px, calc(100% - 32px))',
+          background: 'var(--surface)', borderRadius: 'var(--r-sheet)',
+          boxShadow: '0 30px 80px rgba(15,23,42,0.3)',
+          animation: 'pop-in 220ms cubic-bezier(.4,0,.2,1)',
+          maxHeight: '90vh', overflowY: 'auto',
+        }}>{body}</div>
+      )}
+    </>
+  );
+}
+
+function App() {
+  const mobile = useIsMobile(640);
+  const today = new Date(2026, 4, 7);
+  const [serviceId, setServiceId] = useState('s1');
+  const [date, setDate] = useState(today);
+  const [slot, setSlot] = useState(null);
+  const [open, setOpen] = useState(false);
+  const [booked, setBooked] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const service = services.find(s => s.id === serviceId);
+  const summary = `${service.name} · ${date.getDate()} ${TR_MONTH[date.getMonth()]} ${date.getFullYear()}, ${slot || '—'}`;
+
+  useEffect(() => {
+    setLoading(true);
+    const t = setTimeout(() => setLoading(false), 400);
+    return () => clearTimeout(t);
+  }, [date, serviceId]);
+
+  const sectionTitle = (n, t, meta) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+      <div style={{
+        width: 22, height: 22, borderRadius: 11, background: 'var(--navy)',
+        color: '#fff', fontSize: 11, fontWeight: 700,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto',
+      }}>{n}</div>
+      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+        textTransform: 'uppercase', letterSpacing: 0.6, flex: 1 }}>{t}</div>
+      {meta && <div style={{ fontSize: 12, color: 'var(--ink)', fontWeight: 600 }}>{meta}</div>}
+    </div>
+  );
+
+  const cardStyle = mobile ? {
+    background: 'var(--surface)', padding: '18px 16px',
+    borderBottom: '1px solid var(--hair)',
+  } : {
+    background: 'var(--surface)', border: '1px solid var(--hair)',
+    borderRadius: 'var(--r-card)', boxShadow: 'var(--shadow-card)', padding: 22,
+  };
+
+  const ctaActive = !!slot;
+
+  return (
+    <>
+      <MobileHeader/>
+      <div className="stage">
+        <div className="container">
+          <div className="grid">
+            <ProfileCard mobile={mobile}/>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: mobile ? 0 : 20,
+              paddingBottom: mobile ? 100 : 0 }}>
+              <section style={cardStyle}>
+                {sectionTitle(1, 'Hizmet Seç', service.name)}
+                <ServiceSelector value={serviceId} onChange={setServiceId} mobile={mobile}/>
+              </section>
+
+              <section style={cardStyle}>
+                {sectionTitle(2, 'Tarih',
+                  `${date.getDate()} ${TR_MONTH_SHORT[date.getMonth()]}`)}
+                <DateStrip today={today} value={date} onChange={setDate}/>
+              </section>
+
+              <section style={cardStyle}>
+                {sectionTitle(3, 'Saat', slot || '—')}
+                <SlotGrid value={slot} onChange={setSlot} loading={loading} mobile={mobile}/>
+
+                {!mobile && (
+                  <button disabled={!ctaActive} onClick={() => setOpen(true)} style={{
+                    width: '100%', padding: 16, marginTop: 18,
+                    background: ctaActive ? 'var(--navy)' : 'var(--surfaceAlt)',
+                    color: ctaActive ? '#fff' : 'var(--mutedAlt)',
+                    border: 'none', borderRadius: 'var(--r-cta)',
+                    fontSize: 15, fontWeight: 600,
+                    cursor: ctaActive ? 'pointer' : 'not-allowed',
+                    boxShadow: ctaActive ? 'var(--shadow-cta)' : 'none',
+                  }}>{ctaActive ? `${slot} ile Devam Et` : 'Saat Seç'}</button>
+                )}
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile sticky CTA */}
+      {mobile && (
+        <div style={{
+          position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 20,
+          padding: '12px 16px calc(16px + env(safe-area-inset-bottom))',
+          background: 'rgba(248,250,252,0.92)',
+          backdropFilter: 'saturate(180%) blur(14px)',
+          borderTop: '1px solid var(--hair)',
+        }}>
+          <button disabled={!ctaActive} onClick={() => setOpen(true)} style={{
+            width: '100%', padding: 16,
+            background: ctaActive ? 'var(--navy)' : 'var(--surfaceAlt)',
+            color: ctaActive ? '#fff' : 'var(--mutedAlt)',
+            border: 'none', borderRadius: 'var(--r-cta)',
+            fontSize: 15, fontWeight: 600,
+            cursor: ctaActive ? 'pointer' : 'not-allowed',
+            boxShadow: ctaActive ? 'var(--shadow-cta)' : 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.2 }}>
+              <span style={{ fontSize: 11, fontWeight: 600,
+                color: ctaActive ? 'rgba(255,255,255,0.65)' : 'var(--mutedAlt)',
+                textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                {service.name} · ₺{service.price}
+              </span>
+              <span>{ctaActive ? `${slot} ile Devam Et` : 'Saat seç'}</span>
+            </span>
+            {ctaActive && (
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path d="M6 4l5 5-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+          </button>
+        </div>
+      )}
+
+      <BookingModal open={open} onClose={() => setOpen(false)} summary={summary} mobile={mobile}
+        onConfirm={(d) => { setBooked({ ...d, summary }); setOpen(false); }}/>
+
+      {booked && (
+        <>
+          <div onClick={() => { setBooked(null); setSlot(null); }} style={{
+            position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', zIndex: 70,
+            animation: 'fade-in 200ms ease',
+          }}/>
+          <div style={{
+            position: 'fixed', zIndex: 80,
+            ...(mobile ? {
+              left: 0, right: 0, bottom: 0,
+              background: 'var(--surface)',
+              borderTopLeftRadius: 'var(--r-sheet)', borderTopRightRadius: 'var(--r-sheet)',
+              padding: '24px 20px calc(24px + env(safe-area-inset-bottom))',
+              animation: 'slide-up 280ms cubic-bezier(.4,0,.2,1)',
+            } : {
+              left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+              width: 'min(420px, calc(100% - 32px))',
+              background: 'var(--surface)', borderRadius: 'var(--r-sheet)',
+              padding: 28, animation: 'pop-in 220ms cubic-bezier(.4,0,.2,1)',
+              boxShadow: '0 30px 80px rgba(15,23,42,0.3)',
+            }),
+            textAlign: 'center',
+          }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: 28, background: 'var(--blueSoft)',
+              margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="28" height="28" viewBox="0 0 36 36" fill="none">
+                <path d="M9 18.5l5.5 5.5L27 11" stroke="#1E3A8A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div style={{
+              display: 'inline-block', padding: '4px 12px', borderRadius: 100,
+              background: 'var(--blueSoft)', color: 'var(--navy)',
+              fontSize: 11, fontWeight: 700, letterSpacing: 1.2, textTransform: 'uppercase',
+              marginBottom: 10,
+            }}>ONAYLANDI</div>
+            <h2 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 700 }}>Randevunuz alındı</h2>
+            <div style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 18, lineHeight: 1.5 }}>
+              {booked.summary}<br/>{booked.name} · onay SMS'i yolda.
+            </div>
+            <button onClick={() => { setBooked(null); setSlot(null); }} style={{
+              width: '100%', padding: 14,
+              background: 'var(--navy)', color: '#fff',
+              border: 'none', borderRadius: 'var(--r-cta)',
+              fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              boxShadow: 'var(--shadow-cta)',
+            }}>Tamam</button>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

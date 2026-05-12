@@ -1,7 +1,13 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createAdminClient, sha256 } from "../_shared/supabase-admin.ts";
 import { corsOptions, error, json } from "../_shared/cors.ts";
-import type { BlockWalkinRequest } from "@berber/shared/types";
+
+type LegacyBlockWalkinRequest = {
+  staff_id?: string;
+  barber_id?: string;
+  duration_min: number;
+  reason?: "walkin" | "break" | "personal";
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions();
@@ -31,53 +37,48 @@ serve(async (req) => {
     return error("Token süresi dolmuş", 401);
   }
 
-  let body: BlockWalkinRequest;
+  let body: LegacyBlockWalkinRequest;
   try {
     body = await req.json();
   } catch {
     return error("Geçersiz JSON");
   }
 
-  const { barber_id, duration_min, reason = "walkin" } = body;
+  const { duration_min, reason = "walkin" } = body;
+  const staff_id = body.staff_id ?? body.barber_id;
 
-  if (!barber_id) return error("barber_id zorunlu");
+  if (!staff_id) return error("staff_id zorunlu");
 
   if (!duration_min || duration_min < 5 || duration_min > 480) {
     return error("duration_min 5-480 dakika arasında olmalı");
   }
 
-  // Belirtilen ustaanın bu dükkana ait olduğunu doğrula
-  const { data: barber } = await supabase
-    .from("barbers")
+  // Belirtilen personelin bu dükkana ait olduğunu doğrula
+  const { data: staff } = await supabase
+    .from("staff")
     .select("id")
-    .eq("id", barber_id)
+    .eq("id", staff_id)
     .eq("shop_id", widgetToken.shop_id)
     .eq("is_active", true)
     .single();
 
-  if (!barber) return error("Usta bu dükkana ait değil", 403);
+  if (!staff) return error("Personel bu dükkana ait değil", 403);
 
   const now    = new Date();
   const endsAt = new Date(now.getTime() + duration_min * 60_000);
 
-  const { data: block, error: insertError } = await supabase
-    .from("blocks")
-    .insert({
-      barber_id: barber.id,
-      starts_at: now.toISOString(),
-      ends_at: endsAt.toISOString(),
-      reason,
-      created_via: "widget",
-    })
-    .select()
-    .single();
+  const { data: block, error: rpcError } = await supabase.rpc("create_block_atomic" as never, {
+    p_staff_id: staff.id,
+    p_starts_at: now.toISOString(),
+    p_ends_at: endsAt.toISOString(),
+    p_reason: reason,
+    p_created_via: "widget",
+  } as never);
 
-  if (insertError) {
-    if (insertError.code === "23P01") {
-      return error("Bu saatte zaten bir randevu veya blok var", 409);
-    }
-    console.error("Block insert error:", insertError);
-    return error("Blok oluşturulamadı", 500);
+  if (rpcError) {
+    const status = rpcError.code === "P0001" ? 409 : 500;
+    if (status === 500) console.error("create_block_atomic failed:", rpcError);
+    return error(rpcError.message ?? "Blok oluşturulamadı", status);
   }
 
   await supabase

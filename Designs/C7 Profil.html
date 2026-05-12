@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Müşteri · Profil</title>
+<link rel="stylesheet" href="tokens.css"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head><body class="preview-stage"><div id="root"></div>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="app-shell.jsx"></script>
+<script type="text/babel">
+function Row({ label, value, danger }) {
+  return (
+    <button style={{
+      width: '100%', padding: 14,
+      background: 'var(--surface)', border: 'none',
+      borderBottom: '1px solid var(--hair)',
+      cursor: 'pointer', textAlign: 'left',
+      display: 'flex', alignItems: 'center', gap: 12, fontFamily: 'inherit',
+    }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 14, fontWeight: 500, color: danger ? 'var(--red)' : 'var(--ink)' }}>{label}</div>
+      </div>
+      {value && <div style={{ fontSize: 13, color: 'var(--muted)' }}>{value}</div>}
+      {ICN.chev(danger ? '#DC2626' : '#9CA3AF')}
+    </button>
+  );
+}
+function Section({ title, children }) {
+  return (
+    <div style={{ padding: '8px 20px' }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+        textTransform: 'uppercase', letterSpacing: 0.6, margin: '14px 0 8px' }}>{title}</div>
+      <div style={{ borderRadius: 'var(--r-card)', overflow: 'hidden', background: 'var(--surface)',
+        boxShadow: 'var(--shadow-card)' }}>{children}</div>
+    </div>
+  );
+}
+function App() {
+  return (
+    <div style={{ width: '100%', height: '100%', background: 'var(--bg)', overflow: 'auto', paddingBottom: 32 }}>
+      <PageHeader eyebrow="PROFİL" title="Profil" sub="Bilgilerini ve tercihlerini yönet."/>
+
+      <div style={{ padding: '14px 20px 0' }}>
+        <Card style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
+          <Avatar initials="AY" size={56}/>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>Ahmet Yılmaz</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>+90 555 123 45 67</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>ahmet@mail.com</div>
+          </div>
+          <button style={{
+            padding: '8px 12px', background: 'var(--blueSoft)', color: 'var(--navy)',
+            border: 'none', borderRadius: 100, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+          }}>Düzenle</button>
+        </Card>
+      </div>
+
+      <Section title="Kayıtlı Berberlerim">
+        <Row label="Mert'in Yeri" value="Kadıköy"/>
+        <Row label="Saloon No.7" value="Şişli"/>
+      </Section>
+
+      <Section title="Bildirimler">
+        <Row label="Hatırlatma" value="1 saat önce"/>
+        <Row label="Push bildirimi" value="Açık"/>
+        <Row label="Email" value="Kapalı"/>
+      </Section>
+
+      <Section title="Hesap">
+        <Row label="Şifre Değiştir"/>
+        <Row label="Gizlilik & Veri"/>
+        <Row label="Yardım & Destek"/>
+        <Row label="Çıkış Yap" danger/>
+      </Section>
+
+      <div style={{ marginTop: 16, textAlign: 'center', fontSize: 11, color: 'var(--mutedAlt)' }}>
+        Berber · v1.0.0
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<IOSDevice width={390} height={844}><App/></IOSDevice>);
+</script></body></html>

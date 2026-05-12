@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
+import { useUserRole } from "../../lib/user-context";
 import { T, R, Shadow } from "../../lib/theme";
 import {
   generateWidgetToken,
@@ -35,20 +36,24 @@ function initials(s: string): string {
 }
 
 export default function OwnerSettingsScreen() {
+  const { shopId } = useUserRole();
   const [tokens, setTokens]     = useState<TokenMeta[]>([]);
   const [loading, setLoading]   = useState(true);
   const [generating, setGenerating] = useState(false);
   const [account, setAccount]   = useState<{ name: string; email: string }>({ name: "Sahip", email: "" });
+  const [commissionEnabled, setCommissionEnabled] = useState(false);
+  const [savingCommission, setSavingCommission] = useState(false);
 
   const loadAccount = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { data: shop } = await supabase
       .from("shops")
-      .select("display_name")
+      .select("display_name, commission_enabled")
       .eq("owner_user_id", user.id)
       .single();
     setAccount({ name: shop?.display_name ?? "Dükkan", email: user.email ?? "" });
+    setCommissionEnabled(Boolean(shop?.commission_enabled));
   }, []);
 
   const loadTokens = useCallback(async () => {
@@ -105,6 +110,22 @@ export default function OwnerSettingsScreen() {
     ]);
   }
 
+  async function handleToggleCommission() {
+    if (!shopId || savingCommission) return;
+    const next = !commissionEnabled;
+    setSavingCommission(true);
+    setCommissionEnabled(next);
+    const { error } = await supabase
+      .from("shops")
+      .update({ commission_enabled: next })
+      .eq("id", shopId);
+    if (error) {
+      setCommissionEnabled(!next);
+      Alert.alert("Hata", error.message);
+    }
+    setSavingCommission(false);
+  }
+
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -122,6 +143,30 @@ export default function OwnerSettingsScreen() {
             <Text style={styles.ownerBadge}>Dükkan Sahibi</Text>
           </View>
         </View>
+
+        <View style={styles.secHead}>
+          <Text style={styles.secLabel}>OPERASYON MODULLERI</Text>
+          <Text style={styles.secCount}>{commissionEnabled ? "Acik" : "Kapali"}</Text>
+        </View>
+
+        <Pressable
+          onPress={handleToggleCommission}
+          disabled={savingCommission}
+          style={({ pressed }) => [styles.moduleRow, (pressed || savingCommission) && { opacity: 0.85 }]}
+        >
+          <View style={styles.tokenIcon}>
+            <Feather name="percent" size={18} color={T.navy} />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.tokenLabel}>Komisyon takibi</Text>
+            <Text style={styles.tokenMeta} numberOfLines={2}>
+              {commissionEnabled ? "Personel komisyon ayarlari ve kazanc raporu aktif." : "Normal randevu akisi degismeden kalir."}
+            </Text>
+          </View>
+          <Text style={[styles.moduleState, commissionEnabled && styles.moduleStateOn]}>
+            {commissionEnabled ? "Acik" : "Kapali"}
+          </Text>
+        </Pressable>
 
         <View style={styles.secHead}>
           <Text style={styles.secLabel}>WIDGET TOKENLARI</Text>
@@ -224,6 +269,13 @@ const styles = StyleSheet.create({
   tokenIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: T.surfaceAlt, alignItems: "center", justifyContent: "center" },
   tokenLabel: { fontSize: 14, fontWeight: "600", color: T.ink },
   tokenMeta: { fontSize: 11, color: T.muted, marginTop: 2 },
+  moduleRow: {
+    paddingVertical: 12, paddingHorizontal: 12, backgroundColor: T.surface,
+    borderWidth: 1, borderColor: T.line, borderRadius: R.card,
+    flexDirection: "row", alignItems: "center", gap: 12, ...Shadow.card,
+  },
+  moduleState: { fontSize: 12, fontWeight: "700", color: T.muted },
+  moduleStateOn: { color: "#059669" },
   deleteBtn: { paddingVertical: 8, paddingHorizontal: 10, backgroundColor: T.redSoft, borderWidth: 1, borderColor: T.redBorder, borderRadius: R.card },
   deleteText: { fontSize: 12, fontWeight: "600", color: T.red },
 

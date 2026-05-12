@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Müşteri · Ana sayfa</title>
+<link rel="stylesheet" href="tokens.css"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head><body class="preview-stage"><div id="root"></div>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="app-shell.jsx"></script>
+<script type="text/babel">
+function App() {
+  return (
+    <div style={{ width: '100%', height: '100%', background: 'var(--bg)', overflow: 'auto', paddingBottom: 24 }}>
+      <PageHeader eyebrow="MERHABA AHMET" title="Bir randevu mu?" sub="Berberini seç, slotunu al — 30 saniye sürmez."/>
+
+      {/* Hero CTA */}
+      <div style={{ padding: '14px 20px 0' }}>
+        <button onClick={() => location.href='C8 Booking Servis.html'} style={{
+          width: '100%', padding: 20,
+          background: 'var(--navy)', color: '#fff',
+          border: 'none', borderRadius: 'var(--r-card)',
+          boxShadow: 'var(--shadow-cta)', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
+        }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12,
+            background: 'rgba(255,255,255,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 22, fontWeight: 700,
+          }}>＋</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>Yeni Randevu Al</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>Servis → Berber → Saat</div>
+          </div>
+          {ICN.chev('#fff')}
+        </button>
+      </div>
+
+      {/* Yaklaşan */}
+      <div style={{ padding: '22px 20px 0' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+          textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 }}>Yaklaşan Randevun</div>
+        <Card style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: 14, borderBottom: '1px solid var(--hair)',
+            display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Avatar initials="MY" size={44}/>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Mert'in Yeri</div>
+              <div style={{ fontSize: 12, color: 'var(--blue)', marginTop: 2, fontWeight: 500 }}>Saç + Sakal · 60dk</div>
+            </div>
+            <div style={{
+              padding: '4px 10px', borderRadius: 100,
+              background: 'var(--blueSoft)', color: 'var(--navy)',
+              fontSize: 11, fontWeight: 700, letterSpacing: 0.4,
+            }}>YARIN</div>
+          </div>
+          <div style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 14, color: 'var(--ink)' }}>
+            <div style={{ fontSize: 24, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
+              letterSpacing: -0.5 }}>14:30</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>8 Mayıs 2026, Per</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Bağdat Cad. 142, Kadıköy</div>
+            </div>
+            <button style={{
+              padding: '8px 12px', background: 'var(--surfaceAlt)', color: 'var(--ink)',
+              border: 'none', borderRadius: 100, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            }}>Detay</button>
+          </div>
+        </Card>
+      </div>
+
+      {/* Sık gidilenler */}
+      <div style={{ padding: '22px 20px 0' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+          textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 }}>Sık Gittiklerin</div>
+        <div style={{ display: 'flex', gap: 10, overflowX: 'auto' }} className="no-scrollbar">
+          {[
+            { n: "Mert'in Yeri",   m: 'Kadıköy · 0.4km',    i: 'MY' },
+            { n: 'Saloon No.7',     m: 'Şişli · 2.1km',      i: 'S7' },
+            { n: 'Adam Berber',     m: 'Beşiktaş · 3.4km',   i: 'AB' },
+          ].map((b, i) => (
+            <Card key={i} style={{ flex: '0 0 220px', padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Avatar initials={b.i} size={40}/>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.n}</div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{b.m}</div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Keşfet */}
+      <div style={{ padding: '22px 20px 0' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+          textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10 }}>Yakındaki Berberler</div>
+        {[
+          { n: 'Vintage Cuts',  m: '4.9 ★ · Moda · 1.2km', d: 'Bugün boş', initials: 'VC' },
+          { n: "Lale'nin Yeri", m: '4.7 ★ · Caddebostan · 2.0km', d: 'Yarın boş', initials: 'LY' },
+        ].map((b, i) => (
+          <Card key={i} style={{ padding: 12, marginBottom: 8,
+            display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Avatar initials={b.initials} size={40}/>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>{b.n}</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{b.m}</div>
+            </div>
+            <div style={{
+              padding: '4px 10px', borderRadius: 100,
+              background: 'var(--blueSoft)', color: 'var(--navy)',
+              fontSize: 11, fontWeight: 700,
+            }}>{b.d}</div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<IOSDevice width={390} height={844}><App/></IOSDevice>);
+</script></body></html>

@@ -49,11 +49,21 @@ export default function ProfileScreen() {
     }
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setSaving(false); return; }
-    await upsertProfile(user.id, { full_name: fullName.trim(), phone: phone.trim() || null });
-    setSaving(false);
-    setDirty(false);
-    Alert.alert("Kaydedildi", "Profil bilgileriniz güncellendi.");
+    if (!user) {
+      setSaving(false);
+      return;
+    }
+
+    try {
+      await upsertProfile(user.id, { full_name: fullName.trim(), phone: phone.trim() || null });
+      setDirty(false);
+      Alert.alert("Kaydedildi", "Profil bilgileriniz güncellendi.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Profil kaydedilemedi.";
+      Alert.alert("Hata", message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleSignOut() {
@@ -91,7 +101,6 @@ export default function ProfileScreen() {
           <Text style={styles.eyebrow}>PROFİLİM</Text>
           <Text style={styles.title}>Profilim</Text>
 
-          {/* Avatar */}
           <View style={styles.avatarWrap}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{initials(fullName)}</Text>

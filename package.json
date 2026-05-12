@@ -6,8 +6,12 @@
     "build": "turbo build",
     "type-check": "turbo type-check",
     "lint": "turbo lint",
+    "backend:proof": "powershell -ExecutionPolicy Bypass -File scripts/scheduling-proof.ps1",
+    "backend:proof:fast": "powershell -ExecutionPolicy Bypass -File scripts/scheduling-proof.ps1 -SkipReset",
+    "backend:remote-smoke": "powershell -ExecutionPolicy Bypass -File scripts/scheduling-remote-smoke.ps1",
+    "backend:remote-smoke:skip-push": "powershell -ExecutionPolicy Bypass -File scripts/scheduling-remote-smoke.ps1 -SkipPush",
     "db:sync": "bash supabase/functions/_sync-types.sh",
-    "db:check": "cmp -s packages/db/src/database.types.ts supabase/functions/_shared/database.types.ts || (echo 'database.types out of sync — run pnpm db:sync' && exit 1)"
+    "db:check": "node -e \"const fs=require('fs');const a=fs.readFileSync('packages/db/src/database.types.ts','utf8');const b=fs.readFileSync('supabase/functions/_shared/database.types.ts','utf8');if(a!==b){console.error('database.types out of sync - run pnpm db:sync');process.exit(1)}\""
   },
   "devDependencies": {
     "turbo": "^2.0.0",

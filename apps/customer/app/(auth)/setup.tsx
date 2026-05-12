@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import { upsertProfile } from "../../lib/customer-profiles";
 import { T, R, Shadow } from "../../lib/theme";
@@ -20,24 +21,36 @@ export default function SetupScreen() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   async function handleContinue() {
     if (fullName.trim().length < 2) {
-      Alert.alert("Eksik Bilgi", "Ad soyad en az 2 karakter olmalı.");
+      Alert.alert("Eksik bilgi", "Ad soyad en az 2 karakter olmalı.");
       return;
     }
+
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       setLoading(false);
       return;
     }
-    await upsertProfile(user.id, {
-      full_name: fullName.trim(),
-      phone: phone.trim() || null,
-    });
-    setLoading(false);
-    // Root layout authState değişimini yakalar (needsSetup → ready) ve yönlendirir.
+
+    try {
+      await upsertProfile(user.id, {
+        full_name: fullName.trim(),
+        phone: phone.trim() || null,
+      });
+      await supabase.auth.refreshSession();
+      router.replace("/(app)");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Profil kaydedilemedi.";
+      Alert.alert("Hata", message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -50,20 +63,19 @@ export default function SetupScreen() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Avatar placeholder */}
           <View style={styles.avatarWrap}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarInitial}>👤</Text>
+              <Text style={styles.avatarInitial}>A</Text>
             </View>
           </View>
 
-          <Text style={styles.eyebrow}>HOŞ GELDİNİZ</Text>
-          <Text style={styles.title}>Profilinizi{"\n"}Tamamlayın</Text>
+          <Text style={styles.eyebrow}>PROFİL KURULUM</Text>
+          <Text style={styles.title}>Profilinizi tamamlayın</Text>
           <Text style={styles.subtitle}>
             Randevularınızı takip edebilmek için kısa bir profil oluşturun.
           </Text>
 
-          <Text style={styles.label}>AD SOYAD</Text>
+          <Text style={styles.label}>Ad soyad</Text>
           <TextInput
             style={styles.input}
             placeholder="Adınız Soyadınız"
@@ -74,7 +86,9 @@ export default function SetupScreen() {
             returnKeyType="next"
           />
 
-          <Text style={styles.label}>TELEFON <Text style={styles.optional}>(isteğe bağlı)</Text></Text>
+          <Text style={styles.label}>
+            Telefon <Text style={styles.optional}>(isteğe bağlı)</Text>
+          </Text>
           <TextInput
             style={styles.input}
             placeholder="0532 000 00 00"
@@ -95,7 +109,7 @@ export default function SetupScreen() {
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.ctaText}>Devam Et →</Text>
+              <Text style={styles.ctaText}>Devam et</Text>
             )}
           </TouchableOpacity>
         </ScrollView>
@@ -112,7 +126,6 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingBottom: 48,
   },
-
   avatarWrap: { alignItems: "center", marginBottom: 32 },
   avatar: {
     width: 72,
@@ -122,12 +135,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarInitial: { fontSize: 32 },
-
+  avatarInitial: { fontSize: 28, fontWeight: "700", color: T.navy },
   eyebrow: {
     fontSize: 11,
     fontWeight: "600",
-    color: T.navy,
+    color: T.red,
     letterSpacing: 1.4,
     textTransform: "uppercase",
     marginBottom: 8,
@@ -146,7 +158,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 36,
   },
-
   label: {
     fontSize: 11,
     fontWeight: "600",
@@ -173,7 +184,6 @@ const styles = StyleSheet.create({
     color: T.ink,
     marginBottom: 24,
   },
-
   cta: {
     backgroundColor: T.navy,
     borderRadius: R.cta,

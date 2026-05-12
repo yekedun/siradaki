@@ -69,6 +69,19 @@ export function computeAvailableSlots(params: {
   return slots;
 }
 
+export function getDayBoundsUTC(
+  date: Date,
+  timezone: string
+): { start: Date; end: Date } {
+  const nextDay = new Date(date);
+  nextDay.setDate(nextDay.getDate() + 1);
+
+  return {
+    start: localTimeToUTC(date, "00:00", timezone),
+    end: localTimeToUTC(nextDay, "00:00", timezone),
+  };
+}
+
 /**
  * Belirli bir takvim gününde, belirli bir timezone'da, belirli bir saatin (HH:mm)
  * UTC karşılığını hesaplar. DST geçişlerinde de doğru çalışır.

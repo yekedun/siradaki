@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Müşteri · Randevularım</title>
+<link rel="stylesheet" href="tokens.css"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head><body class="preview-stage"><div id="root"></div>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="app-shell.jsx"></script>
+<script type="text/babel">
+function Tab({ id, active, onClick, children }) {
+  const sel = active === id;
+  return (
+    <button onClick={() => onClick(id)} style={{
+      padding: '8px 14px', borderRadius: 100,
+      background: sel ? 'var(--ink)' : 'transparent',
+      color: sel ? '#fff' : 'var(--muted)',
+      border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+      fontFamily: 'inherit',
+    }}>{children}</button>
+  );
+}
+function ApptCard({ a }) {
+  const tone = a.status === 'upcoming' ? { c: 'var(--navy)', bg: 'var(--blueSoft)', lbl: 'YAKLAŞAN' }
+    : a.status === 'done' ? { c: 'var(--muted)', bg: 'var(--surfaceAlt)', lbl: 'TAMAMLANDI' }
+    : { c: 'var(--red)', bg: 'var(--redSoft)', lbl: 'İPTAL EDİLDİ' };
+  return (
+    <Card style={{ padding: 0, marginBottom: 10, overflow: 'hidden' }}>
+      <div style={{ padding: '10px 14px', background: tone.bg,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: tone.c, letterSpacing: 0.8 }}>{tone.lbl}</div>
+        <div style={{ fontSize: 11, fontWeight: 600, color: tone.c }}>{a.date}</div>
+      </div>
+      <div style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <Avatar initials={a.shop.split(' ').map(s=>s[0]).join('').slice(0,2)} size={44}/>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>{a.shop}</div>
+          <div style={{ fontSize: 12, color: 'var(--blue)', marginTop: 2, fontWeight: 500 }}>{a.service}</div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: -0.3 }}>{a.time}</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)' }}>{a.dur}dk</div>
+        </div>
+      </div>
+      {a.status === 'upcoming' && (
+        <div style={{ display: 'flex', borderTop: '1px solid var(--hair)' }}>
+          <button style={btmBtn}>Detay</button>
+          <div style={{ width: 1, background: 'var(--hair)' }}/>
+          <button style={{ ...btmBtn, color: 'var(--red)' }}>İptal Et</button>
+        </div>
+      )}
+      {a.status === 'done' && (
+        <div style={{ display: 'flex', borderTop: '1px solid var(--hair)' }}>
+          <button style={btmBtn}>Tekrar Al</button>
+          <div style={{ width: 1, background: 'var(--hair)' }}/>
+          <button style={btmBtn}>Değerlendir</button>
+        </div>
+      )}
+    </Card>
+  );
+}
+const btmBtn = {
+  flex: 1, padding: 12, background: 'transparent', border: 'none',
+  fontSize: 13, fontWeight: 600, color: 'var(--ink)', cursor: 'pointer', fontFamily: 'inherit',
+};
+
+function App() {
+  const [tab, setTab] = useState('upcoming');
+  const all = [
+    { id: 1, shop: "Mert'in Yeri",  service: 'Saç + Sakal · 60dk', date: '8 May, Per', time: '14:30', dur: 60, status: 'upcoming' },
+    { id: 2, shop: "Saloon No.7",    service: 'Saç Kesimi · 30dk',  date: '14 May, Çar', time: '11:00', dur: 30, status: 'upcoming' },
+    { id: 3, shop: "Mert'in Yeri",  service: 'Sakal Tıraşı · 20dk', date: '24 Nis, Cum', time: '17:00', dur: 20, status: 'done' },
+    { id: 4, shop: "Adam Berber",   service: 'Saç Kesimi · 30dk',  date: '12 Nis, Pzt', time: '13:30', dur: 30, status: 'cancel' },
+  ];
+  const filtered = all.filter(a =>
+    tab === 'upcoming' ? a.status === 'upcoming' :
+    tab === 'past' ? a.status !== 'upcoming' : true
+  );
+  return (
+    <div style={{ width: '100%', height: '100%', background: 'var(--bg)', overflow: 'auto', paddingBottom: 80 }}>
+      <PageHeader eyebrow="RANDEVULARIM" title="Randevularım" sub="Geçmiş ve gelecek randevuların tek yerde."/>
+      <div style={{ padding: '4px 20px 0', display: 'flex', gap: 6 }}>
+        <Tab id="upcoming" active={tab} onClick={setTab}>Yaklaşan</Tab>
+        <Tab id="past" active={tab} onClick={setTab}>Geçmiş</Tab>
+      </div>
+      <div style={{ padding: '14px 20px 0' }}>
+        {filtered.length ? filtered.map(a => <ApptCard key={a.id} a={a}/>) : (
+          <Card style={{ padding: '40px 20px', textAlign: 'center' }}>
+            <div style={{ width: 56, height: 56, borderRadius: 28, background: 'var(--surfaceAlt)',
+              margin: '0 auto 14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {ICN.cal('#9CA3AF')}
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Burada randevu yok</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)' }}>Diğer sekmeye bakabilirsin.</div>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<IOSDevice width={390} height={844}><App/></IOSDevice>);
+</script></body></html>

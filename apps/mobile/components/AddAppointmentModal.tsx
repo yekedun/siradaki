@@ -189,8 +189,8 @@ export function AddAppointmentModal({
       Alert.alert("Eksik", "Müşteri adı en az 2 karakter olmalı");
       return;
     }
-    if (!serviceId && customServiceName.trim().length < 2) {
-      Alert.alert("Eksik", "Hizmet adı seç veya yaz");
+    if (!serviceId) {
+      Alert.alert("Eksik", "Atomic planlama için kayıtlı bir hizmet seçmelisin");
       return;
     }
     if (!isEdit && startsAt.getTime() < Date.now() - 60_000) {
@@ -199,27 +199,32 @@ export function AddAppointmentModal({
     }
 
     setLoading(true);
-    const payload = {
-      staff_id: staffId,
-      service_id: serviceId,
-      customer_name: name.trim(),
-      customer_phone: phone.trim() || null,
-      starts_at: startsAt.toISOString(),
-      ends_at: endsAt.toISOString(),
-      status: "confirmed",
-    };
-
     const { error } = isEdit
-      ? await supabase
-          .from("appointments")
-          .update(payload)
-          .eq("id", editingAppt!.id)
-      : await supabase.from("appointments").insert(payload);
+      ? await supabase.rpc("update_appointment_atomic" as never, {
+          p_appointment_id: editingAppt!.id,
+          p_staff_id: staffId,
+          p_service_id: serviceId,
+          p_starts_at: startsAt.toISOString(),
+          p_customer_name: name.trim(),
+          p_customer_phone: phone.trim() || null,
+          p_customer_notes: null,
+        } as never)
+      : await supabase.rpc("create_appointment_atomic" as never, {
+          p_shop_slug: null,
+          p_shop_id: shopId,
+          p_service_id: serviceId,
+          p_staff_id: staffId,
+          p_starts_at: startsAt.toISOString(),
+          p_customer_name: name.trim(),
+          p_customer_phone: phone.trim() || null,
+          p_customer_notes: null,
+          p_customer_user_id: null,
+        } as never);
     setLoading(false);
 
     if (error) {
-      if (error.code === "23P01") {
-        Alert.alert("Çakışma", "Bu saatte zaten randevu var. Farklı bir saat seç.");
+      if (error.code === "23P01" || error.code === "P0001") {
+        Alert.alert("Çakışma", error.message || "Bu saat artık müsait değil. Farklı bir saat seç.");
       } else {
         Alert.alert("Hata", error.message);
       }

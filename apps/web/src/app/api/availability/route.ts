@@ -3,6 +3,39 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { computeAvailableSlots } from "@berber/shared/slot-utils";
 import type { WorkingHours } from "@berber/shared/types";
 
+type SupabaseServerClient = ReturnType<typeof createSupabaseServerClient>;
+
+async function resolveWorkingHours(
+  supabase: SupabaseServerClient,
+  staffId: string,
+  date: string,
+  shopWorkingHours: WorkingHours
+): Promise<{ workingHours: WorkingHours; closed: boolean }> {
+  const { data: schedule } = await supabase
+    .rpc("get_staff_day_hours", { p_staff_id: staffId, p_date: date })
+    .maybeSingle();
+
+  if (!schedule) return { workingHours: shopWorkingHours, closed: false };
+  if (!schedule.is_working) return { workingHours: shopWorkingHours, closed: true };
+
+  const dateObj = new Date(`${date}T00:00:00Z`);
+  const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][
+    dateObj.getUTCDay()
+  ] as keyof WorkingHours;
+
+  return {
+    workingHours: {
+      ...shopWorkingHours,
+      [dayKey]: {
+        open: schedule.work_start,
+        close: schedule.work_end,
+        enabled: true,
+      },
+    },
+    closed: false,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const shopSlug      = searchParams.get("shop_slug");
@@ -58,6 +91,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Personel bulunamadı" }, { status: 404 });
     }
 
+    const { workingHours: staffWorkingHours, closed } = await resolveWorkingHours(
+      supabase,
+      staffMember.id,
+      date,
+      workingHours
+    );
+
+    if (closed) {
+      return NextResponse.json(
+        { staff_id: staffMember.id, occupied: [], slots: [] },
+        { headers: { "Cache-Control": "no-store" } }
+      );
+    }
+
     const { data: occupied, error: rpcError } = await supabase.rpc(
       "get_occupied_ranges",
       { p_staff_id: staffMember.id, p_date: date }
@@ -74,7 +121,7 @@ export async function GET(request: NextRequest) {
     const slots = computeAvailableSlots({
       date: new Date(date),
       durationMin: service.duration_min,
-      workingHours,
+      workingHours: staffWorkingHours,
       occupied: occupied ?? [],
       timezone,
     });
@@ -106,23 +153,26 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const occupiedPerStaff = await Promise.all(
+  const perStaff = await Promise.all(
     staff.map(async (b) => {
+      const resolved = await resolveWorkingHours(supabase, b.id, date, workingHours);
+      if (resolved.closed) return { workingHours: resolved.workingHours, occupied: [], closed: true };
       const { data } = await supabase.rpc("get_occupied_ranges", {
         p_staff_id: b.id,
         p_date: date,
       });
-      return data ?? [];
+      return { workingHours: resolved.workingHours, occupied: data ?? [], closed: false };
     })
   );
 
   const slotMap = new Map<string, { available: boolean; ends_at: string }>();
 
-  for (const occupied of occupiedPerStaff) {
+  for (const { workingHours: staffWorkingHours, occupied, closed } of perStaff) {
+    if (closed) continue;
     const slots = computeAvailableSlots({
       date: new Date(date),
       durationMin: service.duration_min,
-      workingHours,
+      workingHours: staffWorkingHours,
       occupied,
       timezone,
     });

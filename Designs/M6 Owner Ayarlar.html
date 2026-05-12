@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Owner · Ayarlar</title>
+<link rel="stylesheet" href="tokens.css"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head><body class="preview-stage"><div id="root"></div>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="app-shell.jsx"></script>
+<script type="text/babel">
+function Section({ title, children, meta }) {
+  return (
+    <div style={{ padding: '8px 20px 4px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginTop: 18, marginBottom: 10 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+          textTransform: 'uppercase', letterSpacing: 0.6 }}>{title}</div>
+        {meta && <div style={{ fontSize: 11, color: 'var(--mutedAlt)', fontWeight: 500 }}>{meta}</div>}
+      </div>
+      {children}
+    </div>
+  );
+}
+function Row({ label, value, danger, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      width: '100%', padding: 14,
+      background: 'var(--surface)', border: '1px solid var(--hair)',
+      borderBottom: 'none',
+      cursor: 'pointer', textAlign: 'left',
+      display: 'flex', alignItems: 'center', gap: 12,
+      fontFamily: 'inherit',
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: 500, color: danger ? 'var(--red)' : 'var(--ink)' }}>{label}</div>
+      </div>
+      {value && <div style={{ fontSize: 13, color: 'var(--muted)' }}>{value}</div>}
+      {ICN.chev(danger ? '#DC2626' : '#9CA3AF')}
+    </button>
+  );
+}
+function Group({ children }) {
+  return (
+    <div style={{ borderRadius: 'var(--r-card)', overflow: 'hidden',
+      boxShadow: 'var(--shadow-card)' }}>
+      {React.Children.map(children, (c, i, arr) => i === React.Children.count(children) - 1
+        ? React.cloneElement(c, { style: { ...(c.props.style||{}) } })
+        : c)}
+    </div>
+  );
+}
+
+function App() {
+  const [tokens] = useState([
+    { id: 1, label: 'iPhone Widget',   last: '7 May 2026', code: 'wgt_4f9a…b21c' },
+    { id: 2, label: 'Eşim Telefonu',   last: '3 May 2026', code: 'wgt_a02e…71d8' },
+  ]);
+  return (
+    <div style={{ width: '100%', height: '100%', background: 'var(--bg)', overflow: 'auto', paddingBottom: 32 }}>
+      <PageHeader eyebrow="AYARLAR" title="Ayarlar" sub="Dükkan bilgileri, ekip ve hesap." />
+
+      {/* Account header */}
+      <div style={{ padding: '14px 20px 0' }}>
+        <Card style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Avatar initials="MY" size={44} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>Mert'in Yeri</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>berber@dukkan.com</div>
+          </div>
+          <button style={{
+            padding: '8px 12px', background: 'var(--blueSoft)', color: 'var(--navy)',
+            border: 'none', borderRadius: 100, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+          }}>Düzenle</button>
+        </Card>
+      </div>
+
+      <Section title="Dükkan">
+        <Group>
+          <Row label="Ad" value="Mert'in Yeri"/>
+          <Row label="Adres" value="Bağdat Cad. 142"/>
+          <Row label="Telefon" value="+90 216 555 00 42"/>
+          <Row label="Çalışma Saatleri" value="09–19"/>
+        </Group>
+      </Section>
+
+      <Section title="Widget Tokenları" meta={`${tokens.length} adet`}>
+        <button style={{
+          width: '100%', padding: 14, marginBottom: 8,
+          background: 'var(--navy)', color: '#fff', border: 'none',
+          borderRadius: 'var(--r-cta)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+          boxShadow: 'var(--shadow-cta)',
+        }}>＋ Yeni Token Oluştur</button>
+        {tokens.map(t => (
+          <Card key={t.id} style={{ marginBottom: 8, padding: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10, background: 'var(--surfaceAlt)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto',
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M15 9.5a3.5 3.5 0 1 1-4.95 4.95L7 17.5V20h2.5l1-1v-1.5h1.5V16h1.5l1.55-1.55A3.5 3.5 0 0 1 15 9.5z"
+                  stroke="#1E3A8A" strokeWidth="1.7" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>{t.label}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2,
+                fontFamily: 'ui-monospace, Menlo, monospace' }}>{t.code} · son {t.last}</div>
+            </div>
+            <DangerButton>Sil</DangerButton>
+          </Card>
+        ))}
+      </Section>
+
+      <Section title="Bildirimler">
+        <Group>
+          <Row label="Yeni randevu push" value="Açık"/>
+          <Row label="İptal/değişiklik push" value="Açık"/>
+          <Row label="Günlük özet" value="Kapalı"/>
+        </Group>
+      </Section>
+
+      <Section title="Hesap">
+        <Group>
+          <Row label="Şifre Değiştir"/>
+          <Row label="Gizlilik"/>
+          <Row label="Çıkış Yap" danger/>
+        </Group>
+      </Section>
+
+      <div style={{ marginTop: 20, textAlign: 'center', fontSize: 11, color: 'var(--mutedAlt)' }}>
+        Berber Panel · v1.0.0
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<IOSDevice width={390} height={844}><App/></IOSDevice>);
+</script></body></html>

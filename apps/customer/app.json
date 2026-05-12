@@ -5,9 +5,9 @@
     "version": "1.0.0",
     "scheme": "berbermusterapp",
     "orientation": "portrait",
-    "icon": "../../mobile/assets/icon.png",
+    "icon": "../mobile/assets/icon.png",
     "splash": {
-      "image": "../../mobile/assets/splash.png",
+      "image": "../mobile/assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#F8FAFC"
     },
@@ -18,7 +18,7 @@
     "android": {
       "package": "com.berberapp.musteri",
       "adaptiveIcon": {
-        "foregroundImage": "../../mobile/assets/adaptive-icon.png",
+        "foregroundImage": "../mobile/assets/adaptive-icon.png",
         "backgroundColor": "#F8FAFC"
       }
     },

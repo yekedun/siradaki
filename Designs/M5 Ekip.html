@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Owner · Ekip</title>
+<link rel="stylesheet" href="tokens.css"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head><body class="preview-stage"><div id="root"></div>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="app-shell.jsx"></script>
+<script type="text/babel">
+const STAFF = [
+  { id: 1, name: 'Mert Yıldız',    role: 'Usta',  status: 'busy',     until: '13:45', initials: 'MY' },
+  { id: 2, name: 'Burak Çelik',    role: 'Usta',  status: 'free',     initials: 'BÇ' },
+  { id: 3, name: 'Emre Korkmaz',   role: 'Çırak', status: 'busy',     until: '14:00', initials: 'EK' },
+  { id: 4, name: 'Hakan Acar',     role: 'Usta',  status: 'off',      until: 'İzinli', initials: 'HA' },
+];
+
+const TONE = {
+  busy: { bg: 'var(--redSoft)',   color: 'var(--red)',  label: 'Meşgul'    },
+  free: { bg: 'var(--blueSoft)',  color: 'var(--navy)', label: 'Müsait'    },
+  off:  { bg: 'var(--surfaceAlt)',color: 'var(--muted)',label: 'Bugün yok' },
+};
+
+function App() {
+  const [scheduleFor, setScheduleFor] = useState(null);
+
+  const open = STAFF.filter(s => s.status !== 'off').length;
+
+  return (
+    <div style={{ width: '100%', height: '100%', background: 'var(--bg)', overflow: 'auto', position: 'relative' }}>
+      <PageHeader eyebrow="EKİP" title="Ekip" sub={`${open} usta aktif · ${STAFF.length} toplam`} />
+
+      {/* filter chips */}
+      <div style={{ display: 'flex', gap: 8, padding: '6px 20px 14px' }}>
+        {['Tümü', 'Müsait', 'Meşgul', 'İzinli'].map((c, i) => (
+          <button key={c} style={{
+            padding: '8px 12px',
+            background: i === 0 ? 'var(--ink)' : 'var(--surface)',
+            color: i === 0 ? '#fff' : 'var(--ink)',
+            border: `1px solid ${i === 0 ? 'var(--ink)' : 'var(--hair)'}`,
+            borderRadius: 100, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+          }}>{c}</button>
+        ))}
+      </div>
+
+      <div style={{ padding: '0 20px 110px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {STAFF.map(s => {
+          const t = TONE[s.status];
+          return (
+            <Card key={s.id} style={{ padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <Avatar initials={s.initials} size={44} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{s.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{s.role}</div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                <div style={{
+                  padding: '4px 10px', borderRadius: 100,
+                  background: t.bg, color: t.color,
+                  fontSize: 11, fontWeight: 700, letterSpacing: 0.4,
+                }}>{t.label}</div>
+                {s.until && (
+                  <div style={{ fontSize: 11, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>
+                    {s.status === 'busy' ? `→ ${s.until}` : s.until}
+                  </div>
+                )}
+              </div>
+              <button onClick={() => setScheduleFor(s)} style={{
+                marginLeft: 4, width: 30, height: 30, borderRadius: 15,
+                background: 'var(--surfaceAlt)', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>{ICN.chev('#6B7280')}</button>
+            </Card>
+          );
+        })}
+
+        {/* Add staff */}
+        <button style={{
+          padding: 14, background: 'transparent',
+          border: '1.5px dashed var(--hairAlt)', borderRadius: 'var(--r-card)',
+          color: 'var(--muted)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+        }}>＋ Personel Ekle</button>
+      </div>
+
+      {/* StaffScheduleModal — bottom sheet */}
+      <div onClick={() => setScheduleFor(null)} style={{
+        position: 'absolute', inset: 0, zIndex: 30, background: 'rgba(15,23,42,0.45)',
+        opacity: scheduleFor ? 1 : 0, pointerEvents: scheduleFor ? 'auto' : 'none',
+        transition: 'opacity 200ms ease',
+      }}/>
+      <div style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 40,
+        background: 'var(--surface)', borderTopLeftRadius: 24, borderTopRightRadius: 24,
+        transform: scheduleFor ? 'translateY(0)' : 'translateY(110%)',
+        transition: 'transform 280ms cubic-bezier(.4,0,.2,1)',
+        boxShadow: 'var(--shadow-sheet)', paddingBottom: 20,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 6px' }}>
+          <div style={{ width: 40, height: 4, borderRadius: 4, background: 'var(--hair)' }}/>
+        </div>
+        {scheduleFor && (
+          <div style={{ padding: '6px 20px 8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <Avatar initials={scheduleFor.initials} size={48}/>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{scheduleFor.name}</h2>
+                <div style={{ fontSize: 13, color: 'var(--muted)' }}>Vardiya · Bu Hafta</div>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 16 }}>
+              {TR_DAY.slice(1).concat(TR_DAY[0]).map((d, i) => {
+                const active = i < 5;
+                return (
+                  <div key={i} style={{
+                    padding: '10px 0', borderRadius: 10,
+                    background: active ? 'var(--blueSoft)' : 'var(--surfaceAlt)',
+                    border: `1px solid ${active ? 'var(--navy)' : 'var(--hair)'}`,
+                    textAlign: 'center',
+                  }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)',
+                      textTransform: 'uppercase', letterSpacing: 0.5 }}>{d}</div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: active ? 'var(--navy)' : 'var(--mutedAlt)',
+                      marginTop: 4 }}>{active ? '09–19' : 'Kapalı'}</div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setScheduleFor(null)} style={{
+                flex: 1, padding: 14, background: 'var(--surfaceAlt)', color: 'var(--ink)',
+                border: 'none', borderRadius: 'var(--r-cta)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              }}>Kapat</button>
+              <PrimaryCTA onClick={() => setScheduleFor(null)}>Vardiyayı Düzenle</PrimaryCTA>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<IOSDevice width={390} height={844}><App/></IOSDevice>);
+</script></body></html>

@@ -13,6 +13,8 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { addDays, startOfDay, startOfWeek, isSameDay } from "date-fns";
+import { DEFAULT_TIMEZONE } from "@berber/shared/constants";
+import { getDayBoundsUTC } from "@berber/shared/slot-utils";
 import { supabase } from "../../lib/supabase";
 import { T, R, Shadow, POLE_COLORS } from "../../lib/theme";
 import { AddAppointmentModal } from "../../components/AddAppointmentModal";
@@ -37,7 +39,7 @@ type TimelineItem =
   | { kind: "appt"; key: string; starts_at: string; appt: Appointment }
   | { kind: "block"; key: string; starts_at: string; block: Block };
 
-const TZ = "Europe/Istanbul";
+const TZ = DEFAULT_TIMEZONE;
 const DAY_NAMES = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 const MONTH_NAMES = [
   "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
@@ -56,8 +58,8 @@ const ROW_DOT_TOP = 16;
 
 function isInDay(iso: string, day: Date): boolean {
   const t = new Date(iso).getTime();
-  const s = startOfDay(day).getTime();
-  return t >= s && t < s + 24 * 3600 * 1000;
+  const { start, end } = getDayBoundsUTC(day, TZ);
+  return t >= start.getTime() && t < end.getTime();
 }
 function sortByStart<T extends { starts_at: string }>(arr: T[]): T[] {
   return [...arr].sort((a, b) => a.starts_at.localeCompare(b.starts_at));
@@ -123,8 +125,9 @@ export default function AppointmentsScreen() {
 
   const fetchDay = useCallback(async (bid: string, day: Date) => {
     const reqId = ++reqIdRef.current;
-    const dayStart = startOfDay(day).toISOString();
-    const dayEnd = addDays(startOfDay(day), 1).toISOString();
+    const { start, end } = getDayBoundsUTC(day, TZ);
+    const dayStart = start.toISOString();
+    const dayEnd = end.toISOString();
     const [{ data: appts }, { data: blks }] = await Promise.all([
       supabase
         .from("appointments")
@@ -167,24 +170,8 @@ export default function AppointmentsScreen() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "appointments", filter: `staff_id=eq.${staffId}` },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            const row = payload.new as Appointment;
-            if (!isInDay(row.starts_at, selectedDay)) return;
-            setAppointments((prev) =>
-              prev.some((a) => a.id === row.id)
-                ? prev
-                : sortByStart([...prev, { ...row, services: row.services ?? null }])
-            );
-          } else if (payload.eventType === "UPDATE") {
-            const row = payload.new as Appointment;
-            setAppointments((prev) =>
-              prev.map((a) => (a.id === row.id ? { ...row, services: a.services } : a))
-            );
-          } else if (payload.eventType === "DELETE") {
-            const id = (payload.old as { id: string }).id;
-            setAppointments((prev) => prev.filter((a) => a.id !== id));
-          }
+        () => {
+          void fetchDay(staffId, selectedDay);
         }
       )
       .on(
@@ -208,7 +195,7 @@ export default function AppointmentsScreen() {
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [staffId, selectedDay]);
+  }, [staffId, selectedDay, fetchDay]);
 
   const timeline: TimelineItem[] = useMemo(() => {
     const items: TimelineItem[] = [
@@ -312,10 +299,9 @@ export default function AppointmentsScreen() {
         onAction={async (action) => {
           if (!detailAppt) return;
           if (action === "complete") {
-            const { error } = await supabase
-              .from("appointments")
-              .update({ status: "completed" })
-              .eq("id", detailAppt.id);
+            const { error } = await supabase.rpc("complete_appointment_with_revenue", {
+              p_appointment_id: detailAppt.id,
+            });
             if (error) console.warn(error.message);
             setDetailAppt(null);
             return;

@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -24,7 +25,7 @@ interface SlotItem {
 
 interface DayItem {
   date: Date;
-  iso: string; // YYYY-MM-DD
+  iso: string;
 }
 
 const TZ = "Europe/Istanbul";
@@ -40,7 +41,10 @@ function buildDays(): DayItem[] {
 
 function fTime(iso: string) {
   return new Intl.DateTimeFormat("tr-TR", {
-    hour: "2-digit", minute: "2-digit", hour12: false, timeZone: TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: TZ,
   }).format(new Date(iso));
 }
 
@@ -65,7 +69,7 @@ function DayPill({
     >
       <Text style={[styles.dayName, selected && styles.dayNameSelected]}>{dayName}</Text>
       <Text style={[styles.dayNum, selected && styles.dayNumSelected]}>{dayNum}</Text>
-      {isToday && <View style={[styles.todayDot, selected && styles.todayDotSelected]} />}
+      {isToday ? <View style={[styles.todayDot, selected && styles.todayDotSelected]} /> : null}
     </TouchableOpacity>
   );
 }
@@ -86,6 +90,7 @@ function SlotChip({
       </View>
     );
   }
+
   return (
     <TouchableOpacity
       style={[styles.slotChip, selected && styles.slotChipSelected]}
@@ -101,8 +106,12 @@ function SlotChip({
 
 export default function Step3Slot() {
   const params = useLocalSearchParams<{
-    sid: string; sname: string; sdur: string; sprice: string;
-    bid: string; bname: string;
+    sid: string;
+    sname: string;
+    sdur: string;
+    sprice: string;
+    bid: string;
+    bname: string;
   }>();
   const [days] = useState<DayItem[]>(buildDays);
   const [selectedDay, setSelectedDay] = useState<DayItem>(days[0]!);
@@ -114,35 +123,46 @@ export default function Step3Slot() {
   const insets = useSafeAreaInsets();
   const dayListRef = useRef<FlatList<DayItem>>(null);
 
-  const fetchSlots = useCallback(async (day: DayItem) => {
-    setSlotsLoading(true);
-    setSlots([]);
-    setSelectedSlot(null);
-    const id = ++reqRef.current;
+  const fetchSlots = useCallback(
+    async (day: DayItem) => {
+      setSlotsLoading(true);
+      setSlots([]);
+      setSelectedSlot(null);
+      const id = ++reqRef.current;
 
-    const url = new URL(`${SUPABASE_URL}/functions/v1/get-availability`);
-    url.searchParams.set("shop_slug", SHOP_SLUG);
-    url.searchParams.set("date", day.iso);
-    url.searchParams.set("service_id", params.sid);
-    if (params.bid !== "any") url.searchParams.set("barber_id", params.bid);
+      const url = new URL(`${SUPABASE_URL}/functions/v1/customer-get-availability`);
+      url.searchParams.set("shop_slug", SHOP_SLUG);
+      url.searchParams.set("date", day.iso);
+      url.searchParams.set("service_id", params.sid);
+      if (params.bid !== "any") url.searchParams.set("staff_id", params.bid);
 
-    // Auth token ile istek at (opsiyonel ama tutarlılık için)
-    const { data: { session } } = await supabase.auth.getSession();
-    const authHeader = session ? `Bearer ${session.access_token}` : `Bearer ${SUPABASE_ANON_KEY}`;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const authHeader = session ? `Bearer ${session.access_token}` : `Bearer ${SUPABASE_ANON_KEY}`;
 
-    try {
-      const res = await fetch(url.toString(), {
-        headers: { Authorization: authHeader, "Content-Type": "application/json" },
-      });
-      if (id !== reqRef.current) return;
-      const data = await res.json() as { slots?: SlotItem[] };
-      setSlots((data.slots ?? []).filter((s) => s.available));
-    } catch {
-      // Bağlantı hatası — boş bırak
-    } finally {
-      if (id === reqRef.current) setSlotsLoading(false);
-    }
-  }, [params.sid, params.bid]);
+      try {
+        const res = await fetch(url.toString(), {
+          headers: { Authorization: authHeader, "Content-Type": "application/json" },
+        });
+        if (id !== reqRef.current) return;
+
+        const data = (await res.json()) as { error?: string; slots?: SlotItem[] };
+        if (!res.ok) {
+          Alert.alert("Musaitlik Alinamadi", data.error ?? "Lutfen tekrar deneyin.");
+          setSlots([]);
+          return;
+        }
+
+        setSlots((data.slots ?? []).filter((s) => s.available));
+      } catch {
+        Alert.alert("Baglanti Hatasi", "Musaitlik bilgisi alinamadi.");
+      } finally {
+        if (id === reqRef.current) setSlotsLoading(false);
+      }
+    },
+    [params.sid, params.bid]
+  );
 
   useEffect(() => {
     fetchSlots(selectedDay);
@@ -170,7 +190,7 @@ export default function Step3Slot() {
           <Ionicons name="arrow-back" size={22} color={T.ink} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Gün & Saat</Text>
+          <Text style={styles.headerTitle}>Gun & Saat</Text>
           <Text style={styles.headerStep}>3 / 4</Text>
         </View>
         <View style={styles.backBtn} />
@@ -179,7 +199,6 @@ export default function Step3Slot() {
         <View style={[styles.progressFill, { width: "75%" }]} />
       </View>
 
-      {/* Breadcrumb */}
       <View style={styles.breadcrumbRow}>
         <View style={styles.breadcrumb}>
           <Ionicons name="cut-outline" size={12} color={T.blue} />
@@ -191,7 +210,6 @@ export default function Step3Slot() {
         </View>
       </View>
 
-      {/* Gün şeridi */}
       <View style={styles.dayStrip}>
         <FlatList
           ref={dayListRef}
@@ -212,7 +230,6 @@ export default function Step3Slot() {
         />
       </View>
 
-      {/* Saatler */}
       <ScrollView
         contentContainerStyle={[styles.slotsContent, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
@@ -227,8 +244,8 @@ export default function Step3Slot() {
         ) : slots.length === 0 ? (
           <View style={styles.emptyWrap}>
             <Ionicons name="calendar-outline" size={32} color={T.mutedAlt} />
-            <Text style={styles.emptyTitle}>Bu gün için uygun saat yok</Text>
-            <Text style={styles.emptyBody}>Lütfen başka bir gün seçin.</Text>
+            <Text style={styles.emptyTitle}>Bu gun icin uygun saat yok</Text>
+            <Text style={styles.emptyBody}>Lutfen baska bir gun secin.</Text>
           </View>
         ) : (
           <View style={styles.slotsGrid}>
@@ -244,7 +261,6 @@ export default function Step3Slot() {
         )}
       </ScrollView>
 
-      {/* Devam Et butonu */}
       <View style={[styles.ctaBar, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity
           style={[styles.cta, !selectedSlot && styles.ctaDisabled]}
@@ -253,7 +269,7 @@ export default function Step3Slot() {
           activeOpacity={0.88}
         >
           <Text style={styles.ctaText}>
-            {selectedSlot ? `${fTime(selectedSlot.starts_at)} seçildi · Devam Et →` : "Saat Seçin"}
+            {selectedSlot ? `${fTime(selectedSlot.starts_at)} secildi · Devam Et →` : "Saat Secin"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -299,7 +315,6 @@ const styles = StyleSheet.create({
   },
   breadcrumbText: { fontSize: 12, fontWeight: "600", color: T.blue },
 
-  // Gün şeridi
   dayStrip: {
     paddingVertical: 14,
     borderBottomWidth: 1,
@@ -331,7 +346,6 @@ const styles = StyleSheet.create({
   todayDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: T.red, marginTop: 4 },
   todayDotSelected: { backgroundColor: "#fff" },
 
-  // Slot grid
   slotsContent: { paddingHorizontal: 20, paddingTop: 20 },
   sectionTitle: {
     fontSize: 14,
@@ -365,7 +379,12 @@ const styles = StyleSheet.create({
     backgroundColor: T.surfaceAlt,
     alignItems: "center",
   },
-  slotDisabledText: { fontSize: 14, fontWeight: "500", color: T.mutedAlt, fontVariant: ["tabular-nums"] },
+  slotDisabledText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: T.mutedAlt,
+    fontVariant: ["tabular-nums"],
+  },
 
   emptyWrap: { alignItems: "center", paddingTop: 48, gap: 8 },
   emptyTitle: { fontSize: 15, fontWeight: "600", color: T.ink },

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Müşteri · Doğrulama</title>
+<link rel="stylesheet" href="tokens.css"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head><body class="preview-stage"><div id="root"></div>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="app-shell.jsx"></script>
+<script type="text/babel">
+function App() {
+  const [code, setCode] = useState(['','','','']);
+  const [secs, setSecs] = useState(45);
+  useEffect(() => { if (secs > 0) { const t = setTimeout(() => setSecs(s => s-1), 1000); return () => clearTimeout(t); } }, [secs]);
+
+  const setDigit = (i, v) => {
+    if (v && !/^\d$/.test(v)) return;
+    const next = [...code]; next[i] = v; setCode(next);
+    if (v && i < 3) document.getElementById(`d${i+1}`).focus();
+  };
+
+  const filled = code.every(d => d !== '');
+
+  return (
+    <div style={{ width: '100%', height: '100%', background: 'var(--bg)',
+      display: 'flex', flexDirection: 'column' }}>
+      <NavTopBar title="Doğrulama" onBack={() => history.back()} />
+
+      <div style={{ flex: 1, padding: '32px 24px' }}>
+        <div className="eyebrow" style={{ marginBottom: 6 }}>SMS DOĞRULAMA</div>
+        <h1 style={{ margin: '0 0 8px', fontSize: 24, fontWeight: 700, letterSpacing: -0.3 }}>Kodu Gir</h1>
+        <div style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 28, lineHeight: 1.5 }}>
+          <span style={{ fontWeight: 600, color: 'var(--ink)' }}>+90 555 123 45 67</span> numarasına gelen 4 haneli kodu gir.
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 24 }}>
+          {code.map((d, i) => (
+            <input key={i} id={`d${i}`} value={d} onChange={e => setDigit(i, e.target.value.slice(-1))}
+              inputMode="numeric" maxLength={1}
+              style={{
+                aspectRatio: '1', textAlign: 'center', fontSize: 28, fontWeight: 700,
+                background: 'var(--surface)', border: `1.5px solid ${d ? 'var(--navy)' : 'var(--hair)'}`,
+                borderRadius: 'var(--r-card)', color: 'var(--ink)',
+                outline: 'none', fontVariantNumeric: 'tabular-nums',
+              }}/>
+          ))}
+        </div>
+
+        <PrimaryCTA disabled={!filled} onClick={() => location.href='C3 Profil Kurulum.html'}>
+          Doğrula
+        </PrimaryCTA>
+
+        <div style={{ marginTop: 22, textAlign: 'center', fontSize: 13, color: 'var(--muted)' }}>
+          {secs > 0 ? (
+            <span>Yeni kod <span style={{ fontWeight: 600, color: 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}>{secs}s</span> sonra</span>
+          ) : (
+            <button onClick={() => setSecs(45)} style={{
+              background: 'transparent', border: 'none', color: 'var(--navy)',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}>Kodu Tekrar Gönder</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<IOSDevice width={390} height={844}><App/></IOSDevice>);
+</script></body></html>

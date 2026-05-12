@@ -1,8 +1,24 @@
+import { useEffect, useState } from "react";
 import { Tabs } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import { supabase } from "../../lib/supabase";
 import { T } from "../../lib/theme";
+import { useUserRole } from "../../lib/user-context";
 
 export default function OwnerLayout() {
+  const { shopId } = useUserRole();
+  const [commissionEnabled, setCommissionEnabled] = useState(false);
+
+  useEffect(() => {
+    if (!shopId) return;
+    supabase
+      .from("shops")
+      .select("commission_enabled")
+      .eq("id", shopId)
+      .single()
+      .then(({ data }) => setCommissionEnabled(Boolean(data?.commission_enabled)));
+  }, [shopId]);
+
   return (
     <Tabs
       screenOptions={{
@@ -40,6 +56,14 @@ export default function OwnerLayout() {
         options={{
           title: "Ekip",
           tabBarIcon: ({ color }) => <Feather name="users" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="earnings"
+        options={{
+          title: "Kazanc",
+          href: commissionEnabled ? undefined : null,
+          tabBarIcon: ({ color }) => <Feather name="credit-card" size={22} color={color} />,
         }}
       />
       <Tabs.Screen

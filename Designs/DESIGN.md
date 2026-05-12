@@ -19,23 +19,23 @@
 
 **Toprak tonları yasak.** Krem / kahve / rust / taş gri kullanma.
 
-| Token       | Hex       | Kullanım                                     |
-|-------------|-----------|----------------------------------------------|
-| `bg`        | `#F8FAFC` | Sayfa zemini (soğuk gri-beyaz)               |
-| `surface`   | `#FFFFFF` | Kart, sheet, modal zemini                    |
-| `surfaceAlt`| `#F1F5F9` | İkincil yüzey (block kart, ikon zemini)      |
-| `ink`       | `#111827` | Birincil metin, ikon                         |
-| `muted`     | `#6B7280` | İkincil metin, label                         |
-| `mutedAlt`  | `#9CA3AF` | Üstü çizili / disabled metin                 |
-| `hair`      | `#E5E7EB` | Border, ayraç                                |
-| `hairAlt`   | `#CBD5E1` | Dashed border, vurgulu ayraç                 |
-| `past`      | `#D1D5DB` | Geçmiş timeline track + nokta                |
-| `red`       | `#DC2626` | NOW indicator, today rozeti, danger          |
-| `redSoft`   | `#FEF2F2` | Danger button bg (border `#FECACA`)          |
-| `blue`      | `#2563EB` | Servis satırı, ikincil aksiyon               |
-| `blueSoft`  | `#EFF6FF` | Aktif chip / aksiyon kartı zemini            |
-| `navy`      | `#1E3A8A` | **Birincil CTA**, FAB, avatar gradient sonu  |
-| `avatarGr`  | `#DBEAFE → #EFF6FF` | Avatar 135° linear gradient        |
+| Token | Hex | Kullanım |
+|---|---|---|
+| `bg` | `#F8FAFC` | Sayfa zemini (soğuk gri-beyaz) |
+| `surface` | `#FFFFFF` | Kart, sheet, modal zemini |
+| `surfaceAlt` | `#F1F5F9` | İkincil yüzey (block kart, ikon zemini) |
+| `ink` | `#111827` | Birincil metin, ikon |
+| `muted` | `#6B7280` | İkincil metin, label |
+| `mutedAlt` | `#9CA3AF` | Üstü çizili / disabled metin |
+| `hair` | `#E5E7EB` | Border, ayraç |
+| `hairAlt` | `#CBD5E1` | Dashed border, vurgulu ayraç |
+| `past` | `#D1D5DB` | Geçmiş timeline track + nokta |
+| `red` | `#DC2626` | NOW indicator, today rozeti, danger |
+| `redSoft` | `#FEF2F2` | Danger button bg (border `#FECACA`) |
+| `blue` | `#2563EB` | Servis satırı, ikincil aksiyon |
+| `blueSoft` | `#EFF6FF` | Aktif chip / aksiyon kartı zemini |
+| `navy` | `#1E3A8A` | **Birincil CTA**, FAB, avatar gradient sonu |
+| `avatarGr` | `#DBEAFE → #EFF6FF` | Avatar 135° linear gradient |
 
 **Berber direği (animated track):** `repeating-linear-gradient(135deg, #DC2626 0 6px, #FFFFFF 6px 12px, #2563EB 12px 18px, #FFFFFF 18px 24px)`; 6s linear infinite, opacity 0.45–0.55.
 
@@ -71,13 +71,13 @@
 
 ## 5. Gölge & Yükseklik
 
-| Yer                   | Shadow                                                                 |
-|-----------------------|------------------------------------------------------------------------|
-| Upcoming card         | `0 1px 2px rgba(17,24,39,.04), 0 4px 8px rgba(17,24,39,.04)`           |
-| Date pill (selected)  | `0 6px 14px rgba(17,24,39,.18)`                                        |
-| Primary CTA / FAB     | `0 12px 28px rgba(30,58,138,.4), 0 4px 8px rgba(30,58,138,.2)`         |
-| Sheet                 | `0 -10px 40px rgba(15,23,42,.2)`                                       |
-| Now-dot navy          | `0 0 0 1px #1E3A8A, 0 2px 4px rgba(30,58,138,.3)`                      |
+| Yer | Shadow |
+|---|---|
+| Upcoming card | `0 1px 2px rgba(17,24,39,.04), 0 4px 8px rgba(17,24,39,.04)` |
+| Date pill (selected) | `0 6px 14px rgba(17,24,39,.18)` |
+| Primary CTA / FAB | `0 12px 28px rgba(30,58,138,.4), 0 4px 8px rgba(30,58,138,.2)` |
+| Sheet | `0 -10px 40px rgba(15,23,42,.2)` |
+| Now-dot navy | `0 0 0 1px #1E3A8A, 0 2px 4px rgba(30,58,138,.3)` |
 
 ---
 
@@ -130,82 +130,139 @@
 
 ## 7. Animasyon
 
-| Olay              | Süre    | Easing                 |
-|-------------------|---------|------------------------|
-| Button press      | 80ms    | ease                   |
-| Sheet slide       | 280ms   | cubic-bezier(.4,0,.2,1)|
-| Backdrop fade     | 200ms   | ease                   |
-| Date pill select  | 150ms   | ease                   |
-| Pulse halo        | 1600ms  | ease-out infinite      |
-| Barber pole       | 6000ms  | linear infinite        |
+| Olay | Süre | Easing |
+|---|---|---|
+| Button press | 80ms | ease |
+| Sheet slide | 280ms | cubic-bezier(.4,0,.2,1) |
+| Backdrop fade | 200ms | ease |
+| Date pill select | 150ms | ease |
+| Pulse halo | 1600ms | ease-out infinite |
+| Barber pole | 6000ms | linear infinite |
 
 ---
 
 ## 8. Sayfa Envanteri
 
-> Her brief'in ilk cümlesi: "Tasarım dili `DESIGN.md`'de tanımlı; aşağıdakini birebir o dile uydur."
+> Her brief'in ilk cümlesi: "Tasarım dili `DESIGN.md`'de tanımlı; aşağıdaki sayfa envanterine göre bu ekranı tasarla."
 
-### Mobile
+### Owner Mobile App (`apps/mobile`)
 
-#### M1 · `(auth)/login.tsx` — Giriş
-- **Amaç:** berberin email + şifre ile Supabase auth'a girişi.
-- **Layout:** centered, dikey. Üstte logo/eyebrow, başlık "Giriş Yap", iki input (Email, Şifre), primary CTA "Giriş Yap" (navy), footer "Hesabın yok mu?" link.
-- **State:** loading → CTA içinde spinner; hata → Alert (RN native).
-- **Klavye:** KeyboardAvoidingView, iOS padding behavior.
+#### M1 · `(auth)/login.tsx` — Berber girişi
+- **Amaç:** işletme sahibinin veya personelin oturum açması.
+- **İçerik:** marka alanı, başlık, email input, şifre input, birincil giriş CTA'sı, hata alanı.
+- **Durumlar:** loading, hatalı giriş, klavye açık hali.
 
-#### M2 · `(app)/_layout.tsx` — Tab bar
-- **Amaç:** 3 sekme — Randevular / Blok / Ayarlar.
-- **Stil:** tab bar `bg`, üst border `hair`, aktif `navy`, pasif `muted`. Header gizli (her ekran kendi başlığını çiziyor).
-- **İkonlar:** lucide veya tek-renk svg; emoji kullanma (mockup'ta emoji vardı, RN'de svg'ye geç).
+#### M2 · `(owner)/_layout.tsx` — Owner tab yapısı
+- **Amaç:** owner uygulamasının ana navigasyonu.
+- **Sekmeler:** `Özet`, `Ajanda`, `Ekip`, `Ayarlar`.
+- **Tasarım ihtiyacı:** alt tab bar, aktif/pasif ikon dili, sekme etiket hiyerarşisi.
 
-#### M3 · `(app)/index.tsx` — Randevular (ana ekran)
-- **Amaç:** günün ajandası, NOW indicator, geçmiş/gelecek ayrımı, yeni randevu ekleme, randevu detay.
-- **Spec:** `app.jsx` birebir. Header eyebrow + başlık + tarih + 7-day strip, sonra timeline (past gri / future barber-pole), NOW pulse, FAB "Yeni Randevu", iki bottom sheet (NewSheet, DetailSheet).
-- **Boş gün:** 64 round pill ikon (`surfaceAlt`), "Henüz randevu yok" 16/600 + meta açıklama.
-- **Pull-to-refresh:** tabii (RN `RefreshControl`).
+#### M3 · `(owner)/index.tsx` — Özet
+- **Amaç:** işletmenin günlük durumunu tek bakışta göstermek.
+- **İçerik:** bugünkü randevu özeti, doluluk, hızlı aksiyonlar, kritik uyarılar, kısa performans kartları.
+- **Durumlar:** veri dolu, boş, loading.
 
-#### M4 · `(app)/block.tsx` — Slot Blokla
-- **Amaç:** "şu andan itibaren X dk" diye hızlı blok ekleme (yürüyen müşteri / mola / kişisel).
-- **Layout:** dikey ScrollView. Bölümler:
-  1. Eyebrow `BLOK EKLE`, başlık "Slotu Blokla".
-  2. Süre grid 3×2 chip (15/30/45/60/90/120 dk) — chip stili 6.6 servis chip ile aynı.
-  3. Sebep listesi (Yürüyen Müşteri / Mola / Kişisel) — radio liste, seçili `blueSoft` + `navy` border.
-  4. Primary CTA "Bloğu Ekle".
-- **Onay:** Alert ile başarı mesajı + reset.
+#### M4 · `(owner)/agenda.tsx` — Ajanda
+- **Amaç:** gün bazlı randevu akışını yönetmek.
+- **İçerik:** tarih seçimi, gün şeridi, timeline veya liste, yaklaşan/geçmiş randevular, detay açma, yeni randevu ekleme.
+- **Bağlı bileşenler:** `AddAppointmentModal`, `AppointmentDetailSheet`.
 
-#### M5 · `(app)/settings.tsx` — Ayarlar
-- **Amaç:** Widget token'ları yönet (oluştur/listele/sil) + çıkış.
-- **Layout:** ScrollView. Bölümler:
-  1. Eyebrow `AYARLAR`, başlık "Ayarlar".
-  2. **Widget Token'ları** — section başlık + "Yeni Token Oluştur" primary CTA (navy).
-  3. Token listesi: her satır kart (label, son kullanım tarihi, sil butonu — danger style).
-  4. Alt: "Çıkış Yap" danger button.
-- **Boş:** ortalı pill ikon + "Henüz token yok".
+#### M5 · `(owner)/team.tsx` — Ekip
+- **Amaç:** personel ve çalışma düzeni yönetimi.
+- **İçerik:** personel listesi, uygunluk bilgisi, vardiya/saat düzenleme aksiyonları.
+- **Bağlı bileşen:** `StaffScheduleModal`.
 
-### Web
+#### M6 · `(owner)/settings.tsx` — Owner ayarları
+- **Amaç:** işletme ve uygulama ayarlarını toplamak.
+- **İçerik:** dükkan bilgileri, widget token işlemleri, hesap aksiyonları, çıkış.
+- **Durumlar:** liste, boş durum, tehlikeli aksiyon alanları.
 
-#### W1 · `app/layout.tsx` — Root
-- **Amaç:** HTML iskelet.
-- **Body:** `bg` (#F8FAFC), ink text, antialiased. Tailwind config bu paleti yansıtacak.
-- **Font:** Inter via next/font.
+### Widget / Quick Action Mobile (`apps/mobile`)
 
-#### W2 · `app/[slug]/page.tsx` — Berber profil sayfası
-- **Amaç:** müşteri tarafı — berberi tanıt, servisleri seç, slot seç, randevu al.
-- **Layout (desktop):** iki kolon — sol berber kartı (foto, isim, adres, telefon link), sağ booking flow. Mobil: tek kolon, berber kartı üstte.
-- **Hero:** üstte berber adı 30/700, eyebrow "BERBER · ONLİNE RANDEVU" kırmızı, küçük adres satırı muted.
+#### M7 · `(app)/_layout.tsx` — Hafif akış tab yapısı
+- **Amaç:** widget veya hızlı operasyon akışı için ayrı navigasyon.
+- **Sekmeler:** `Randevular`, `Blok`, `Ayarlar`.
 
-#### W3 · `app/[slug]/BookingFlow.tsx` — Booking akışı
-- **Amaç:** servis seç → tarih seç → slot seç → modal'da bilgi gir → onayla.
-- **Bölümler:**
-  1. **ServiceSelector** — kartlı liste, seçili `blueSoft` + `navy` border. Servis adı + süre + fiyat.
-  2. **Tarih şeridi** — 14 günlük yatay scroll (mobil mockup date strip ile aynı stil — 48×64 pill).
-  3. **SlotGrid** — 3-4 sütun grid, her slot pill (radius 10, hair border). Default beyaz, hover hair koyulaşır, dolu disabled (mutedAlt çizgili), seçili navy zemin beyaz tipo.
-  4. **BookingModal** — bottom sheet (mobil) / center modal (desktop). İçinde isim, telefon, opsiyonel not + primary CTA "Randevuyu Onayla".
-- **Loading:** slot grid'de skeleton pill'ler (hair zemin, pulse).
-- **Başarı:** modal yerini yeşil değil — `navy` rozet + "Randevunuz alındı" + tarih/saat özeti + "Yeni randevu" link.
+#### M8 · `(app)/index.tsx` — Hızlı randevu görünümü
+- **Amaç:** kompakt günlük görünüm sunmak.
+- **İçerik:** bugünkü liste, yaklaşan müşteriler, hızlı detay erişimi.
 
-#### W4 · `app/not-found.tsx` — 404
-- **Layout:** centered, 30/700 başlık "Berber Bulunamadı", muted alt metin, ana sayfaya dön linki (navy).
+#### M9 · `(app)/block.tsx` — Slot bloklama
+- **Amaç:** belirli süre için takvimi bloklamak.
+- **İçerik:** süre seçenekleri, blok nedeni, onay CTA'sı, sonuç geri bildirimi.
+
+#### M10 · `(app)/settings.tsx` — Widget / hızlı akış ayarları
+- **Amaç:** token, bağlantı ve oturum aksiyonlarını toplamak.
+- **İçerik:** token üretme, listeleme, silme, çıkış gibi ayarlar.
+
+### Customer Mobile App (`apps/customer`)
+
+#### C1 · `(auth)/login.tsx` — Müşteri girişi
+- **Amaç:** müşterinin oturum açması.
+- **İçerik:** giriş alanı, kısa açıklama, devam CTA'sı.
+
+#### C2 · `(auth)/verify.tsx` — Doğrulama
+- **Amaç:** giriş sonrası kod/doğrulama adımı.
+- **İçerik:** kod giriş alanı, tekrar kod gönder, geri dön, süre bilgisi.
+
+#### C3 · `(auth)/setup.tsx` — Profil kurulum
+- **Amaç:** ilk girişte temel müşteri bilgilerini tamamlama.
+- **İçerik:** ad soyad, iletişim bilgisi, kaydet CTA'sı.
+
+#### C4 · `(app)/_layout.tsx` — Customer app iskeleti
+- **Amaç:** giriş yapmış müşteri alanının ana navigasyonu.
+- **Ekranlar:** `Ana sayfa`, `Randevular`, `Profil`.
+
+#### C5 · `(app)/index.tsx` — Ana sayfa
+- **Amaç:** müşteriyi rezervasyon akışına yönlendirmek.
+- **İçerik:** öne çıkan CTA'lar, son işlemler veya berber keşif alanı.
+
+#### C6 · `(app)/appointments.tsx` — Randevularım
+- **Amaç:** aktif ve geçmiş randevuları görmek, gerektiğinde iptal etmek.
+- **İçerik:** yaklaşan randevu kartları, geçmiş liste, durum etiketleri, iptal aksiyonu.
+
+#### C7 · `(app)/profile.tsx` — Profil
+- **Amaç:** müşteri bilgilerinin yönetimi.
+- **İçerik:** kişisel bilgiler, iletişim bilgileri, hesap aksiyonları.
+
+#### C8 · `booking/step1-service.tsx` — Servis seçimi
+- **Amaç:** rezervasyonun ilk adımında hizmet seçtirmek.
+- **İçerik:** servis kartları, süre/fiyat bilgisi, devam CTA'sı.
+
+#### C9 · `booking/step2-barber.tsx` — Berber seçimi
+- **Amaç:** uygun personeli seçtirmek.
+- **İçerik:** personel kartları, uygunluk ipuçları, devam CTA'sı.
+
+#### C10 · `booking/step3-slot.tsx` — Tarih ve saat seçimi
+- **Amaç:** uygun slot seçimi yaptırmak.
+- **İçerik:** tarih şeridi, saat listesi veya grid, dolu/uygun durumları.
+
+#### C11 · `booking/step4-confirm.tsx` — Onay
+- **Amaç:** seçilen randevuyu son kez özetleyip tamamlatmak.
+- **İçerik:** servis + berber + zaman özeti, not alanı, onay CTA'sı.
+
+#### C12 · `booking/success.tsx` — Başarılı rezervasyon
+- **Amaç:** rezervasyon tamamlandı ekranı.
+- **İçerik:** başarı mesajı, tarih/saat özeti, sonraki adım CTA'ları.
+
+### Web Booking (`apps/web`)
+
+#### W1 · `src/app/layout.tsx` — Web root
+- **Amaç:** web uygulamasının temel iskeleti.
+- **İçerik:** global arka plan, tipografi, container mantığı.
+
+#### W2 · `src/app/[slug]/page.tsx` — Berber profil + rezervasyon sayfası
+- **Amaç:** tek sayfada berberi tanıtıp rezervasyon akışını başlatmak.
+- **İçerik:** berber kimliği, iletişim/adres, hizmet seçimi alanı, uygunluk akışı.
+
+#### W3 · `src/app/[slug]/BookingFlow.tsx` — Rezervasyon akışı modülü
+- **Amaç:** web'deki esas rezervasyon deneyimi.
+- **Alt parçalar:** `ServiceSelector`, tarih seçimi, `SlotGrid`, `BookingModal`.
+- **Durumlar:** loading, slot yok, seçim yapılmadı, başarı, hata.
+
+#### W4 · `src/app/not-found.tsx` — 404
+- **Amaç:** bulunamayan sayfa veya slug durumunu karşılamak.
+- **İçerik:** net hata başlığı, açıklama, geri dönüş CTA'sı.
 
 ---
 

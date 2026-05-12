@@ -10,16 +10,23 @@ const TZ = "Europe/Istanbul";
 
 function fTime(iso: string) {
   return new Intl.DateTimeFormat("tr-TR", {
-    hour: "2-digit", minute: "2-digit", hour12: false, timeZone: TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: TZ,
   }).format(new Date(iso));
 }
+
 function fDate(iso: string) {
   return format(new Date(iso), "d MMMM yyyy, EEEE", { locale: tr });
 }
 
 export default function SuccessScreen() {
   const { sname, bname, slot } = useLocalSearchParams<{
-    sname: string; bname: string; slot: string; apptId: string;
+    sname: string;
+    bname: string;
+    slot: string;
+    apptId: string;
   }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -27,8 +34,6 @@ export default function SuccessScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={[styles.content, { paddingBottom: insets.bottom + 24 }]}>
-
-        {/* Başarı ikonu */}
         <View style={styles.iconWrap}>
           <View style={styles.iconOuter}>
             <View style={styles.iconInner}>
@@ -37,11 +42,13 @@ export default function SuccessScreen() {
           </View>
         </View>
 
-        <Text style={styles.eyebrow}>RANDEVU ALINDI</Text>
-        <Text style={styles.title}>Randevunuz Onaylandı!</Text>
-        <Text style={styles.subtitle}>Sizi bekliyoruz. Randevunuzu iptal etmeniz gerekirse{"\n"}&quot;Randevularım&quot; sekmesini kullanabilirsiniz.</Text>
+        <Text style={styles.eyebrow}>ONAYLANDI</Text>
+        <Text style={styles.title}>Randevun alındı</Text>
+        <Text style={styles.subtitle}>
+          <Text style={styles.subtitleStrong}>{fDate(slot)}</Text>
+          {"\n"}günü saat <Text style={styles.subtitleStrong}>{fTime(slot)}</Text> için kaydın hazır.
+        </Text>
 
-        {/* Özet kart */}
         <View style={styles.card}>
           {sname ? (
             <View style={styles.row}>
@@ -56,16 +63,10 @@ export default function SuccessScreen() {
             </View>
           ) : null}
           {slot ? (
-            <>
-              <View style={styles.row}>
-                <Ionicons name="calendar-outline" size={16} color={T.muted} />
-                <Text style={styles.rowText}>{fDate(slot)}</Text>
-              </View>
-              <View style={[styles.row, { marginBottom: 0 }]}>
-                <Ionicons name="time-outline" size={16} color={T.navy} />
-                <Text style={[styles.rowText, styles.rowTime]}>{fTime(slot)}</Text>
-              </View>
-            </>
+            <View style={[styles.row, { marginBottom: 0 }]}>
+              <Ionicons name="time-outline" size={16} color={T.navy} />
+              <Text style={[styles.rowText, styles.rowTime]}>{fTime(slot)}</Text>
+            </View>
           ) : null}
         </View>
 
@@ -75,7 +76,7 @@ export default function SuccessScreen() {
             onPress={() => router.replace("/(app)/appointments")}
             activeOpacity={0.88}
           >
-            <Text style={styles.primaryBtnText}>Randevularımı Gör →</Text>
+            <Text style={styles.primaryBtnText}>Randevularıma git</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -83,7 +84,7 @@ export default function SuccessScreen() {
             onPress={() => router.replace("/(app)")}
             activeOpacity={0.7}
           >
-            <Text style={styles.secondaryBtnText}>Ana Sayfaya Dön</Text>
+            <Text style={styles.secondaryBtnText}>Ana sayfaya dön</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -99,7 +100,6 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     alignItems: "center",
   },
-
   iconWrap: { marginBottom: 28 },
   iconOuter: {
     width: 96,
@@ -118,22 +118,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     ...Shadow.cta,
   },
-
   eyebrow: {
     fontSize: 11,
     fontWeight: "600",
-    color: T.navy,
+    color: T.red,
     letterSpacing: 1.4,
     textTransform: "uppercase",
     marginBottom: 8,
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "700",
     color: T.ink,
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
@@ -141,9 +140,9 @@ const styles = StyleSheet.create({
     color: T.muted,
     textAlign: "center",
     lineHeight: 20,
-    marginBottom: 32,
+    marginBottom: 24,
   },
-
+  subtitleStrong: { color: T.ink, fontWeight: "700" },
   card: {
     width: "100%",
     backgroundColor: T.surface,
@@ -163,7 +162,6 @@ const styles = StyleSheet.create({
   },
   rowText: { fontSize: 14, fontWeight: "500", color: T.ink, flex: 1 },
   rowTime: { fontSize: 16, fontWeight: "700", color: T.navy, fontVariant: ["tabular-nums"] },
-
   actions: { width: "100%", gap: 12 },
   primaryBtn: {
     backgroundColor: T.navy,
@@ -177,5 +175,5 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: "center",
   },
-  secondaryBtnText: { fontSize: 14, fontWeight: "500", color: T.muted },
+  secondaryBtnText: { fontSize: 14, fontWeight: "500", color: T.navy },
 });

@@ -73,6 +73,7 @@ export default async function BookingPage({ params }: PageProps) {
       .from("staff")
       .select("id, shop_id, name, role")
       .eq("shop_id", shop.id)
+      .eq("is_active", true)
       .order("created_at"),
   ]);
 

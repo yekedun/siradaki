@@ -16,6 +16,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
 import { T, R, Shadow } from "../../lib/theme";
 
+const OTP_LENGTH = 8;
+
 export default function VerifyScreen() {
   const { email } = useLocalSearchParams<{ email: string }>();
   const [token, setToken] = useState("");
@@ -24,10 +26,11 @@ export default function VerifyScreen() {
   const router = useRouter();
 
   async function handleVerify() {
-    if (token.trim().length < 6) {
-      Alert.alert("Eksik Kod", "6 haneli kodu eksiksiz girin.");
+    if (token.trim().length < OTP_LENGTH) {
+      Alert.alert("Eksik kod", "Kodun tamamını girin.");
       return;
     }
+
     setLoading(true);
     const { error } = await supabase.auth.verifyOtp({
       email: email ?? "",
@@ -35,11 +38,11 @@ export default function VerifyScreen() {
       type: "email",
     });
     setLoading(false);
+
     if (error) {
-      Alert.alert("Doğrulama Başarısız", "Kod hatalı veya süresi dolmuş. Tekrar deneyin.");
+      Alert.alert("Doğrulama başarısız", "Kod hatalı veya süresi dolmuş. Tekrar deneyin.");
       setToken("");
     }
-    // Başarılı: root layout authState değişimini yakalar, otomatik yönlendirir.
   }
 
   async function handleResend() {
@@ -49,10 +52,11 @@ export default function VerifyScreen() {
       options: { shouldCreateUser: true },
     });
     setResending(false);
+
     if (error) {
       Alert.alert("Hata", error.message);
     } else {
-      Alert.alert("Kod Gönderildi", `${email} adresine yeni kod gönderildi.`);
+      Alert.alert("Kod gönderildi", `${email} adresine yeni kod gönderildi.`);
     }
   }
 
@@ -68,35 +72,35 @@ export default function VerifyScreen() {
           </TouchableOpacity>
 
           <Text style={styles.eyebrow}>DOĞRULAMA</Text>
-          <Text style={styles.title}>Kodunuzu Girin</Text>
+          <Text style={styles.title}>Kodunuzu girin</Text>
           <Text style={styles.subtitle}>
             <Text style={styles.emailHighlight}>{email}</Text>
-            {"\n"}adresine 6 haneli bir kod gönderdik.
+            {"\n"}adresine {OTP_LENGTH} haneli bir kod gönderdik.
           </Text>
 
           <TextInput
             style={styles.otpInput}
-            placeholder="------"
+            placeholder="Kodu girin"
             placeholderTextColor={T.mutedAlt}
             value={token}
-            onChangeText={(v) => setToken(v.replace(/\D/g, "").slice(0, 6))}
+            onChangeText={(v) => setToken(v.replace(/\D/g, "").slice(0, OTP_LENGTH))}
             keyboardType="number-pad"
-            maxLength={6}
+            maxLength={OTP_LENGTH}
             textAlign="center"
             returnKeyType="done"
             onSubmitEditing={handleVerify}
           />
 
           <TouchableOpacity
-            style={[styles.cta, (loading || token.length < 6) && styles.ctaDisabled]}
+            style={[styles.cta, (loading || token.length < OTP_LENGTH) && styles.ctaDisabled]}
             onPress={handleVerify}
-            disabled={loading || token.length < 6}
+            disabled={loading || token.length < OTP_LENGTH}
             activeOpacity={0.85}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.ctaText}>Doğrula →</Text>
+              <Text style={styles.ctaText}>Doğrula</Text>
             )}
           </TouchableOpacity>
 
@@ -109,7 +113,7 @@ export default function VerifyScreen() {
             {resending ? (
               <ActivityIndicator size="small" color={T.navy} />
             ) : (
-              <Text style={styles.resendText}>Kodu almadım — tekrar gönder</Text>
+              <Text style={styles.resendText}>Kodu almadım, tekrar gönder</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -127,7 +131,6 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 32,
   },
-
   back: {
     width: 40,
     height: 40,
@@ -136,11 +139,10 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     marginLeft: -8,
   },
-
   eyebrow: {
     fontSize: 11,
     fontWeight: "600",
-    color: T.navy,
+    color: T.red,
     letterSpacing: 1.4,
     textTransform: "uppercase",
     marginBottom: 8,
@@ -163,7 +165,6 @@ const styles = StyleSheet.create({
     color: T.navy,
     fontWeight: "600",
   },
-
   otpInput: {
     backgroundColor: T.surface,
     borderWidth: 2,
@@ -176,7 +177,6 @@ const styles = StyleSheet.create({
     letterSpacing: 12,
     marginBottom: 28,
   },
-
   cta: {
     backgroundColor: T.navy,
     borderRadius: R.cta,
@@ -188,7 +188,6 @@ const styles = StyleSheet.create({
   },
   ctaDisabled: { opacity: 0.4 },
   ctaText: { fontSize: 15, fontWeight: "700", color: "#fff" },
-
   resend: {
     alignItems: "center",
     paddingVertical: 12,

@@ -38,14 +38,14 @@ export default function AppLayout() {
       <Tabs.Screen
         name="appointments"
         options={{
-          title: "Randevularım",
+          title: "Randevular",
           tabBarIcon: ({ focused }) => tabIcon(focused, "calendar", "calendar-outline"),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profilim",
+          title: "Profil",
           tabBarIcon: ({ focused }) => tabIcon(focused, "person", "person-outline"),
         }}
       />

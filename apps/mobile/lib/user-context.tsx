@@ -46,7 +46,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const { data: shop } = await supabase
         .from("shops")
         .select("id")
-        .eq("owner_id", user.id)
+        .or(`owner_id.eq.${user.id},owner_user_id.eq.${user.id}`)
         .single();
 
       if (shop && !cancelled) {

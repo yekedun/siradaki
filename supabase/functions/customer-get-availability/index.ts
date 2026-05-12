@@ -2,7 +2,11 @@ import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createAdminClient } from "../_shared/supabase-admin.ts";
 import { corsOptions, error, json } from "../_shared/cors.ts";
 import { computeAvailableSlots } from "@berber/shared/slot-utils";
-import type { WorkingHours } from "@berber/shared/types";
+
+type WorkingHours = Record<
+  "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat",
+  { open: string | null; close: string | null; enabled: boolean }
+>;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions();
@@ -12,7 +16,7 @@ serve(async (req) => {
   const shop_slug = url.searchParams.get("shop_slug");
   const dateStr = url.searchParams.get("date");     // YYYY-MM-DD
   const service_id = url.searchParams.get("service_id");
-  const barber_id = url.searchParams.get("barber_id"); // optional
+  const staff_id = url.searchParams.get("staff_id") ?? url.searchParams.get("barber_id"); // barber_id kept for old clients
 
   if (!shop_slug || !dateStr || !service_id) {
     return error("shop_slug, date, service_id zorunlu");
@@ -23,47 +27,51 @@ serve(async (req) => {
 
   const supabase = createAdminClient();
 
-  // Dükkanın aktif berberlerini getir
-  const barberQuery = supabase
-    .from("barbers")
+  const { data: shop } = await supabase
+    .from("shops")
     .select("id, timezone, working_hours")
-    .eq("shop_slug", shop_slug)
-    .eq("is_active", true);
-  if (barber_id) barberQuery.eq("id", barber_id);
+    .eq("slug", shop_slug)
+    .single();
+  if (!shop) return error("Dükkan bulunamadı", 404);
 
-  const { data: barbers, error: bErr } = await barberQuery;
-  if (bErr || !barbers || barbers.length === 0) {
-    return error("Dükkan veya usta bulunamadı", 404);
+  // Dükkanın aktif personelini getir
+  const staffQuery = supabase
+    .from("staff")
+    .select("id")
+    .eq("shop_id", shop.id)
+    .eq("is_active", true);
+  if (staff_id) staffQuery.eq("id", staff_id);
+
+  const { data: staff, error: staffErr } = await staffQuery;
+  if (staffErr || !staff || staff.length === 0) {
+    return error("Dükkan veya personel bulunamadı", 404);
   }
 
-  // Hizmet — bu dükkanın herhangi bir ustasına ait olmalı
-  const barberIds = barbers.map((b: { id: string }) => b.id);
   const { data: service } = await supabase
     .from("services")
     .select("id, duration_min")
     .eq("id", service_id)
-    .in("barber_id", barberIds)
+    .eq("shop_id", shop.id)
     .eq("is_active", true)
     .single();
   if (!service) return error("Hizmet bulunamadı", 404);
 
-  // Her berber için müsait slotları hesapla
-  // "any barber" modunda: tüm berberler arasındaki UNION (herhangi biri müsaitse slot açık)
+  // "any staff" modunda: tüm personel arasındaki UNION (herhangi biri müsaitse slot açık)
   const slotMap = new Map<string, { starts_at: string; ends_at: string; available: boolean }>();
 
   await Promise.all(
-    barbers.map(async (barber: { id: string; timezone: string; working_hours: unknown }) => {
+    staff.map(async (member: { id: string }) => {
       const { data: occupied } = await supabase.rpc("get_occupied_ranges", {
-        p_barber_id: barber.id,
+        p_staff_id: member.id,
         p_date: dateStr,
-      });
+      } as never);
 
       const computed = computeAvailableSlots({
         date: dateParsed,
         durationMin: service.duration_min,
-        workingHours: barber.working_hours as WorkingHours,
+        workingHours: shop.working_hours as WorkingHours,
         occupied: occupied ?? [],
-        timezone: barber.timezone,
+        timezone: shop.timezone,
       });
 
       for (const s of computed) {

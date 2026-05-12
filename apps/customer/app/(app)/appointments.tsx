@@ -19,7 +19,7 @@ interface Appointment {
   starts_at: string;
   ends_at: string;
   status: string;
-  barbers: { display_name: string } | null;
+  staff: { name: string } | null;
   services: { name: string; duration_min: number } | null;
 }
 
@@ -45,7 +45,7 @@ function initials(name: string) {
 }
 
 function UpcomingCard({ appt, onCancel }: { appt: Appointment; onCancel: () => void }) {
-  const barber = appt.barbers?.display_name ?? "Usta";
+  const barber = appt.staff?.name ?? "Usta";
   return (
     <View style={styles.upcomingCard}>
       <View style={styles.upcomingLeft}>
@@ -73,7 +73,7 @@ function UpcomingCard({ appt, onCancel }: { appt: Appointment; onCancel: () => v
 }
 
 function PastCard({ appt }: { appt: Appointment }) {
-  const barber = appt.barbers?.display_name ?? "Usta";
+  const barber = appt.staff?.name ?? "Usta";
   const cancelled = appt.status === "cancelled";
   return (
     <View style={styles.pastRow}>
@@ -110,7 +110,7 @@ export default function AppointmentsScreen() {
     // RLS policy "appointments_customer_select" otomatik filtreler — ek eq gerekmiyor
     const { data } = await supabase
       .from("appointments")
-      .select("id, starts_at, ends_at, status, barbers(display_name), services(name, duration_min)")
+      .select("id, starts_at, ends_at, status, staff(name), services(name, duration_min)")
       .order("starts_at", { ascending: false }) as unknown as { data: Appointment[] | null };
     setAppointments(data ?? []);
   }, []);

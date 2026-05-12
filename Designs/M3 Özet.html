@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="tr">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Owner · Özet</title>
+<link rel="stylesheet" href="tokens.css"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head><body class="preview-stage"><div id="root"></div>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="app-shell.jsx"></script>
+<script type="text/babel">
+function Stat({ k, l, tone }) {
+  return (
+    <Card style={{ padding: 14 }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+        textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>{l}</div>
+      <div style={{ fontSize: 24, fontWeight: 700, color: tone || 'var(--ink)',
+        fontVariantNumeric: 'tabular-nums', letterSpacing: -0.5 }}>{k}</div>
+    </Card>
+  );
+}
+function App() {
+  return (
+    <div style={{ width: '100%', height: '100%', background: 'var(--bg)', overflow: 'auto', paddingBottom: 96 }}>
+      <PageHeader eyebrow="BERBER · DÜKKAN PANELİ" title="Özet" sub="7 Mayıs 2026, Çar · Mert'in Yeri" />
+
+      {/* NOW pulse strip */}
+      <div style={{ padding: '14px 20px 0' }}>
+        <div style={{
+          padding: '12px 14px', background: 'var(--redSoft)',
+          border: '1px solid var(--redBorder)', borderRadius: 'var(--r-card)',
+          display: 'flex', alignItems: 'center', gap: 12,
+        }}>
+          <div className="pulse-dot" style={{ flex: '0 0 auto' }}/>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)', letterSpacing: 0.4 }}>ŞU AN · 13:18</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Sıradaki: Cem Polat · 13:45</div>
+          </div>
+          <a href="M3 Randevular.html" style={{ fontSize: 12, fontWeight: 600, color: 'var(--navy)', textDecoration: 'none' }}>Ajanda →</a>
+        </div>
+      </div>
+
+      {/* KPI grid */}
+      <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <Stat k="11" l="Bugün Randevu" />
+        <Stat k="68%" l="Doluluk" tone="var(--navy)" />
+        <Stat k="2.840₺" l="Beklenen Ciro" />
+        <Stat k="3" l="Boş Slot" />
+      </div>
+
+      {/* Hızlı aksiyon */}
+      <div style={{ padding: '8px 20px' }}>
+        <div style={{
+          fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+          textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10,
+        }}>Hızlı Aksiyon</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+          {[
+            { i: '＋', l: 'Yeni Randevu', tone: 'var(--navy)', bg: 'var(--blueSoft)' },
+            { i: '⏸', l: 'Bloğu Aç',    tone: 'var(--ink)',  bg: 'var(--surfaceAlt)' },
+            { i: '✆', l: 'Müşteri Ara', tone: 'var(--blue)', bg: 'var(--blueSoft)' },
+          ].map((b, i) => (
+            <button key={i} style={{
+              padding: '14px 8px', background: b.bg, border: 'none',
+              borderRadius: 'var(--r-card)', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+            }}>
+              <div style={{ fontSize: 22, color: b.tone, lineHeight: 1, fontWeight: 700 }}>{b.i}</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: b.tone }}>{b.l}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Kritik uyarılar */}
+      <div style={{ padding: '12px 20px' }}>
+        <div style={{
+          fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+          textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10,
+        }}>Uyarılar</div>
+        <Card style={{ padding: 12, display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
+          <div style={{ width: 8, height: 8, borderRadius: 8, background: 'var(--red)',
+            marginTop: 6, flex: '0 0 auto' }}/>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>2 müşteri onay bekliyor</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Hakan Şahin · Selim Doğan</div>
+          </div>
+          {ICN.chev('#9CA3AF')}
+        </Card>
+        <Card style={{ padding: 12, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ width: 8, height: 8, borderRadius: 8, background: 'var(--blue)',
+            marginTop: 6, flex: '0 0 auto' }}/>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600 }}>Yarın için 4 boş slot var</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Sosyal medyada paylaş</div>
+          </div>
+          {ICN.chev('#9CA3AF')}
+        </Card>
+      </div>
+
+      {/* Performans haftalık */}
+      <div style={{ padding: '12px 20px 24px' }}>
+        <div style={{
+          fontSize: 11, fontWeight: 600, color: 'var(--muted)',
+          textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10,
+        }}>Bu Hafta</div>
+        <Card>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 80, marginBottom: 10 }}>
+            {[40, 65, 50, 80, 72, 90, 58].map((h, i) => (
+              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <div style={{
+                  width: '100%',
+                  height: `${h}%`,
+                  background: i === 5 ? 'var(--navy)' : 'var(--hair)',
+                  borderRadius: 4,
+                }}/>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {TR_DAY.slice(1).concat(TR_DAY[0]).map((d, i) => (
+              <div key={i} style={{ flex: 1, textAlign: 'center', fontSize: 10,
+                fontWeight: 600, color: i === 5 ? 'var(--navy)' : 'var(--mutedAlt)',
+                textTransform: 'uppercase', letterSpacing: 0.5 }}>{d}</div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<IOSDevice width={390} height={844}><App/></IOSDevice>);
+</script></body></html>

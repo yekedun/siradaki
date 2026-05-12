@@ -39,15 +39,15 @@ export default function BlockScreen() {
   }, []);
 
   async function insertBlock(staffId: string, startsAt: Date, endsAt: Date) {
-    const { error } = await supabase.from("blocks").insert({
-      staff_id: staffId,
-      starts_at: startsAt.toISOString(),
-      ends_at: endsAt.toISOString(),
-      reason,
-      created_via: "app",
-    });
+    const { error } = await supabase.rpc("create_block_atomic" as never, {
+      p_staff_id: staffId,
+      p_starts_at: startsAt.toISOString(),
+      p_ends_at: endsAt.toISOString(),
+      p_reason: reason,
+      p_created_via: "app",
+    } as never);
     if (error) {
-      Alert.alert("Hata", error.message);
+      Alert.alert(error.code === "P0001" ? "Çakışma" : "Hata", error.message);
       return;
     }
     Alert.alert("Blok Eklendi", `${dur} dakikalık blok eklendi.`);
@@ -68,41 +68,6 @@ export default function BlockScreen() {
       const startsAt = new Date();
       const endsAt = new Date(startsAt.getTime() + dur * 60_000);
 
-      const { data: conflicts } = await supabase
-        .from("appointments")
-        .select("starts_at, ends_at, customer_name")
-        .eq("staff_id", staff.id)
-        .neq("status", "cancelled")
-        .lt("starts_at", endsAt.toISOString())
-        .gt("ends_at", startsAt.toISOString())
-        .order("starts_at");
-
-      if (conflicts && conflicts.length > 0) {
-        const list = conflicts
-          .map((c) => {
-            const s = fmtNow(new Date(c.starts_at));
-            const e = fmtNow(new Date(c.ends_at));
-            return `• ${s}-${e} ${c.customer_name}`;
-          })
-          .join("\n");
-        setLoading(false);
-        Alert.alert(
-          "Mevcut Randevu Var",
-          `Bu aralıkta randevu(lar) var:\n\n${list}\n\nYine de bloklamak ister misin?`,
-          [
-            { text: "Vazgeç", style: "cancel" },
-            {
-              text: "Yine de Blokla",
-              style: "destructive",
-              onPress: async () => {
-                setLoading(true);
-                try { await insertBlock(staff.id, startsAt, endsAt); } finally { setLoading(false); }
-              },
-            },
-          ]
-        );
-        return;
-      }
       await insertBlock(staff.id, startsAt, endsAt);
     } catch (err) {
       Alert.alert("Hata", (err as Error).message);

@@ -15,8 +15,8 @@ import { T, R, Shadow } from "../../lib/theme";
 
 interface Barber {
   id: string;
-  display_name: string;
-  avatar_url: string | null;
+  name: string;
+  role: "admin" | "staff";
 }
 
 function initials(name: string) {
@@ -71,10 +71,11 @@ export default function Step2Barber() {
       if (!shop) { setLoading(false); return; }
 
       const { data } = await supabase
-        .from("barbers")
-        .select("id, display_name, avatar_url")
+        .from("staff")
+        .select("id, name, role")
         .eq("shop_id", shop.id)
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .order("created_at");
       setBarbers(data ?? []);
       setLoading(false);
     })();
@@ -133,9 +134,9 @@ export default function Step2Barber() {
             <BarberCard
               key={b.id}
               id={b.id}
-              name={b.display_name}
-              subtitle="Berber"
-              onSelect={() => go(b.id, b.display_name)}
+              name={b.name}
+              subtitle={b.role === "admin" ? "Dukkan sahibi" : "Berber"}
+              onSelect={() => go(b.id, b.name)}
             />
           ))
         )}
