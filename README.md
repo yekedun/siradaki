@@ -1,5 +1,11 @@
 # Berber Randevu Sistemi
 
+## Product Focus
+
+- `apps/web` is the canonical customer booking and acquisition flow. Customers should book from the browser after opening a link from Instagram, TikTok, WhatsApp, Google Maps, or direct sharing.
+- `apps/mobile` is the canonical owner/staff operational app. Main focus is agenda speed, walk-in flow, quick block, quick reschedule, realtime operational reliability, and scheduling stability.
+- The former customer mobile app is archived at `archive/customer`. It is preserved historical code, not part of the active pnpm/turbo workspace, and not an implementation target.
+
 Modern, ölçeklenebilir ve çok oyunculu (multi-tenant) online berber randevu yönetim platformu. 
 
 ## 🏗 Yeni Mimari (Multi-seat & Schedules)
@@ -20,7 +26,7 @@ Eski sürümdeki tek dükkan - tek usta mimarisi, tamamen **çoklu personel (Mul
 Uygulama iş mantığı güvenliği ve ölçeklenebilirliği adına kritik süreçler Supabase Edge Functions üzerinde Deno runtime'ında koşar:
 - **`book-appointment`**: Müsaitlik (availability) server-side olarak `get_occupied_ranges` RPC'si üzerinden kontrol edilir ve race-condition'ların önüne geçilir. `customer_notes` desteği mevcuttur.
 - **`get-availability`**: Seçili personelin programı ve dükkan çalışma saatlerini birleştirerek uygun boş slotları döner.
-- **`customer-cancel-appointment`**: Müşterinin önceden belirlenmiş iptal kurallarına (örn: randevuya en az 2 saat kala) uyarak randevusunu iptal etmesini sağlayan endpoint.
+- **`customer-cancel-appointment`**: Archived native customer app leftover. Retained for now; not used by the canonical web booking flow.
 
 ## 🛠 Tech Stack
 - **Frontend**: Next.js (Web), Expo / React Native (Mobil)

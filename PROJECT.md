@@ -4,11 +4,20 @@ Berber dükkanları için online randevu sistemi. **Müşteri tarafı web** (slu
 
 ---
 
+## Current Product Focus
+
+- `apps/web` is the canonical customer booking and acquisition surface. Customers should arrive from Instagram, TikTok, WhatsApp, Google Maps, or direct links and complete booking in the browser.
+- `apps/mobile` is the canonical owner/staff operational app. Main product focus is agenda speed, walk-in flow, quick block, quick reschedule, realtime operational reliability, and scheduling stability.
+- The former customer mobile app is archived at `archive/customer`. It is preserved historical code, not part of the active pnpm/turbo workspace, and must not receive product, scheduling, realtime, auth, backend, or shared-package work.
+
+---
+
 ## Mimari
 
 ```
-apps/web         Next.js 14 App Router · /[slug] (ISR 60s) · /api/availability
-apps/mobile      Expo SDK 51 · expo-router · 4 ekran + Android widget (Kotlin)
+apps/web         canonical customer booking · Next.js 14 App Router · /[slug] (ISR 60s) · /api/availability
+apps/mobile      canonical owner/staff operations · Expo SDK 51 · agenda + quick block + widget
+archive/customer preserved historical customer mobile code · outside active workspace
 packages/db      Supabase tip tanımları (CLI'den üretiliyor)
 packages/shared  slot-utils (computeAvailableSlots), types, constants
 supabase/        4 edge function + migrations + seed

@@ -44,7 +44,7 @@ export default function ProfileScreen() {
 
   async function handleSave() {
     if (fullName.trim().length < 2) {
-      Alert.alert("Eksik Bilgi", "Ad soyad en az 2 karakter olmalı.");
+      Alert.alert("Eksik bilgi", "Ad soyad en az 2 karakter olmalı.");
       return;
     }
     setSaving(true);
@@ -57,7 +57,7 @@ export default function ProfileScreen() {
     try {
       await upsertProfile(user.id, { full_name: fullName.trim(), phone: phone.trim() || null });
       setDirty(false);
-      Alert.alert("Kaydedildi", "Profil bilgileriniz güncellendi.");
+      Alert.alert("Kaydedildi", "Profil güncellendi.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Profil kaydedilemedi.";
       Alert.alert("Hata", message);
@@ -67,10 +67,10 @@ export default function ProfileScreen() {
   }
 
   async function handleSignOut() {
-    Alert.alert("Çıkış Yap", "Hesabınızdan çıkmak istediğinizden emin misiniz?", [
+    Alert.alert("Çıkış yap", "Hesaptan çıkmak istediğine emin misin?", [
       { text: "Vazgeç", style: "cancel" },
       {
-        text: "Çıkış Yap",
+        text: "Çıkış yap",
         style: "destructive",
         onPress: () => supabase.auth.signOut(),
       },
@@ -140,14 +140,14 @@ export default function ProfileScreen() {
             {saving ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.saveBtnText}>Değişiklikleri Kaydet</Text>
+              <Text style={styles.saveBtnText}>Kaydet</Text>
             )}
           </TouchableOpacity>
 
           <View style={styles.spacer} />
 
           <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut} activeOpacity={0.8}>
-            <Text style={styles.signOutText}>Çıkış Yap</Text>
+            <Text style={styles.signOutText}>Çıkış yap</Text>
           </TouchableOpacity>
 
           <Text style={styles.version}>Berber Müşteri · v1.0.0</Text>

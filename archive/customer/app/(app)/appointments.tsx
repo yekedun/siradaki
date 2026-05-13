@@ -170,7 +170,7 @@ export default function AppointmentsScreen() {
 
     Alert.alert(
       "Randevuyu İptal Et",
-      "Bu randevuyu iptal etmek istediğinizden emin misiniz?",
+      "Bu randevuyu iptal etmek istediğine emin misin?",
       [
         { text: "Vazgeç", style: "cancel" },
         {

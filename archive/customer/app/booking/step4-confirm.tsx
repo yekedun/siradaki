@@ -146,7 +146,7 @@ export default function Step4Confirm() {
     if (submittingRef.current) return;
 
     if (!SHOP_SLUG || !params.sid || !params.slot) {
-      Alert.alert("Randevu alinamadi", "Dukkan, hizmet veya saat bilgisi eksik. Lutfen hizmet seciminden tekrar deneyin.");
+      Alert.alert("Randevu alınamadı", "Dükkan, hizmet veya saat eksik. Hizmet seçiminden tekrar deneyin.");
       return;
     }
 
@@ -275,8 +275,8 @@ export default function Step4Confirm() {
 
         <View style={styles.notice}>
           <Text style={styles.noticeText}>
-            Randevuyu onayladığınızda berbere bilgi gider. Randevudan 3 saat öncesine kadar
-            iptal edebilirsiniz.
+            Randevuyu onayladığında berbere bilgi gider. Randevudan 3 saat öncesine kadar
+            iptal edebilirsin.
           </Text>
         </View>
       </ScrollView>

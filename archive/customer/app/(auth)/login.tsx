@@ -85,9 +85,9 @@ export default function LoginScreen() {
           <Text style={styles.eyebrow}>MÜŞTERİ GİRİŞİ</Text>
           <Text style={styles.title}>Giriş yap</Text>
           <Text style={styles.subtitle}>
-            Randevu almak için e-posta adresinizi girin.
+            Randevu almak için e-postanı gir.
             {"\n"}
-            Size {OTP_LENGTH} haneli bir doğrulama kodu göndereceğiz.
+            {OTP_LENGTH} haneli doğrulama kodu göndereceğiz.
           </Text>
 
           <Text style={styles.label}>E-posta</Text>
@@ -118,7 +118,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <Text style={styles.disclaimer}>
-            Devam ederek kullanım şartları ve gizlilik politikasını kabul edersiniz.
+            Devam ederek kullanım şartlarını ve gizlilik politikasını kabul edersin.
           </Text>
 
           {__DEV__ && DEV_TEST_EMAIL && DEV_TEST_PASSWORD ? (

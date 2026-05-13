@@ -21,7 +21,7 @@ interface Service {
 }
 
 function formatPrice(cents: number | null): string {
-  if (!cents) return "Fiyat Sor";
+  if (!cents) return "Fiyat sor";
   return `₺${Math.round(cents / 100)}`;
 }
 
@@ -86,7 +86,7 @@ export default function Step1Service() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.question}>Hangi hizmeti istiyorsunuz?</Text>
+        <Text style={styles.question}>Hangi hizmet?</Text>
 
         {loading ? (
           <ActivityIndicator color={T.navy} style={{ marginTop: 40 }} />

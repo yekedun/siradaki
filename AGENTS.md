@@ -1,5 +1,13 @@
 # AGENTS.md
 
+## Customer App Maintenance Mode
+
+- **Product focus / app ownership:** `apps/web` is the canonical customer booking surface. `apps/mobile` is the canonical owner/staff operational app. The former customer mobile app is archived at `archive/customer` and is not an active product surface.
+- **No archived customer app features:** Do not add customer mobile features, booking workflows, scheduling logic, realtime architecture, auth architecture, migrations, RLS policies, RPCs, edge functions, or duplicated business logic for `archive/customer`.
+- **Default routing:** Customer booking work defaults to `apps/web`. Owner/staff operational work defaults to `apps/mobile`. `archive/customer` must not drive `@berber/shared`, schema, scheduling, realtime, or backend contract decisions.
+- **Allowed archive changes:** Only documentation corrections or explicit, reversible restoration work after a product/architecture decision. Do not make routine maintenance fixes there while it is outside the active workspace.
+- **Rollback:** To reactivate intentionally, move `archive/customer` back to `apps/customer`, run `pnpm install`, and validate `pnpm --filter @berber/customer type-check` plus `pnpm turbo type-check`.
+
 ## Must-follow constraints
 
 - **pnpm only** — `npm` veya `yarn` kullanma. Workspace `pnpm-workspace.yaml` ile yönetiliyor.

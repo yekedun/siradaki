@@ -162,7 +162,7 @@ export default function Step3Slot() {
         if (!mountedRef.current) return;
         setSlots([]);
         setSelectedSlot(null);
-        Alert.alert("Musaitlik Alinamadi", "Dukkan veya hizmet bilgisi eksik. Lutfen hizmet seciminden tekrar deneyin.");
+        Alert.alert("Müsaitlik alınamadı", "Dükkan veya hizmet eksik. Hizmet seçiminden tekrar deneyin.");
         return;
       }
 
@@ -191,7 +191,7 @@ export default function Step3Slot() {
         const data = (await res.json()) as { error?: string; slots?: SlotItem[] };
         if (!mountedRef.current || id !== reqRef.current) return;
         if (!res.ok) {
-          Alert.alert("Musaitlik Alinamadi", data.error ?? "Lutfen tekrar deneyin.");
+          Alert.alert("Müsaitlik alınamadı", data.error ?? "Tekrar deneyin.");
           setSlots([]);
           return;
         }
@@ -199,7 +199,7 @@ export default function Step3Slot() {
         setSlots((data.slots ?? []).filter((s) => s.available));
       } catch {
         if (!mountedRef.current || id !== reqRef.current) return;
-        Alert.alert("Baglanti Hatasi", "Musaitlik bilgisi alinamadi.");
+        Alert.alert("Bağlantı hatası", "Müsaitlik bilgisi alınamadı.");
       } finally {
         if (mountedRef.current && id === reqRef.current) setSlotsLoading(false);
       }
@@ -268,7 +268,7 @@ export default function Step3Slot() {
           <Ionicons name="arrow-back" size={22} color={T.ink} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Gun & Saat</Text>
+          <Text style={styles.headerTitle}>Gün ve Saat</Text>
           <Text style={styles.headerStep}>3 / 4</Text>
         </View>
         <View style={styles.backBtn} />
@@ -314,7 +314,7 @@ export default function Step3Slot() {
       >
         <Text style={styles.sectionTitle}>
           {format(selectedDay.date, "d MMMM yyyy", { locale: tr })}
-          {availableCount > 0 ? ` · ${availableCount} uygun saat` : ""}
+          {availableCount > 0 ? ` · ${availableCount} müsait saat` : ""}
         </Text>
 
         {slotsLoading ? (
@@ -322,8 +322,8 @@ export default function Step3Slot() {
         ) : slots.length === 0 ? (
           <View style={styles.emptyWrap}>
             <Ionicons name="calendar-outline" size={32} color={T.mutedAlt} />
-            <Text style={styles.emptyTitle}>Bu gun icin uygun saat yok</Text>
-            <Text style={styles.emptyBody}>Lutfen baska bir gun secin.</Text>
+            <Text style={styles.emptyTitle}>Bugün müsait saat yok</Text>
+            <Text style={styles.emptyBody}>Başka bir gün seçin.</Text>
           </View>
         ) : (
           <View style={styles.slotsGrid}>
@@ -347,7 +347,7 @@ export default function Step3Slot() {
           activeOpacity={0.88}
         >
           <Text style={styles.ctaText}>
-            {selectedSlot ? `${fTime(selectedSlot.starts_at)} secildi · Devam Et →` : "Saat Secin"}
+            {selectedSlot ? `${fTime(selectedSlot.starts_at)} seçildi · Devam et →` : "Saat seç"}
           </Text>
         </TouchableOpacity>
       </View>

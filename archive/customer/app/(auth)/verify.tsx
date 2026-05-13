@@ -72,7 +72,7 @@ export default function VerifyScreen() {
           </TouchableOpacity>
 
           <Text style={styles.eyebrow}>DOĞRULAMA</Text>
-          <Text style={styles.title}>Kodunuzu girin</Text>
+          <Text style={styles.title}>Kodu gir</Text>
           <Text style={styles.subtitle}>
             <Text style={styles.emailHighlight}>{email}</Text>
             {"\n"}adresine {OTP_LENGTH} haneli bir kod gönderdik.

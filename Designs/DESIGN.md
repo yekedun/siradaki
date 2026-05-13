@@ -195,7 +195,9 @@
 - **Amaç:** token, bağlantı ve oturum aksiyonlarını toplamak.
 - **İçerik:** token üretme, listeleme, silme, çıkış gibi ayarlar.
 
-### Customer Mobile App (`apps/customer`)
+### Archived Customer Mobile App (`archive/customer`)
+
+This section is historical reference only. Customer booking implementation belongs in `apps/web`; owner/staff operations belong in `apps/mobile`.
 
 #### C1 · `(auth)/login.tsx` — Müşteri girişi
 - **Amaç:** müşterinin oturum açması.

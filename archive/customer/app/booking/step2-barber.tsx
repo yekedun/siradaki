@@ -127,7 +127,7 @@ export default function Step2Barber() {
           </Text>
         </View>
 
-        <Text style={styles.question}>Hangi usta ile görüşmek istersiniz?</Text>
+        <Text style={styles.question}>Hangi usta?</Text>
 
         {/* "Fark Etmez" seçeneği — her zaman ilk */}
         <BarberCard
@@ -146,7 +146,7 @@ export default function Step2Barber() {
               key={b.id}
               id={b.id}
               name={b.name}
-              subtitle={b.role === "admin" ? "Dukkan sahibi" : "Berber"}
+              subtitle={b.role === "admin" ? "Dükkan sahibi" : "Berber"}
               onSelect={() => go(b.id, b.name)}
             />
           ))

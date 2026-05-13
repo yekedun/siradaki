@@ -70,9 +70,9 @@ export default function SetupScreen() {
           </View>
 
           <Text style={styles.eyebrow}>PROFİL KURULUM</Text>
-          <Text style={styles.title}>Profilinizi tamamlayın</Text>
+          <Text style={styles.title}>Profilini tamamla</Text>
           <Text style={styles.subtitle}>
-            Randevularınızı takip edebilmek için kısa bir profil oluşturun.
+            Randevularını takip etmek için kısa profil oluştur.
           </Text>
 
           <Text style={styles.label}>Ad soyad</Text>

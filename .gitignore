@@ -17,6 +17,8 @@ apps/mobile/.expo/
 apps/mobile/dist/
 apps/mobile/android/
 apps/mobile/ios/
+apps/customer/.expo/
+apps/customer/android/
 *.jks
 *.p8
 *.p12
