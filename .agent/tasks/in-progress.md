@@ -1,6 +1,6 @@
 ---
 board: in-progress
-updated: 2026-05-12
+updated: 2026-05-13
 priority: critical
 allowed_statuses:
   - planned
@@ -14,18 +14,7 @@ allowed_statuses:
 
 # In Progress
 
-## TASK-016
-
-```md
-id: TASK-016
-depends_on:
-  - TASK-014
-  - TASK-015
-priority: medium
-status: blocked
-```
-
-- [ ] drag/drop optimization
+No active in-progress tasks.
 
 # Rotation Rule
 

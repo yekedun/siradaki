@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   RefreshControl,
@@ -84,6 +85,7 @@ export default function AppointmentsScreen() {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [editingAppt, setEditingAppt] = useState<Appointment | null>(null);
   const [detailAppt, setDetailAppt] = useState<Appointment | null>(null);
+  const [statusActionLoading, setStatusActionLoading] = useState(false);
   const [now, setNow] = useState<Date>(() => new Date());
 
   const reqIdRef = useRef(0);
@@ -264,6 +266,7 @@ export default function AppointmentsScreen() {
           staffId={staffId}
           initialDate={selectedDay}
           editingAppt={editingAppt}
+          onSaved={() => fetchDay(staffId, selectedDay)}
           onClose={() => {
             setAddModalVisible(false);
             setEditingAppt(null);
@@ -276,20 +279,32 @@ export default function AppointmentsScreen() {
         onClose={() => setDetailAppt(null)}
         onAction={async (action) => {
           if (!detailAppt) return;
+          if (statusActionLoading && (action === "complete" || action === "cancel")) return;
           if (action === "complete") {
+            setStatusActionLoading(true);
             const { error } = await supabase.rpc("complete_appointment_with_revenue", {
               p_appointment_id: detailAppt.id,
             });
-            if (error) console.warn(error.message);
+            setStatusActionLoading(false);
+            if (error) {
+              Alert.alert("Hata", error.message || "Randevu tamamlanamadi.");
+              return;
+            }
+            if (staffId) await fetchDay(staffId, selectedDay);
             setDetailAppt(null);
             return;
           }
           if (action === "cancel") {
-            const { error } = await supabase
-              .from("appointments")
-              .update({ status: "cancelled" })
-              .eq("id", detailAppt.id);
-            if (error) console.warn(error.message);
+            setStatusActionLoading(true);
+            const { error } = await supabase.rpc("cancel_appointment_atomic" as never, {
+              p_appointment_id: detailAppt.id,
+            } as never);
+            setStatusActionLoading(false);
+            if (error) {
+              Alert.alert("Hata", error.message || "Randevu iptal edilemedi.");
+              return;
+            }
+            if (staffId) await fetchDay(staffId, selectedDay);
             setDetailAppt(null);
             return;
           }

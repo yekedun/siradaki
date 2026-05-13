@@ -86,7 +86,7 @@ export default function OwnerSettingsScreen() {
   }
 
   function handleDelete(tokenId: string) {
-    Alert.alert("Token Sil", "Bu token silinirse widget çalışmayı durduracak.", [
+    Alert.alert("Token sil", "Bu token silinirse widget çalışmayı durduracak.", [
       { text: "İptal", style: "cancel" },
       {
         text: "Sil",
@@ -106,7 +106,7 @@ export default function OwnerSettingsScreen() {
   function handleSignOut() {
     Alert.alert("Çıkış", "Hesaptan çıkmak istediğine emin misin?", [
       { text: "Vazgeç", style: "cancel" },
-      { text: "Çıkış Yap", style: "destructive", onPress: () => supabase.auth.signOut() },
+      { text: "Çıkış yap", style: "destructive", onPress: () => supabase.auth.signOut() },
     ]);
   }
 
@@ -145,8 +145,8 @@ export default function OwnerSettingsScreen() {
         </View>
 
         <View style={styles.secHead}>
-          <Text style={styles.secLabel}>OPERASYON MODULLERI</Text>
-          <Text style={styles.secCount}>{commissionEnabled ? "Acik" : "Kapali"}</Text>
+          <Text style={styles.secLabel}>OPERASYON MODÜLLERİ</Text>
+          <Text style={styles.secCount}>{commissionEnabled ? "Açık" : "Kapalı"}</Text>
         </View>
 
         <Pressable
@@ -160,11 +160,11 @@ export default function OwnerSettingsScreen() {
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={styles.tokenLabel}>Komisyon takibi</Text>
             <Text style={styles.tokenMeta} numberOfLines={2}>
-              {commissionEnabled ? "Personel komisyon ayarlari ve kazanc raporu aktif." : "Normal randevu akisi degismeden kalir."}
+              {commissionEnabled ? "Personel komisyonu ve kazanç raporu açık." : "Randevu akışı değişmez."}
             </Text>
           </View>
           <Text style={[styles.moduleState, commissionEnabled && styles.moduleStateOn]}>
-            {commissionEnabled ? "Acik" : "Kapali"}
+            {commissionEnabled ? "Açık" : "Kapalı"}
           </Text>
         </Pressable>
 
@@ -223,7 +223,7 @@ export default function OwnerSettingsScreen() {
           style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.9 }]}
           onPress={handleSignOut}
         >
-          <Text style={styles.signOutText}>Çıkış Yap</Text>
+          <Text style={styles.signOutText}>Çıkış yap</Text>
         </Pressable>
 
         <Text style={styles.version}>Berber Panel · Sahip Ekranı</Text>

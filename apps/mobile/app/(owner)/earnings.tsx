@@ -106,14 +106,14 @@ export default function OwnerEarningsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.navy} />}
       >
-        <Text style={styles.eyebrow}>KOMISYON</Text>
-        <Text style={styles.title}>Kazanc</Text>
+        <Text style={styles.eyebrow}>KOMİSYON</Text>
+        <Text style={styles.title}>Kazanç</Text>
 
         <View style={styles.rangeRow}>
           {[
-            ["today", "Bugun"],
-            ["week", "7 gun"],
-            ["month", "30 gun"],
+            ["today", "Bugün"],
+            ["week", "7 gün"],
+            ["month", "30 gün"],
           ].map(([key, label]) => (
             <Pressable
               key={key}
@@ -130,18 +130,18 @@ export default function OwnerEarningsScreen() {
         ) : !enabled ? (
           <View style={styles.empty}>
             <Feather name="lock" size={24} color={T.mutedAlt} />
-            <Text style={styles.emptyTitle}>Komisyon takibi kapali</Text>
-            <Text style={styles.emptyText}>Ayarlar ekranindan acildiginda kazanc raporu gorunur.</Text>
+            <Text style={styles.emptyTitle}>Komisyon takibi kapalı</Text>
+            <Text style={styles.emptyText}>Ayarlardan açılınca kazanç raporu görünür.</Text>
           </View>
         ) : report ? (
           <>
             <View style={styles.kpiGrid}>
               <Kpi label="Tamamlanan ciro" value={money(report.total_revenue_cents)} icon="trending-up" />
               <Kpi label="Usta komisyonu" value={money(report.total_commission_cents)} icon="percent" />
-              <Kpi label="Dukkan payi" value={money(report.total_shop_share_cents)} icon="credit-card" />
+              <Kpi label="Dükkan payı" value={money(report.total_shop_share_cents)} icon="credit-card" />
             </View>
 
-            <Text style={styles.sectionLabel}>PERSONEL DAGILIMI</Text>
+            <Text style={styles.sectionLabel}>PERSONEL DAĞILIMI</Text>
             <View style={{ gap: 10 }}>
               {report.staff.map((row) => (
                 <View key={row.staff_id} style={styles.staffRow}>

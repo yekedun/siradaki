@@ -43,6 +43,7 @@ interface AddAppointmentModalProps {
   staffId: string;
   initialDate?: Date;
   editingAppt?: EditingAppt | null;
+  onSaved?: () => void | Promise<void>;
   onClose: () => void;
 }
 
@@ -93,6 +94,7 @@ export function AddAppointmentModal({
   staffId,
   initialDate,
   editingAppt,
+  onSaved,
   onClose,
 }: AddAppointmentModalProps) {
   const isEdit = !!editingAppt;
@@ -156,6 +158,7 @@ export function AddAppointmentModal({
   }, [visible, loadServices]);
 
   const endsAt = useMemo(() => addMinutes(startsAt, duration), [startsAt, duration]);
+  const hasServices = services.length > 0;
 
   function handleClose() {
     if (loading) return;
@@ -189,8 +192,12 @@ export function AddAppointmentModal({
       Alert.alert("Eksik", "Müşteri adı en az 2 karakter olmalı");
       return;
     }
+    if (!hasServices) {
+      Alert.alert("Eksik", "Randevu eklemek için önce aktif bir hizmet tanımlanmalı.");
+      return;
+    }
     if (!serviceId) {
-      Alert.alert("Eksik", "Atomic planlama için kayıtlı bir hizmet seçmelisin");
+      Alert.alert("Eksik", "Kayıtlı bir hizmet seçmelisin");
       return;
     }
     if (!isEdit && startsAt.getTime() < Date.now() - 60_000) {
@@ -230,6 +237,7 @@ export function AddAppointmentModal({
       }
       return;
     }
+    await onSaved?.();
     onClose();
   }
 
@@ -265,7 +273,7 @@ export function AddAppointmentModal({
           <Text style={styles.headerTitle}>
             {isEdit ? "Randevuyu Düzenle" : "Yeni Randevu"}
           </Text>
-          <TouchableOpacity onPress={handleSave} disabled={loading}>
+          <TouchableOpacity onPress={handleSave} disabled={loading || !hasServices}>
             {loading ? (
               <ActivityIndicator color={T.navy} />
             ) : (
@@ -297,7 +305,7 @@ export function AddAppointmentModal({
           />
 
           <Text style={styles.label}>Hizmet</Text>
-          {services.length > 0 ? (
+          {hasServices ? (
             <View style={styles.serviceGrid}>
               {services.map((s) => {
                 const sel = s.id === serviceId;
@@ -317,16 +325,12 @@ export function AddAppointmentModal({
               })}
             </View>
           ) : (
-            <TextInput
-              value={customServiceName}
-              onChangeText={(t) => {
-                setCustomServiceName(t);
-                setServiceId(null);
-              }}
-              placeholder="Örn. Saç Kesimi"
-              placeholderTextColor={T.muted}
-              style={styles.input}
-            />
+            <View style={styles.emptyServices}>
+              <Text style={styles.emptyServicesTitle}>Aktif hizmet yok</Text>
+              <Text style={styles.emptyServicesText}>
+                Randevu eklemek için önce hizmet tanımlanmalı.
+              </Text>
+            </View>
           )}
 
           <Text style={styles.label}>Tarih</Text>
@@ -391,26 +395,27 @@ export function AddAppointmentModal({
           )}
 
           <Text style={styles.label}>Süre</Text>
-          <View style={styles.durRow}>
-            {FALLBACK_DURATIONS.map((d) => {
-              const sel = duration === d.value;
-              return (
-                <Pressable
-                  key={d.value}
-                  onPress={() => {
-                    setDuration(d.value);
-                    // Picking duration manually clears service selection
-                    if (serviceId) setServiceId(null);
-                  }}
-                  style={[styles.durChip, sel && styles.durChipSel]}
-                >
-                  <Text style={[styles.durText, sel && { color: T.navy, fontWeight: "700" }]}>
-                    {d.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          {hasServices ? (
+            <View style={styles.durationInfo}>
+              <Text style={styles.durationInfoText}>Süre seçilen hizmetten gelir: {duration} dk</Text>
+            </View>
+          ) : (
+            <View style={styles.durRow}>
+              {FALLBACK_DURATIONS.map((d) => {
+                const sel = duration === d.value;
+                return (
+                  <View
+                    key={d.value}
+                    style={[styles.durChip, sel && styles.durChipSel, styles.durChipDisabled]}
+                  >
+                    <Text style={[styles.durText, sel && { color: T.navy, fontWeight: "700" }]}>
+                      {d.label}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
 
           <View style={styles.preview}>
             <Text style={styles.previewLabel}>ÖZET</Text>
@@ -494,6 +499,15 @@ const styles = StyleSheet.create({
   serviceChipSel: { borderColor: T.navy, backgroundColor: T.blueSoft },
   serviceName: { fontSize: 13, fontWeight: "600", color: T.ink },
   serviceMeta: { fontSize: 11, color: T.muted, marginTop: 2 },
+  emptyServices: {
+    padding: 14,
+    backgroundColor: T.surface,
+    borderWidth: 1.5,
+    borderColor: T.line,
+    borderRadius: R.input,
+  },
+  emptyServicesTitle: { fontSize: 13, fontWeight: "700", color: T.ink },
+  emptyServicesText: { marginTop: 4, fontSize: 12, color: T.muted, lineHeight: 17 },
 
   durRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   durChip: {
@@ -505,7 +519,17 @@ const styles = StyleSheet.create({
     borderRadius: R.input,
   },
   durChipSel: { borderColor: T.navy, backgroundColor: T.blueSoft },
+  durChipDisabled: { opacity: 0.55 },
   durText: { fontSize: 13, color: T.ink, fontWeight: "500" },
+  durationInfo: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: T.surface,
+    borderWidth: 1.5,
+    borderColor: T.line,
+    borderRadius: R.input,
+  },
+  durationInfoText: { fontSize: 13, color: T.muted, fontWeight: "600" },
 
   preview: {
     marginTop: 24,

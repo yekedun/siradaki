@@ -116,7 +116,7 @@ export default function TeamScreen() {
       [
         { text: "Vazgeç", style: "cancel" },
         {
-          text: staffMember.is_active ? "Pasif Yap" : "Aktif Yap",
+          text: staffMember.is_active ? "Pasif yap" : "Aktif yap",
           style: staffMember.is_active ? "destructive" : "default",
           onPress: async () => {
             const { error } = await supabase
@@ -151,7 +151,7 @@ export default function TeamScreen() {
     }
     const percent = Number(trimmed);
     if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
-      Alert.alert("Gecersiz", "0 ile 100 arasinda bir oran gir.");
+      Alert.alert("Geçersiz", "0 ile 100 arasında oran gir.");
       return;
     }
     await updateCommission(commissionStaff.id, "percentage", Math.round(percent * 100));
@@ -198,7 +198,7 @@ export default function TeamScreen() {
           ) : (
             <>
               <Feather name="user-plus" size={16} color="#fff" />
-              <Text style={styles.inviteBtnTxt}>Personel Ekle</Text>
+              <Text style={styles.inviteBtnTxt}>Personel ekle</Text>
             </>
           )}
         </Pressable>
@@ -281,8 +281,8 @@ export default function TeamScreen() {
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.commissionModal}>
-            <Text style={styles.modalTitle}>Personel Ekle</Text>
-            <Text style={styles.modalText}>Randevu alinabilecek usta/personel adini gir.</Text>
+            <Text style={styles.modalTitle}>Personel ekle</Text>
+            <Text style={styles.modalText}>Randevu alacak usta adını gir.</Text>
             <TextInput
               value={newStaffName}
               onChangeText={setNewStaffName}
@@ -299,13 +299,13 @@ export default function TeamScreen() {
                 disabled={inviting}
                 style={styles.secondaryBtn}
               >
-                <Text style={styles.secondaryText}>Vazgec</Text>
+                <Text style={styles.secondaryText}>Vazgeç</Text>
               </Pressable>
               <Pressable
                 onPress={async () => {
                   const name = newStaffName.trim();
                   if (name.length < 2) {
-                    Alert.alert("Gecersiz", "Gecerli bir ad gir.");
+                    Alert.alert("Geçersiz", "Geçerli bir ad gir.");
                     return;
                   }
                   const created = await handleAddStaff(name);
@@ -327,21 +327,21 @@ export default function TeamScreen() {
       <Modal visible={commissionStaff !== null} transparent animationType="fade" onRequestClose={closeCommissionModal}>
         <View style={styles.modalBackdrop}>
           <View style={styles.commissionModal}>
-            <Text style={styles.modalTitle}>Komisyon Orani</Text>
+            <Text style={styles.modalTitle}>Komisyon Oranı</Text>
             <Text style={styles.modalText}>
-              {commissionStaff?.name} icin yuzde oran gir. Bos birakirsan komisyon kapanir.
+              {commissionStaff?.name} için yüzde oran gir. Boş bırakırsan komisyon kapanır.
             </Text>
             <TextInput
               value={commissionInput}
               onChangeText={setCommissionInput}
-              placeholder="Orn. 50"
+              placeholder="Örn. 50"
               keyboardType="decimal-pad"
               style={styles.commissionInput}
               editable={!savingCommission}
             />
             <View style={styles.modalActions}>
               <Pressable onPress={closeCommissionModal} disabled={savingCommission} style={styles.secondaryBtn}>
-                <Text style={styles.secondaryText}>Vazgec</Text>
+                <Text style={styles.secondaryText}>Vazgeç</Text>
               </Pressable>
               <Pressable
                 onPress={saveCommission}

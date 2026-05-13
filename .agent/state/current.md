@@ -1,33 +1,29 @@
 # Active Feature
 
-Customer booking availability compatibility
+No active implementation task.
 
 # Current Task
 
-- Fixed customer app availability failures caused by deployed `get-availability` expecting legacy `slug` while the app sent `shop_slug`.
-- Customer booking params now normalize Expo Router array/scalar values before passing `sid`, `staff`, `date`, and slot data between steps.
-- Customer service list now scopes active services to the configured shop slug's `shop_id`.
-- Web and customer availability calls send both `shop_slug` and `slug` for backwards compatibility.
-- Remote Supabase `get-availability` was deployed to version 3 on project `yvxjandwfkaiwhbeslen` and returns slots for `test-berber`.
-- Customer Android app was reinstalled/launched against Metro; booking step 3 renders slots for `test-berber` (`12 Mayis 2026`, `18:30`).
+- Session closeout completed after TASK-016.
+- User stated the owner agenda/randevular screen will not be used, so TASK-016 manual drag/drop smoke is no longer a blocking validation item.
 
 # Current Problems
 
-- Supabase advisors still report non-scheduling warnings: RLS performance, multiple permissive policies outside scheduling, `btree_gist` public extension, and intentional public availability RPC warnings
-- test data exists on remote for slug `test-berber`
+- `20260518130000_non_scheduling_rls_advisor_cleanup.sql` is local only; review/deploy to linked Supabase when ready.
+- Supabase advisor intentionally still reports `btree_gist` in public; moving it would need a separate ADR-backed migration.
 - Supabase CLI remote query may need `--dns-resolver https`; native DNS timed out during staging smoke.
-- remote/local migration history has unrelated drift around older `20260512*` and `20260517100000` local migrations; do not bulk push without reviewing migration history.
-- if a device still shows the old availability error, reinstall/reload Expo or leave/re-enter the booking flow to clear the old bundle/screen state.
+
+# Latest Check
+
+- TASK-016 implementation remains in `apps/mobile/app/(owner)/agenda.tsx`; `pnpm --filter @berber/mobile type-check` passed and `git diff --check -- apps/mobile/app/(owner)/agenda.tsx` passed with CRLF warning only.
+- Android owner app was reconnected to mobile Metro on port 8083 after clearing cache; app opened to owner UI.
+- TASK-016 moved to completed because the target screen is out of scope for manual product validation.
+- Non-scheduling RLS advisor cleanup migration passed `supabase db reset`; local advisors now only report the intentional `btree_gist` public extension warning.
 
 # Active Files
 
-- `apps/customer/app/(auth)/login.tsx`
-- `apps/customer/app/(app)/index.tsx`
-- `apps/customer/app/booking/step2-barber.tsx`
-- `apps/customer/app/booking/step3-slot.tsx`
-- `apps/customer/app/booking/step4-confirm.tsx`
-- `apps/web/src/app/[slug]/BookingFlow.tsx`
-- `supabase/functions/get-availability/index.ts`
+- `supabase/migrations/20260518130000_non_scheduling_rls_advisor_cleanup.sql`
+- `apps/mobile/app/(owner)/agenda.tsx`
 
 # Rotation Rule
 

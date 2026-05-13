@@ -61,7 +61,7 @@ export default function OwnerLayout() {
       <Tabs.Screen
         name="earnings"
         options={{
-          title: "Kazanc",
+          title: "Kazanç",
           href: commissionEnabled ? undefined : null,
           tabBarIcon: ({ color }) => <Feather name="credit-card" size={22} color={color} />,
         }}

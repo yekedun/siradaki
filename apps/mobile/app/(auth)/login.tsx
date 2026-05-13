@@ -41,7 +41,7 @@ export default function LoginScreen() {
         </Text>
 
         <View style={styles.field}>
-          <Text style={styles.label}>EMAIL</Text>
+          <Text style={styles.label}>E-POSTA</Text>
           <TextInput
             style={styles.input}
             placeholder="berber@dukkan.com"

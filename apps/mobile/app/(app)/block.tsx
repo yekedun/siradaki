@@ -16,7 +16,7 @@ import { supabase } from "../../lib/supabase";
 const DURATIONS = [15, 30, 45, 60, 90, 120] as const;
 
 const REASONS = [
-  { id: "walkin" as const, label: "Yürüyen Müşteri", meta: "Şu anda gelen müşteri için" },
+  { id: "walkin" as const, label: "Anlık müşteri", meta: "Şu anda gelen müşteri için" },
   { id: "break" as const, label: "Mola", meta: "Kahve / dinlenme arası" },
   { id: "personal" as const, label: "Kişisel", meta: "Telefon, evrak vs." },
 ];
@@ -66,7 +66,7 @@ export default function BlockScreen() {
       return;
     }
 
-    Alert.alert("Blok Eklendi", `${dur} dakikalık blok eklendi.`);
+    Alert.alert("Takvim kapatıldı", `${dur} dakika kapalı görünecek.`);
   }
 
   async function handleBlock() {
@@ -99,7 +99,7 @@ export default function BlockScreen() {
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.eyebrow}>BLOK EKLE</Text>
-        <Text style={styles.title}>Slotu Blokla</Text>
+        <Text style={styles.title}>Takvimi Kapat</Text>
         <Text style={styles.lead}>Şu andan itibaren seçtiğin süre boyunca takvim kapalı görünür.</Text>
 
         <NowBadge now={now} />
@@ -165,7 +165,7 @@ export default function BlockScreen() {
           onPress={handleBlock}
           disabled={loading}
         >
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.fabText}>Bloğu Ekle</Text>}
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.fabText}>Kapat</Text>}
         </Pressable>
       </View>
     </View>
