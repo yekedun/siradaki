@@ -16,7 +16,7 @@ export const revalidate = 60;
 export const dynamicParams = true;
 
 export async function generateStaticParams() {
-  const url  = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anon) return [];
   const supabase = createClient<Database>(url, anon);
@@ -134,7 +134,7 @@ function ProfileCard({
       </div>
 
       <div className="mb-1 text-[11px] font-semibold uppercase tracking-[1.4px] text-red">
-        BERBER · ONLİNE RANDEVU
+        BERBER · ONLINE RANDEVU
       </div>
       <h1 className="m-0 text-[30px] font-bold leading-tight tracking-[-0.5px] text-ink">
         {name}

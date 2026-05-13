@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 export default function NotFound() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-bg p-6">
@@ -18,12 +16,12 @@ export default function NotFound() {
           Aradığın berber profili artık mevcut değil ya da bağlantı yanlış
           yazılmış olabilir. Ana sayfaya dönüp tekrar deneyebilirsin.
         </p>
-        <Link
+        <a
           href="/"
           className="inline-block rounded-cta bg-navy px-[22px] py-3.5 text-[14px] font-semibold text-white shadow-cta"
         >
           Ana Sayfaya Dön
-        </Link>
+        </a>
         <div className="mt-7 border-t border-hair pt-[18px] text-[11px] font-semibold uppercase tracking-[1.2px] text-mutedAlt">
           Berber · v1.0.0
         </div>

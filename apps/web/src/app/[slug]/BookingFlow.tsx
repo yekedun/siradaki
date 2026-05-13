@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import Image from "next/image";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import type {
   ShopPublic,
@@ -26,30 +27,40 @@ interface SlotItem {
   available: boolean;
 }
 
+interface AvailabilityResponse {
+  slots?: SlotItem[];
+  closed?: boolean;
+  error?: string;
+}
+
 const TR_DAY_SHORT = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
 const TR_MONTH = [
   "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
   "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
 ];
 
-function ymd(d: Date): string {
-  return d.toISOString().split("T")[0]!;
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
 }
+
+function localYmd(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
 function isSameYMD(a: Date, b: Date): boolean {
-  return ymd(a) === ymd(b);
-}
-function initials(name: string): string {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]!.toUpperCase()).join("");
+  return localYmd(a) === localYmd(b);
 }
 
 export function BookingFlow({ shop, staff, services }: BookingFlowProps) {
-  const [selectedService, setSelectedService]     = useState<ServicePublic | null>(null);
-  const [selectedStaff, setSelectedStaff]         = useState<StaffSelection | null>(null);
-  const [selectedDate, setSelectedDate]           = useState<string>(() => ymd(new Date()));
-  const [serverSlots, setServerSlots]             = useState<SlotItem[]>([]);
-  const [selectedSlot, setSelectedSlot]           = useState<Slot | null>(null);
-  const [isLoadingSlots, setIsLoadingSlots]       = useState(false);
-  const [confirmOpen, setConfirmOpen]             = useState(false);
+  const [selectedService, setSelectedService] = useState<ServicePublic | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState<StaffSelection | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(() => localYmd(new Date()));
+  const [serverSlots, setServerSlots] = useState<SlotItem[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [slotError, setSlotError] = useState<string | null>(null);
+  const [isClosed, setIsClosed] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
@@ -59,31 +70,50 @@ export function BookingFlow({ shop, staff, services }: BookingFlowProps) {
     ? "any"
     : selectedStaff.id;
 
-  // Slot'ları sunucudan çek
   const fetchSlots = useCallback(() => {
     if (!selectedService || selectedStaffId === null) return;
     let cancelled = false;
     setIsLoadingSlots(true);
+    setSlotError(null);
+
     const params = new URLSearchParams({
-      shop_slug:  shop.slug,
-      slug:       shop.slug,
-      date:       selectedDate,
+      shop_slug: shop.slug,
+      slug: shop.slug,
+      date: selectedDate,
       service_id: selectedService.id,
-      staff_id:   selectedStaffId ?? "",
+      staff_id: selectedStaffId ?? "",
     });
+
     fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/get-availability?${params}`, {
       headers: {
         apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       },
     })
-      .then((r) => r.json())
-      .then((data: { slots: SlotItem[] }) => {
+      .then(async (res) => {
+        const data = (await res.json().catch(() => ({}))) as AvailabilityResponse;
+        if (!res.ok) {
+          throw new Error(data.error || "Müsaitlik bilgisi alınamadı.");
+        }
+        return data;
+      })
+      .then((data) => {
         if (cancelled) return;
         setServerSlots(data.slots ?? []);
+        setIsClosed(Boolean(data.closed));
       })
-      .catch(() => { if (!cancelled) setServerSlots([]); })
-      .finally(() => { if (!cancelled) setIsLoadingSlots(false); });
-    return () => { cancelled = true; };
+      .catch((err: Error) => {
+        if (cancelled) return;
+        setServerSlots([]);
+        setIsClosed(false);
+        setSlotError(err.message || "Müsaitlik bilgisi alınamadı.");
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingSlots(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedService, selectedStaffId, selectedDate, shop.slug]);
 
   useEffect(() => {
@@ -91,16 +121,13 @@ export function BookingFlow({ shop, staff, services }: BookingFlowProps) {
     return cleanup;
   }, [fetchSlots]);
 
-  // selectedSlot'u slot listesi değişince sıfırla
   useEffect(() => {
     setSelectedSlot(null);
   }, [selectedService, selectedStaff, selectedDate]);
 
-  // Realtime: slot değişince yeniden çek
   useEffect(() => {
     if (!selectedService || selectedStaffId === null) return;
 
-    // Hangi usta ID'lerine subscribe olacağız?
     const targetStaffIds =
       selectedStaffId === "any"
         ? staff.map((b) => b.id)
@@ -122,15 +149,16 @@ export function BookingFlow({ shop, staff, services }: BookingFlowProps) {
     }
 
     channel.subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [selectedStaffId, selectedService, staff, shop.id, supabase, fetchSlots]);
 
-  // serverSlots → Slot[]
   const slots: Slot[] = useMemo(
     () =>
       serverSlots.map((s) => ({
-        startsAt:  new Date(s.starts_at),
-        endsAt:    new Date(s.ends_at),
+        startsAt: new Date(s.starts_at),
+        endsAt: new Date(s.ends_at),
         available: s.available,
       })),
     [serverSlots]
@@ -138,7 +166,6 @@ export function BookingFlow({ shop, staff, services }: BookingFlowProps) {
 
   const handleBookingSuccess = useCallback(() => {
     setSelectedSlot(null);
-    setConfirmOpen(false);
     fetchSlots();
   }, [fetchSlots]);
 
@@ -167,24 +194,20 @@ export function BookingFlow({ shop, staff, services }: BookingFlowProps) {
 
   return (
     <div className="flex flex-col gap-7">
-
-      {/* Adım 1: Hizmet */}
       <Section step={1} title="Hizmet Seç">
         <ServiceSelector
           services={services}
           selected={selectedService}
-          onSelect={(s) => {
-            setSelectedService(s);
+          onSelect={(service) => {
+            setSelectedService(service);
             setSelectedStaff(null);
           }}
         />
       </Section>
 
-      {/* Adım 2: Usta */}
       {selectedService && (
         <Section step={2} title="Usta Seç">
           <div className="flex flex-wrap gap-2">
-            {/* Fark Etmez */}
             <StaffCard
               name="Fark Etmez"
               subtitle="Uygun personele atanır"
@@ -193,44 +216,43 @@ export function BookingFlow({ shop, staff, services }: BookingFlowProps) {
               onSelect={() => setSelectedStaff("any")}
               isAny
             />
-            {staff.map((s) => (
+            {staff.map((staffMember) => (
               <StaffCard
-                key={s.id}
-                name={s.name}
+                key={staffMember.id}
+                name={staffMember.name}
                 avatarUrl={null}
-                selected={selectedStaff !== "any" && selectedStaff?.id === s.id}
-                onSelect={() => setSelectedStaff(s)}
+                selected={selectedStaff !== "any" && selectedStaff?.id === staffMember.id}
+                onSelect={() => setSelectedStaff(staffMember)}
               />
             ))}
           </div>
         </Section>
       )}
 
-      {/* Adım 3: Tarih */}
       {selectedService && selectedStaff !== null && (
         <Section step={3} title="Tarih">
           <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
-            {dateOptions.map((d) => {
-              const sel     = ymd(d) === selectedDate;
-              const isToday = isSameYMD(d, today);
+            {dateOptions.map((date) => {
+              const selected = localYmd(date) === selectedDate;
+              const isToday = isSameYMD(date, today);
               return (
                 <button
-                  key={d.toISOString()}
-                  onClick={() => setSelectedDate(ymd(d))}
+                  key={date.toISOString()}
+                  onClick={() => setSelectedDate(localYmd(date))}
                   className={`flex h-[72px] w-14 flex-none flex-col items-center justify-center rounded-cta transition-colors ${
-                    sel
+                    selected
                       ? "bg-ink text-white shadow-pill"
                       : isToday
                       ? "border-[1.5px] border-red bg-surface text-ink"
                       : "border border-hair bg-surface text-ink"
                   }`}
                 >
-                  <span className={`text-[10px] font-semibold uppercase tracking-[0.5px] ${sel ? "text-white/70" : "text-muted"}`}>
-                    {TR_DAY_SHORT[d.getDay()]}
+                  <span className={`text-[10px] font-semibold uppercase tracking-[0.5px] ${selected ? "text-white/70" : "text-muted"}`}>
+                    {TR_DAY_SHORT[date.getDay()]}
                   </span>
-                  <span className="text-[20px] font-bold">{d.getDate()}</span>
-                  <span className={`text-[9px] ${sel ? "text-white/60" : "text-mutedAlt"}`}>
-                    {TR_MONTH[d.getMonth()]!.slice(0, 3)}
+                  <span className="text-[20px] font-bold">{date.getDate()}</span>
+                  <span className={`text-[9px] ${selected ? "text-white/60" : "text-mutedAlt"}`}>
+                    {TR_MONTH[date.getMonth()]!.slice(0, 3)}
                   </span>
                 </button>
               );
@@ -239,7 +261,6 @@ export function BookingFlow({ shop, staff, services }: BookingFlowProps) {
         </Section>
       )}
 
-      {/* Adım 4: Saat */}
       {selectedService && selectedStaff !== null && (
         <Section step={4} title="Saat">
           <SlotGrid
@@ -248,12 +269,15 @@ export function BookingFlow({ shop, staff, services }: BookingFlowProps) {
             isLoading={isLoadingSlots}
             selected={selectedSlot}
             onSelect={setSelectedSlot}
+            errorMessage={slotError}
+            isClosed={isClosed}
+            onRetry={fetchSlots}
           />
           <button
-            disabled={!selectedSlot}
+            disabled={!selectedSlot || Boolean(slotError)}
             onClick={() => setConfirmOpen(true)}
             className={`mt-5 w-full rounded-cta py-4 text-[15px] font-semibold transition-colors ${
-              selectedSlot
+              selectedSlot && !slotError
                 ? "bg-navy text-white shadow-cta"
                 : "bg-surfaceAlt text-mutedAlt cursor-not-allowed"
             }`}
@@ -318,7 +342,13 @@ function StaffCard({
           <span className={`text-[10px] font-bold ${selected ? "text-white/70" : "text-muted"}`}>?</span>
         </div>
       ) : avatarUrl ? (
-        <img src={avatarUrl} alt={name} className="h-8 w-8 flex-none rounded-full object-cover" />
+        <Image
+          src={avatarUrl}
+          alt={name}
+          width={32}
+          height={32}
+          className="h-8 w-8 flex-none rounded-full object-cover"
+        />
       ) : (
         <div className={`flex h-8 w-8 flex-none items-center justify-center rounded-full ${selected ? "bg-white/20" : "bg-blue-soft"}`}>
           <span className={`text-[11px] font-bold ${selected ? "text-white" : "text-navy"}`}>{initials(name)}</span>

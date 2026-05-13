@@ -40,6 +40,7 @@ export function BookingModal({
   const [note, setNote] = useState("");
   const [step, setStep] = useState<Step>("form");
   const [errorMsg, setErrorMsg] = useState("");
+  const [isConflict, setIsConflict] = useState(false);
   const [confirmation, setConfirmation] = useState<BookAppointmentResponse | null>(null);
 
   const timeLabel = formatSlotTime(slot.startsAt, timezone);
@@ -56,6 +57,9 @@ export function BookingModal({
     e.preventDefault();
     if (name.trim().length < 2) return;
     setStep("loading");
+    setErrorMsg("");
+    setIsConflict(false);
+
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/book-appointment`,
@@ -76,12 +80,15 @@ export function BookingModal({
           }),
         }
       );
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (res.status === 409 || data?.should_refetch_availability) {
+          setIsConflict(true);
+          setErrorMsg("Bu saat az önce doldu. Lütfen listeden başka bir saat seçin.");
           onConflict();
+        } else {
+          setErrorMsg(data.error ?? "Randevu oluşturulamadı.");
         }
-        setErrorMsg(data.error ?? "Randevu oluşturulamadı.");
         setStep("error");
         return;
       }
@@ -99,16 +106,16 @@ export function BookingModal({
       className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(15,23,42,0.45)] p-4 sm:items-center"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full max-w-[440px] rounded-sheet bg-surface shadow-[0_30px_80px_rgba(15,23,42,0.3)]">
+      <div className="max-h-[calc(100dvh-2rem)] w-full max-w-[440px] overflow-hidden rounded-sheet bg-surface shadow-[0_30px_80px_rgba(15,23,42,0.3)]">
         {step === "form" && (
-          <>
+          <div className="flex max-h-[calc(100dvh-2rem)] flex-col">
             <div className="border-b border-hair px-[22px] pb-2 pt-5">
               <h2 className="m-0 text-[20px] font-bold text-ink">Randevuyu Onayla</h2>
               <p className="mt-1.5 text-[13px] text-muted">
                 {staffLabel} · {service.name} · {dateLabel}, {timeLabel}
               </p>
             </div>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 p-[22px]">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-3.5 overflow-y-auto p-[22px]">
               <Field label="Ad Soyad">
                 <input
                   type="text"
@@ -155,18 +162,18 @@ export function BookingModal({
                 </button>
               </div>
             </form>
-          </>
+          </div>
         )}
 
         {step === "loading" && (
-          <div className="flex flex-col items-center py-12 text-center">
+          <div className="flex max-h-[calc(100dvh-2rem)] flex-col items-center overflow-y-auto py-12 text-center">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-navy border-t-transparent" />
-            <p className="mt-4 text-sm text-muted">Randevu oluşturuluyor…</p>
+            <p className="mt-4 text-sm text-muted">Randevu oluşturuluyor...</p>
           </div>
         )}
 
         {step === "success" && confirmation && (
-          <div className="flex flex-col items-center px-7 py-9 text-center">
+          <div className="flex max-h-[calc(100dvh-2rem)] flex-col items-center overflow-y-auto px-7 py-9 text-center">
             <span className="mb-3 inline-block rounded-full bg-blue-soft px-3 py-1 text-[11px] font-bold uppercase tracking-[1.2px] text-navy">
               Onaylandı
             </span>
@@ -183,7 +190,7 @@ export function BookingModal({
                 timeZone: timezone,
               })}
               <br />
-              <span className="text-mutedAlt">onay SMS'i yolda.</span>
+              <span className="text-mutedAlt">Onay SMS&apos;i yolda.</span>
             </p>
             <button
               onClick={onClose}
@@ -195,7 +202,7 @@ export function BookingModal({
         )}
 
         {step === "error" && (
-          <div className="flex flex-col items-center px-7 py-9 text-center">
+          <div className="flex max-h-[calc(100dvh-2rem)] flex-col items-center overflow-y-auto px-7 py-9 text-center">
             <span className="mb-3 inline-block rounded-full bg-red-soft px-3 py-1 text-[11px] font-bold uppercase tracking-[1.2px] text-red">
               Hata
             </span>
@@ -205,14 +212,16 @@ export function BookingModal({
                 onClick={onClose}
                 className="flex-1 rounded-cta bg-surfaceAlt py-3.5 text-[14px] font-semibold text-ink"
               >
-                Kapat
+                {isConflict ? "Saat Seç" : "Kapat"}
               </button>
-              <button
-                onClick={() => setStep("form")}
-                className="flex-1 rounded-cta bg-navy py-3.5 text-[14px] font-semibold text-white"
-              >
-                Tekrar Dene
-              </button>
+              {!isConflict && (
+                <button
+                  onClick={() => setStep("form")}
+                  className="flex-1 rounded-cta bg-navy py-3.5 text-[14px] font-semibold text-white"
+                >
+                  Tekrar Dene
+                </button>
+              )}
             </div>
           </div>
         )}

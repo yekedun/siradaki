@@ -7,6 +7,9 @@ interface SlotGridProps {
   isLoading: boolean;
   selected: Slot | null;
   onSelect: (slot: Slot) => void;
+  errorMessage?: string | null;
+  isClosed?: boolean;
+  onRetry?: () => void;
 }
 
 export function SlotGrid({
@@ -15,6 +18,9 @@ export function SlotGrid({
   isLoading,
   selected,
   onSelect,
+  errorMessage,
+  isClosed = false,
+  onRetry,
 }: SlotGridProps) {
   if (isLoading) {
     return (
@@ -29,9 +35,31 @@ export function SlotGrid({
     );
   }
 
+  if (errorMessage) {
+    return (
+      <div className="rounded-input border border-red-soft bg-red-soft/40 p-4">
+        <p className="m-0 text-sm font-semibold text-red">
+          Müsaitlik bilgisi alınamadı.
+        </p>
+        <p className="mb-0 mt-1 text-sm text-muted">
+          Bağlantıyı kontrol edip tekrar deneyin.
+        </p>
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-3 rounded-cta bg-navy px-4 py-2 text-[13px] font-semibold text-white"
+          >
+            Tekrar Dene
+          </button>
+        )}
+      </div>
+    );
+  }
+
   const available = slots.filter((s) => s.available);
 
-  if (slots.length === 0) {
+  if (isClosed || slots.length === 0) {
     return (
       <p className="text-sm text-mutedAlt">
         Bu gün için çalışma saati tanımlanmamış.
