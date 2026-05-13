@@ -158,7 +158,15 @@ export default function OwnerAgenda() {
       .eq("shop_id", shopId);
 
     if (!staffData) { setLoading(false); setRefreshing(false); return; }
-    setStaff(staffData);
+    // Referans ancak içerik gerçekten değişmişse güncellenir; aksi halde
+    // subscription useEffect gereksiz yere yeniden kurulur.
+    setStaff((prev) => {
+      if (
+        prev.length === staffData.length &&
+        prev.every((s, i) => s.id === staffData[i]!.id && s.name === staffData[i]!.name)
+      ) return prev;
+      return staffData;
+    });
     const staffIds = staffData.map((b) => b.id);
 
     if (staffIds.length === 0) {
@@ -198,25 +206,32 @@ export default function OwnerAgenda() {
   useEffect(() => {
     if (!shopId || staff.length === 0) return;
 
+    const { start: dayStart, end: dayEnd } = getDayBoundsUTC(new Date(selectedDayKey), TZ);
+    const dayStartMs = dayStart.getTime();
+    const dayEndMs   = dayEnd.getTime();
+
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const handleChange = (payload: { new: Record<string, unknown>; old: Record<string, unknown> }) => {
+      const startsAt = (payload.new?.starts_at ?? payload.old?.starts_at) as string | undefined;
+      if (startsAt) {
+        const t = new Date(startsAt).getTime();
+        if (t < dayStartMs || t >= dayEndMs) return;
+      }
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => { void load(); }, 300);
+    };
+
     let channel = supabase.channel(`owner-agenda:${shopId}:${selectedDayKey}`);
     for (const member of staff) {
-      channel = channel.on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "appointment_slots", filter: `staff_id=eq.${member.id}` },
-        () => {
-          void load();
-        }
-      ).on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "block_slots", filter: `staff_id=eq.${member.id}` },
-        () => {
-          void load();
-        }
-      );
+      channel = channel
+        .on("postgres_changes", { event: "*", schema: "public", table: "appointment_slots", filter: `staff_id=eq.${member.id}` }, handleChange)
+        .on("postgres_changes", { event: "*", schema: "public", table: "block_slots",       filter: `staff_id=eq.${member.id}` }, handleChange);
     }
     channel.subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       void supabase.removeChannel(channel);
     };
   }, [shopId, staff, selectedDayKey, load]);

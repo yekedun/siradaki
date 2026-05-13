@@ -75,6 +75,10 @@ serve(async (req) => {
 
   if (!staff) return error("Personel bu dukkana ait degil", 403);
 
+  // now = Edge Function saati; PostgreSQL now() ile küçük drift (ms-düzeyinde)
+  // oluşabilir. create_block_atomic EXCLUDE constraint'i DB tarafında değerlendirdiği
+  // için pratik çakışmaya yol açmaz; daha hassas ihtiyaçta p_starts_at'i
+  // DB'ye bırakmak gerekir (ör. DEFAULT now() parametresiyle).
   const now = new Date();
   const endsAt = new Date(now.getTime() + duration_min * 60_000);
 

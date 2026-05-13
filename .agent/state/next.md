@@ -1,16 +1,17 @@
 # Next Tasks
 
-1. review/deploy `20260518130000_non_scheduling_rls_advisor_cleanup.sql` to linked Supabase when ready
-2. decide whether `btree_gist` public extension warning should stay documented or move extension schema in a separate ADR-backed migration
+1. ~~DESIGN.md page inventory update~~ — §8 tam envanter done 2026-05-13.
+2. ~~DESIGN.md UI copy (Step 2)~~ — tüm ekranlar için label/placeholder/hata metinleri eklendi 2026-05-13.
+3. Delete Tokyo Supabase project after confirming Frankfurt is stable.
+4. Decide whether `btree_gist` public extension warning should stay documented or be moved via ADR-backed migration (low priority).
 
 # Completed Recently
 
-- TASK-016 moved to completed; manual drag/drop smoke was skipped because the owner agenda/randevular screen is not planned to be used.
-- TASK-016 owner agenda drag/drop optimization implemented locally and mobile type-check passed.
-- Android owner app was reconnected to mobile Metro on port 8083 after cache clear.
-- non-scheduling RLS advisor cleanup added locally; initplan and multiple permissive warnings are gone after `supabase db reset`.
-- raw availability helper RPCs (`get_occupied_ranges`, `get_staff_day_hours`) are no longer executable by `anon`/`authenticated`; `service_role` remains allowed for Edge Functions.
-- customer success screen -> appointments was verified on Android emulator after real manual CTA click; appointments tab selected and list rendered.
+- DESIGN.md Step 2: UI metinleri — M1–M11, W1–W4, W3a için tüm label/placeholder/buton/hata kopyası eklendi (2026-05-13).
+- TASK-014: Upstash IP rate limiting on `book-appointment`; H-2 coverage now complete.
+- Supabase project migrated Tokyo → Frankfurt (`hnaxcntnntwvqhremzet`).
+- `uuid_generate_v4()` → `gen_random_uuid()` fixed; all edge functions redeployed.
+- TASK-001–TASK-013: scheduling-hardening code review remediation (2026-05-13).
 
 # Rotation Rule
 

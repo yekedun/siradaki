@@ -84,7 +84,14 @@ export function BookingModal({
       if (!res.ok) {
         if (res.status === 409 || data?.should_refetch_availability) {
           setIsConflict(true);
-          setErrorMsg("Bu saat az önce doldu. Lütfen listeden başka bir saat seçin.");
+          const isWorkWindow =
+            typeof data?.error === "string" &&
+            data.error.includes("calisma saati");
+          setErrorMsg(
+            isWorkWindow
+              ? "Bu saat artık çalışma saatleri dışında. Sayfayı yenileyip güncel saatleri görün."
+              : "Bu saat az önce doldu. Lütfen listeden başka bir saat seçin."
+          );
           onConflict();
         } else {
           setErrorMsg(data.error ?? "Randevu oluşturulamadı.");

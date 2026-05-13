@@ -33,11 +33,8 @@ async function resolveWorkingHours(
   }
 
   // Personele özel çalışma saatlerini WorkingHours formatına dönüştür
-  // date.getDay() → 0=Sun,1=Mon,...,6=Sat; DAY_KEYS aynı sıralamayı kullanır
-  const dateObj = new Date(date + "T00:00:00Z");
-  const jsDay   = dateObj.getUTCDay(); // UTC gün (0-6)
-  const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
-  const dayKey   = DAY_KEYS[jsDay];
+  const jsDay  = new Date(date + "T00:00:00Z").getUTCDay();
+  const dayKey = DAY_KEYS[jsDay];
 
   // Mevcut shopWorkingHours yapısını kopyala, sadece o günü override et
   const overridden: WorkingHours = {
@@ -51,6 +48,8 @@ async function resolveWorkingHours(
 
   return { workingHours: overridden, closed: false };
 }
+
+const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 
 // ── Ana Handler ───────────────────────────────────────────────────────────────
 
@@ -159,33 +158,65 @@ serve(async (req) => {
     .from("staff")
     .select("id")
     .eq("shop_id", shop.id)
-    .eq("is_active", true);   // pasif personeli dahil etme
+    .eq("is_active", true);
 
   if (!staffList || staffList.length === 0) {
     return error("Dükkanda aktif personel yok", 404);
   }
 
-  // Her personel için: schedule kontrolü + occupied ranges — paralel
-  const perStaff = await Promise.all(
-    staffList.map(async (b) => {
-      const { workingHours, closed } = await resolveWorkingHours(
-        supabase,
-        b.id,
-        date,
-        shopWorkingHours,
-        timezone
-      );
+  const dowInt = new Date(date + "T00:00:00Z").getUTCDay();
+  const staffIds = staffList.map((s) => s.id);
 
-      if (closed) return { wh: workingHours, occupied: [], closed: true };
+  // 2 sorgu — N×2 fan-out yerine
+  const [schedulesResult, shopOccupiedResult] = await Promise.all([
+    supabase
+      .from("staff_schedules")
+      .select("staff_id, is_working, work_start, work_end")
+      .in("staff_id", staffIds)
+      .eq("day_of_week", dowInt),
+    supabase.rpc("get_shop_occupied_ranges", {
+      p_shop_id: shop.id,
+      p_date: date,
+    }),
+  ]);
 
-      const { data } = await supabase.rpc("get_occupied_ranges", {
-        p_staff_id: b.id,
-        p_date: date,
-      });
+  if (shopOccupiedResult.error) {
+    console.error("get_shop_occupied_ranges RPC failed:", shopOccupiedResult.error);
+    return error("Müsaitlik bilgisi alınamadı", 500);
+  }
 
-      return { wh: workingHours, occupied: data ?? [], closed: false };
-    })
+  // Çalışma saatlerini staff_id → schedule şeklinde indeksle
+  const scheduleByStaff = new Map(
+    (schedulesResult.data ?? []).map((s) => [s.staff_id, s])
   );
+
+  // Dolu aralıkları staff_id'ye göre grupla
+  const occupiedByStaff = new Map<string, { starts_at: string; ends_at: string }[]>();
+  for (const row of shopOccupiedResult.data ?? []) {
+    const list = occupiedByStaff.get(row.staff_id) ?? [];
+    list.push({ starts_at: row.starts_at, ends_at: row.ends_at });
+    occupiedByStaff.set(row.staff_id, list);
+  }
+
+  // Her personel için çalışma saatlerini belirle + slot hesapla — DB çağrısı yok
+  const perStaff = staffList.map((b) => {
+    const schedule = scheduleByStaff.get(b.id);
+
+    if (schedule && !schedule.is_working) {
+      return { wh: shopWorkingHours, occupied: [], closed: true };
+    }
+
+    let wh = shopWorkingHours;
+    if (schedule?.work_start && schedule?.work_end) {
+      const dayKey = DAY_KEYS[dowInt];
+      wh = {
+        ...shopWorkingHours,
+        [dayKey]: { open: schedule.work_start, close: schedule.work_end, enabled: true },
+      };
+    }
+
+    return { wh, occupied: occupiedByStaff.get(b.id) ?? [], closed: false };
+  });
 
   // Slot bazında union: en az 1 personel müsaitse available = true
   const slotMap = new Map<string, { available: boolean; ends_at: string }>();

@@ -2,6 +2,45 @@ import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createAdminClient } from "../_shared/supabase-admin.ts";
 import { corsOptions, error, json } from "../_shared/cors.ts";
 
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_WINDOW_SEC = 600;
+
+async function isRateLimited(ip: string): Promise<boolean> {
+  const url = Deno.env.get("UPSTASH_REDIS_REST_URL");
+  const token = Deno.env.get("UPSTASH_REDIS_REST_TOKEN");
+  if (!url || !token) return false;
+
+  const key = `rl:book:${ip}`;
+  try {
+    const res = await fetch(`${url}/pipeline`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify([
+        ["INCR", key],
+        ["EXPIRE", key, String(RATE_LIMIT_WINDOW_SEC), "NX"],
+      ]),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    const count: unknown = data?.[0]?.result;
+    return typeof count === "number" && count > RATE_LIMIT_MAX;
+  } catch (err) {
+    console.error("Upstash rate limit check failed:", err);
+    return false;
+  }
+}
+
+function getClientIp(req: Request): string {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown"
+  );
+}
+
 interface BookAppointmentRequest {
   shop_slug: string;
   service_id: string;
@@ -23,6 +62,14 @@ function mapRpcErrorStatus(code?: string): number {
 serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions();
   if (req.method !== "POST") return error("Method not allowed", 405);
+
+  const ip = getClientIp(req);
+  if (await isRateLimited(ip)) {
+    return error("Çok fazla istek. 10 dakika sonra tekrar deneyin.", 429, {
+      code: "RATE_LIMITED",
+      retry_after: RATE_LIMIT_WINDOW_SEC,
+    });
+  }
 
   let body: BookAppointmentRequest;
   try {

@@ -145,126 +145,368 @@
 
 > Her brief'in ilk cümlesi: "Tasarım dili `DESIGN.md`'de tanımlı; aşağıdaki sayfa envanterine göre bu ekranı tasarla."
 
-### Owner Mobile App (`apps/mobile`)
+---
 
-#### M1 · `(auth)/login.tsx` — Berber girişi
-- **Amaç:** işletme sahibinin veya personelin oturum açması.
-- **İçerik:** marka alanı, başlık, email input, şifre input, birincil giriş CTA'sı, hata alanı.
-- **Durumlar:** loading, hatalı giriş, klavye açık hali.
+### Owner Mobile App (`apps/mobile/app/(owner)/`)
+
+#### M1 · `(auth)/login.tsx` — Giriş
+- **Amaç:** dükkan sahibinin veya personelin oturum açması.
+- **İçerik:** BrandMark (56×56 navy + kırmızı çapraz çizgi), eyebrow, başlık, email input, şifre input, birincil CTA.
+- **Modals / Sheets:** yok.
+- **Navigasyon:** başarılı giriş → Expo Router auth guard → `(owner)` veya `(app)` tab'ına.
+- **Hata:** `Alert("Giriş Başarısız", error.message)`.
+- **Boş:** email veya şifre boş → CTA pasif (opacity 0.6).
+- **UI Metinleri:**
+  - Eyebrow: `"BERBER · DÜKKAN PANELİ"`
+  - Başlık: `"Giriş Yap"`
+  - Lead: `"Randevu panelini açmak için hesabına giriş yap."`
+  - Label/Placeholder (1): `"E-POSTA"` / `"berber@dukkan.com"`
+  - Label/Placeholder (2): `"ŞİFRE"` / `"••••••••"`
+  - CTA: `"Giriş Yap"`
+  - Footer: `"Hesabın yok mu?"` + link `"Kayıt ol"` (şu an işlevsiz)
+  - Hata Alert başlık: `"Giriş Başarısız"` — tetikleyici: yanlış email / şifre
 
 #### M2 · `(owner)/_layout.tsx` — Owner tab yapısı
-- **Amaç:** owner uygulamasının ana navigasyonu.
-- **Sekmeler:** `Özet`, `Ajanda`, `Ekip`, `Ayarlar`.
-- **Tasarım ihtiyacı:** alt tab bar, aktif/pasif ikon dili, sekme etiket hiyerarşisi.
+- **Amaç:** owner uygulamasının ana alt tab navigasyonu.
+- **Sekmeler (fiili):** Özet · Ajanda · Kazanç · Ekip · Ayarlar.
+- **Modals / Sheets:** yok (her tab kendi sayfası).
+- **Navigasyon:** sekme basımı → ilgili ekran. `"Kazanç"` sekmesi `commission_enabled = false` iken gizlenir (`href: null`).
+- **UI Metinleri (tab etiketleri + ikonlar):**
+  - `"Özet"` (bar-chart-2) · `"Ajanda"` (calendar) · `"Ekip"` (users) · `"Kazanç"` (credit-card) · `"Ayarlar"` (settings)
 
 #### M3 · `(owner)/index.tsx` — Özet
-- **Amaç:** işletmenin günlük durumunu tek bakışta göstermek.
-- **İçerik:** bugünkü randevu özeti, doluluk, hızlı aksiyonlar, kritik uyarılar, kısa performans kartları.
-- **Durumlar:** veri dolu, boş, loading.
+- **Amaç:** işletmenin günlük durumunu ve 30 günlük öngörülerini tek bakışta sunmak.
+- **İçerik:** StaffPicker (yatay chip şeridi; "Tüm Ekip" + personel başlatıcıları), 3 KPI kartı (Bugün Toplam / Tamamlanan / Tahmini ₺), Öngörüler kutusu (En Çok Tercih / En Yoğun Gün), personel satır listesi.
+- **Modals / Sheets:** yok.
+- **Navigasyon:** personel satırına tıklama → client-side filtre (sayfa değişmez); pull-to-refresh → veri yenileme.
+- **Hata:** veri çekilemezse loading → null render (kullanıcıya hata gösterilmez, sessiz başarısız).
+- **Boş:** personel satırı yok → "Bu personele ait randevu yok." satırı.
+- **UI Metinleri:**
+  - Eyebrow: `"DÜKKAN ÖZET"`
+  - Başlık: `"Bugün"`
+  - Alt başlık: dinamik · örn. `"7 Mayıs 2026, Çarşamba"`
+  - StaffPicker hepsi chip: `"Tüm Ekip"` (users ikon)
+  - KPI etiketleri: `"Bugün Toplam"` · `"Tamamlanan"` · `"Tahmini (₺)"`
+  - Öngörüler bölüm başlığı: `"ÖNGÖRÜLER (30 GÜN)"`
+  - Insight satır etiketleri: `"En Çok Tercih Edilen"` · `"En Yoğun Gün"`
+  - Insight boş değer: `"Veri Yok"`
+  - Personel bölüm başlığı: `"PERSONEL DETAYI"` (filtre aktifken) / `"USTA BAZINDA"` (hepsi seçiliyken)
+  - Personel sayaç: `"{n} randevu"`
+  - Boş satır: `"Bu personele ait randevu yok."`
 
 #### M4 · `(owner)/agenda.tsx` — Ajanda
-- **Amaç:** gün bazlı randevu akışını yönetmek.
-- **İçerik:** tarih seçimi, gün şeridi, timeline veya liste, yaklaşan/geçmiş randevular, detay açma, yeni randevu ekleme.
-- **Bağlı bileşenler:** `AddAppointmentModal`, `AppointmentDetailSheet`.
+- **Amaç:** seçilen gün için tüm personelin randevularını kanban düzeninde yönetmek.
+- **İçerik:** haftalık gün şeridi (üst, sabitlenmiş), yatay scroll personel sütunları (200px genişlik), sütun başlığı (isim + randevu/blok sayısı), AppointmentCard (drag handle dahil), BlockCard (dashed), "+ Randevu Ekle" dashed CTA.
+- **Modals / Sheets:** `AddAppointmentModal` (pageSheet, yeni + düzenleme modu).
+- **Navigasyon:** gün şeridinden gün seçimi → veri yenileme; sütundaki "+ Randevu Ekle" → AddAppointmentModal (ilgili personel + seçili gün önseçili); Realtime — `appointment_slots` + `block_slots` kanalları (debounce 300ms).
+- **Drag-drop akışı:** karta uzunca basma + yatay sürükleme → hedef sütun highlight (columnDropTarget) → bırakma → `update_appointment_atomic` RPC; başarısızlıkta veri geri yüklenir.
+- **Hata:** çakışma → `Alert("Çakışma")`; diğer RPC hataları → `Alert("Taşınamadı")`.
+- **Boş:** personel sütunu boş → "Randevu yok" etiketi; personel listesi boş → sadece boş yatay alan.
+- **UI Metinleri:**
+  - Gün kısaltmaları: `"Pzt"` `"Sal"` `"Çar"` `"Per"` `"Cum"` `"Cmt"` `"Paz"`
+  - Ay kısaltmaları: `"Oca"` `"Şub"` `"Mar"` `"Nis"` `"May"` `"Haz"` `"Tem"` `"Ağu"` `"Eyl"` `"Eki"` `"Kas"` `"Ara"`
+  - Sütun sayaç: `"{n} randevu"` veya `"{n} randevu · {k} blok"`
+  - Kart zaman satırı: `"{HH:MM} · {dur} dk"`
+  - Blok kartı etiketi: `"Bloke"`
+  - Ekle CTA: `"+ Randevu Ekle"` (dashed, navy border)
+  - Boş sütun: `"Randevu yok"`
+  - Drag hata — hizmet yok: Alert `"Taşınamadı"` / `"Bu randevunun kayıtlı hizmeti yok."` — tetikleyici: `appt.service_id = null`
+  - Drag çakışma: Alert `"Çakışma"` / `error.message` — tetikleyici: RPC `23P01` veya `P0001`
+  - Drag genel hata: Alert `"Taşınamadı"` / `error.message`
+- **AddAppointmentModal UI Metinleri** *(bu modal M4 ve M9'da paylaşılır)*:
+  - Header başlık: `"Yeni Randevu"` (yeni) / `"Randevuyu Düzenle"` (düzenleme)
+  - Header butonlar: `"İptal"` (sol, muted) · `"Kaydet"` (sağ, navy)
+  - Alan etiketleri: `"Müşteri Adı"` · `"Telefon"` · `"Hizmet"` · `"Tarih"` · `"Saat"` · `"Süre"` · `"ÖZET"`
+  - Placeholder ad: `"Örn. Ahmet Yılmaz"` · Placeholder telefon: `"0(5xx) xxx xx xx"`
+  - Hizmet chip içeriği: `"{name}"` + `"{duration_min} dk · {price}₺"`
+  - Hizmet boş başlık: `"Aktif hizmet yok"` · Hizmet boş metin: `"Randevu eklemek için önce hizmet tanımlanmalı."`
+  - Süre bilgi (hizmet seçiliyken): `"Süre seçilen hizmetten gelir: {dur} dk"`
+  - Özet metni: `"{serviceName} · {dateLabel} · {timeLabel}"` · Alt: `"Bitiş: {endLabel} ({dur} dk)"`
+  - Doğrulama Alert'leri:
+    - `"Eksik"` / `"Müşteri adı en az 2 karakter olmalı"` — ad < 2 karakter
+    - `"Eksik"` / `"Randevu eklemek için önce aktif bir hizmet tanımlanmalı."` — dükkanın hiç aktif hizmeti yok
+    - `"Eksik"` / `"Kayıtlı bir hizmet seçmelisin"` — hizmet seçilmeden Kaydet
+    - `"Geçersiz Saat"` / `"Geçmiş bir saate randevu eklenemez"` — yeni randevu + geçmiş saat
+    - `"Çakışma"` / `error.message || "Bu saat artık müsait değil. Farklı bir saat seç."` — RPC `23P01` / `P0001`
+    - `"Hata"` / `error.message` — diğer RPC hataları
 
 #### M5 · `(owner)/team.tsx` — Ekip
-- **Amaç:** personel ve çalışma düzeni yönetimi.
-- **İçerik:** personel listesi, uygunluk bilgisi, vardiya/saat düzenleme aksiyonları.
-- **Bağlı bileşen:** `StaffScheduleModal`.
+- **Amaç:** personel listesi, aktif/pasif durumu, çalışma saatleri ve komisyon oranı yönetimi.
+- **İçerik:** "Personel ekle" CTA (navy), personel kart listesi (avatar + ad + durum chip + komisyon etiketi + aksiyon ikonları).
+- **Modals / Sheets:**
+  - `StaffScheduleModal` (pageSheet) — saat ikonu → 7 günlük çalışma saati ve mola düzenleme.
+  - "Personel Ekle" Modal (fade) — ad giriş alanı.
+  - "Komisyon Oranı" Modal (fade) — `commission_enabled` açıksa % giriş alanı.
+- **Navigasyon:** saat ikonu → StaffScheduleModal; % ikonu → komisyon modal (yalnızca `commission_enabled`); Pause/Play → aktif/pasif Alert onay; "Personel Ekle" CTA → Personel Ekle Modal.
+- **Hata:** RPC veya DB hatası → `Alert("Hata", error.message)`; komisyon % geçersiz → `Alert("Geçersiz", "0-100 arası gir")`.
+- **Boş:** personel yokken → "Henüz personel yok. Yeni personel ekleyin."
+- **UI Metinleri — ekran:**
+  - Eyebrow: `"EKİP YÖNETİMİ"`
+  - Başlık: `"Ustalar"`
+  - CTA: `"Personel ekle"` (user-plus ikon)
+  - Durum chip: `"Aktif"` (#16a34a) / `"Pasif"` (muted, kart opaklık 0.65)
+  - Komisyon etiketi: `"%{oran} komisyon"` veya `"Komisyon yok"`
+  - Toggle Alert başlık: `"Durumu Değiştir"` · mesaj: `"{name} personelini pasif yap?"` / `"...aktif yap?"`
+  - Toggle butonlar: `"Vazgeç"` · `"Pasif yap"` (destructive) / `"Aktif yap"`
+  - Boş: `"Henüz personel yok. Yeni personel ekleyin."`
+- **UI Metinleri — Personel Ekle Modal:**
+  - Başlık: `"Personel ekle"` · Açıklama: `"Randevu alacak usta adını gir."`
+  - Placeholder: `"Ad Soyad"` · Butonlar: `"Vazgeç"` · `"Ekle"` (navy)
+  - Başarı Alert: `"Başarılı"` / `"{name} başarıyla eklendi."`
+  - Doğrulama: `"Geçersiz"` / `"Geçerli bir ad gir."` — ad < 2 karakter
+  - Hata Alert: `"Hata"` / `error.message`
+- **UI Metinleri — Komisyon Oranı Modal:**
+  - Başlık: `"Komisyon Oranı"` · Açıklama: `"{name} için yüzde oran gir. Boş bırakırsan komisyon kapanır."`
+  - Placeholder: `"Örn. 50"` · Butonlar: `"Vazgeç"` · `"Kaydet"` (navy)
+  - Doğrulama: `"Geçersiz"` / `"0 ile 100 arasında oran gir."` — NaN veya aralık dışı
+- **UI Metinleri — StaffScheduleModal:**
+  - Eyebrow: `"ÇALIŞMA SAATLERİ"` · Başlık: `"{staff.name}"`
+  - Gün kısaltmaları: `"Paz"` `"Pzt"` `"Sal"` `"Çar"` `"Per"` `"Cum"` `"Cmt"`
+  - Toggle başlık: `"Çalışıyor"` · alt metin: `"Bu gün aktif"` / `"Bu gün tatil / kapalı"`
+  - Bölüm başlıkları: `"ÇALIŞMA SAATLERİ"` · `"MOLA (OPSİYONEL)"`
+  - Alan etiketleri: `"Açılış"` · `"Kapanış"` · `"Mola Başlangıç"` · `"Mola Bitiş"`
+  - Placeholder çalışma: `"09:00"` · Placeholder mola: `"--:--"`
+  - İpucu metni: `"Mola saatleri müşteri randevu ekranında otomatik kapalı görünür."`
+  - Kaydet CTA: `"Tüm Günleri Kaydet"` (save ikon)
+  - Doğrulama Alert'leri:
+    - `"Geçersiz Saat"` / `"{gün}: çalışma saati HH:MM formatında olmalı."` — yanlış format
+    - `"Geçersiz Aralık"` / `"{gün}: açılış kapanıştan önce olmalı."` — work_start ≥ work_end
+    - `"Geçersiz Mola"` / `"{gün}: mola saati HH:MM formatında olmalı."` — mola yanlış format
+    - `"Geçersiz Mola"` / `"{gün}: mola başlangıcı bitişten önce olmalı."` — break_start ≥ break_end
+  - Başarı Alert: `"Kaydedildi"` / `"{staff.name} çalışma saatleri güncellendi."`
 
-#### M6 · `(owner)/settings.tsx` — Owner ayarları
-- **Amaç:** işletme ve uygulama ayarlarını toplamak.
-- **İçerik:** dükkan bilgileri, widget token işlemleri, hesap aksiyonları, çıkış.
-- **Durumlar:** liste, boş durum, tehlikeli aksiyon alanları.
+#### M6 · `(owner)/settings.tsx` — Owner Ayarları
+- **Amaç:** komisyon modülü toggle, widget tokenları ve hesap aksiyonlarını toplamak.
+- **İçerik:** hesap kartı (avatar + dükkan adı + email + "Dükkan Sahibi" etiketi), "OPERASYON MODÜLLERİ" satırı (komisyon toggle), "WIDGET TOKENLARI" bölümü (oluştur + liste + sil), Çıkış butonu (danger).
+- **Modals / Sheets:** yok (Alert kullanır).
+- **Alert'ler:** token oluşturuldu bilgisi; token silme onayı (destructive); çıkış onayı (destructive).
+- **Navigasyon:** yok — tüm aksiyonlar bu ekranda tamamlanır.
+- **Hata:** `generateWidgetToken` / `deleteWidgetToken` → `Alert("Hata", error.message)`.
+- **Boş:** token listesi boş → kilit ikonu + "Henüz token yok".
+- **UI Metinleri:**
+  - Eyebrow: `"DÜKKAN AYARLARI"` · Başlık: `"Ayarlar"`
+  - Lead: `"Widget tokenlarını yönet ve hesabından çıkış yap."`
+  - Hesap kartı rozeti: `"Dükkan Sahibi"`
+  - Bölüm başlıkları: `"OPERASYON MODÜLLERİ"` · `"WIDGET TOKENLARI"`
+  - Komisyon satır başlık: `"Komisyon takibi"`
+  - Komisyon meta (açık): `"Personel komisyonu ve kazanç raporu açık."` · (kapalı): `"Randevu akışı değişmez."`
+  - Komisyon durum etiketi: `"Açık"` (#059669) / `"Kapalı"` (muted)
+  - Token oluştur CTA: `"Yeni Token Oluştur"` (plus ikon, navy)
+  - Token meta: `"wgt_{id4}…{id4} · son {tarih}"` (shortId + last_used veya created)
+  - Sil butonu: `"Sil"` (redSoft zemin)
+  - Token sil Alert: `"Token sil"` / `"Bu token silinirse widget çalışmayı durduracak."` → `"İptal"` · `"Sil"` (destructive)
+  - Token oluşturuldu Alert: `"Token Oluşturuldu"` / `"Widget'ınıza otomatik yüklendi.\n\nToken ID: {id}…"`
+  - Çıkış CTA: `"Çıkış yap"` (danger, redSoft zemin)
+  - Çıkış Alert: `"Çıkış"` / `"Hesaptan çıkmak istediğine emin misin?"` → `"Vazgeç"` · `"Çıkış yap"` (destructive)
+  - Boş token: `"Henüz token yok"` (lock ikon)
+  - Alt not: `"Berber Panel · Sahip Ekranı"`
 
-### Widget / Quick Action Mobile (`apps/mobile`)
+#### M7 · `(owner)/earnings.tsx` — Kazanç
+- **Amaç:** seçilen dönem için dükkanın komisyon ve ciro raporunu göstermek.
+- **İçerik:** dönem seçici şerit (Bugün / 7 gün / 30 gün), 3 KPI kartı (Tamamlanan ciro / Usta komisyonu / Dükkan payı), personel dağılım listesi (her satır: tamamlanan randevu + komisyon + ciro + pay), pull-to-refresh.
+- **Modals / Sheets:** yok.
+- **Navigasyon:** dönem chip seçimi → veri yenileme (API çağrısı).
+- **Hata:** DB veya RPC hatası → `Alert("Hata", error.message)`.
+- **Boş / Devre dışı:** `commission_enabled = false` → kilit ikonu + "Komisyon takibi kapalı" + yönlendirme metni.
+- **UI Metinleri:**
+  - Eyebrow: `"KOMİSYON"` · Başlık: `"Kazanç"`
+  - Dönem chip etiketleri: `"Bugün"` · `"7 gün"` · `"30 gün"`
+  - KPI başlıkları: `"Tamamlanan ciro"` (trending-up) · `"Usta komisyonu"` (percent) · `"Dükkan payı"` (credit-card)
+  - Para birimi formatı: `"{n} TL"` (tr-TR toLocaleString, kuruş/100)
+  - Bölüm başlığı: `"PERSONEL DAĞILIMI"`
+  - Personel satır meta: `"{n} tamamlanan randevu"`
+  - Tutar alt etiketleri: `"Ciro {amount}"` · `"Pay {amount}"`
+  - Devre dışı başlık: `"Komisyon takibi kapalı"` (lock ikon)
+  - Devre dışı metin: `"Ayarlardan açılınca kazanç raporu görünür."`
+  - Hata Alert: `"Hata"` / `error.message`
 
-#### M7 · `(app)/_layout.tsx` — Hafif akış tab yapısı
-- **Amaç:** widget veya hızlı operasyon akışı için ayrı navigasyon.
-- **Sekmeler:** `Randevular`, `Blok`, `Ayarlar`.
+---
 
-#### M8 · `(app)/index.tsx` — Hızlı randevu görünümü
-- **Amaç:** kompakt günlük görünüm sunmak.
-- **İçerik:** bugünkü liste, yaklaşan müşteriler, hızlı detay erişimi.
+### Usta (Staff) Mobile App (`apps/mobile/app/(app)/`)
 
-#### M9 · `(app)/block.tsx` — Slot bloklama
-- **Amaç:** belirli süre için takvimi bloklamak.
-- **İçerik:** süre seçenekleri, blok nedeni, onay CTA'sı, sonuç geri bildirimi.
+> Bu tab grubu widget token ile veya personel girişiyle erişilen **usta görünümüdür**. Sahip değil, personel kullanır.
 
-#### M10 · `(app)/settings.tsx` — Widget / hızlı akış ayarları
-- **Amaç:** token, bağlantı ve oturum aksiyonlarını toplamak.
-- **İçerik:** token üretme, listeleme, silme, çıkış gibi ayarlar.
+#### M8 · `(app)/_layout.tsx` — Usta tab yapısı
+- **Amaç:** personelin kendi randevu ve blok akışı için navigasyon.
+- **Sekmeler (fiili):** Randevular · Blok · Ayarlar.
+- **UI Metinleri (tab etiketleri + ikonlar):**
+  - `"Randevular"` (calendar) · `"Blok"` (slash) · `"Ayarlar"` (settings)
 
-### Archived Customer Mobile App (`archive/customer`)
+#### M9 · `(app)/index.tsx` — Randevular (Timeline)
+- **Amaç:** ustanın o güne ait randevu ve bloklarını timeline görünümünde göstermek; aksiyonları yönetmek.
+- **İçerik:** sabitlenmiş header (eyebrow + başlık + tarih etiketi + haftalık gün şeridi), Timeline (geçmiş/gelecek/bugün 3-state), berber direği animasyonlu track, NOW indicator (kırmızı puls dot), DoneRow (üstü çizili), UpcomingRow (kart + avatar + chevron), BlockRow (dashed), FAB "Yeni Randevu".
+- **Modals / Sheets:**
+  - `AppointmentDetailSheet` (bottom sheet, animasyonlu slide-up) — saat+dk başlığı, müşteri adı, hizmet; aksiyon butonları: Ara / Mesaj / Düzenle; alt satır: İptal Et (danger) + Tamamlandı (navy).
+  - `AddAppointmentModal` (pageSheet, yeni + düzenleme modu).
+- **Navigasyon:** gün şeridinden gün seçimi → veri yenileme; UpcomingRow'a tıklama → AppointmentDetailSheet; "Düzenle" → AppointmentDetailSheet kapanır (220ms) → AddAppointmentModal; FAB → AddAppointmentModal; Realtime — `appointments` + `blocks` kanalları.
+- **Hata:** tamamlama/iptal RPC hatası → `Alert("Hata")`; AddAppointmentModal çakışma → `Alert("Çakışma")`.
+- **Boş:** o gün randevu + blok yoksa → EmptyDay (takvim ikonu + tarih bazlı mesaj + "Yeni Randevu" yönlendirmesi).
+- **UI Metinleri — ekran:**
+  - Eyebrow: `"BERBER · DÜKKAN PANELİ"` · Başlık: `"Randevular"`
+  - Tarih etiketi: `"{gün} {ay} {yıl}, {kısa gün}"` · örn. `"7 Mayıs 2026, Çar"`
+  - Gün kısaltmaları: `"Pzt"` `"Sal"` `"Çar"` `"Per"` `"Cum"` `"Cmt"` `"Paz"`
+  - Ay adları: `"Ocak"` `"Şubat"` `"Mart"` `"Nisan"` `"Mayıs"` `"Haziran"` `"Temmuz"` `"Ağustos"` `"Eylül"` `"Ekim"` `"Kasım"` `"Aralık"`
+  - UpcomingRow: `"{HH:MM} · {dur} dk"` + müşteri adı + servis adı (mavi)
+  - DoneRow: müşteri adı (üstü çizili, mutedAlt) + `"{servis} · {dur}dk"` (mutedAlt)
+  - BlockRow: `"BLOKE · {dur}dk"` (uppercase, letter-spacing 2, blockInk renk)
+  - FAB: `"Yeni Randevu"` (plus ikon, full-width navy)
+  - Boş başlık: `"Henüz randevu yok"` (takvim ikon + surfaceAlt daire)
+  - Boş metin: `"{gün} {ay} için randevu bulunmuyor.\nYeni Randevu butonuna basarak ekleyebilirsiniz."`
+  - Tamamlama hata Alert: `"Hata"` / `error.message || "Randevu tamamlanamadi."` — tetikleyici: RPC başarısız
+  - İptal hata Alert: `"Hata"` / `error.message || "Randevu iptal edilemedi."` — tetikleyici: RPC başarısız
+- **UI Metinleri — AppointmentDetailSheet:**
+  - Eyebrow: `"{HH:MM} · {dur}DK"` (blue, uppercase, letter-spacing 1.2)
+  - Müşteri adı: büyük (24/700, ink)
+  - Hizmet: `services.name` yoksa `"Randevu"` (14/500, muted)
+  - Aksiyon butonları: `"Ara"` (phone) · `"Mesaj"` (message-circle) · `"Düzenle"` (edit-2, muted zemin)
+  - `"Ara"` ve `"Mesaj"` butonları `customer_phone = null` ise devre dışı (opacity 0.5)
+  - Alt butonlar: `"İptal Et"` (danger, redSoft) · `"Tamamlandı"` (navy)
 
-This section is historical reference only. Customer booking implementation belongs in `apps/web`; owner/staff operations belong in `apps/mobile`.
+#### M10 · `(app)/block.tsx` — Takvimi Kapat
+- **Amaç:** şu andan itibaren belirli süre için ustanın takvimini kapatmak.
+- **İçerik:** NowBadge (kırmızı puls dot + saat + blok başlangıç notu), Süre grid (6 seçenek: 15/30/45/60/90/120 dk), Sebep listesi (Anlık müşteri / Mola / Kişisel), dashed önizleme kartı, FAB "Kapat".
+- **Modals / Sheets:** yok.
+- **Navigasyon:** FAB → `create-manual-block` edge function → Alert sonucu.
+- **Hata:** çakışma → `Alert("Çakışma", message)`; diğer hata → `Alert("Hata", message)`.
+- **Boş:** yok — her zaman seçim mevcut (default: 30 dk, Mola).
+- **UI Metinleri:**
+  - Eyebrow: `"BLOK EKLE"` · Başlık: `"Takvimi Kapat"`
+  - Lead: `"Şu andan itibaren seçtiğin süre boyunca takvim kapalı görünür."`
+  - NowBadge başlık: `"ŞU AN · {HH:MM}"` (red, uppercase, letter-spacing 0.4)
+  - NowBadge alt: `"Blok başlangıç saati otomatik atanır."` (muted)
+  - Bölüm etiketleri: `"Süre"` · `"Sebep"` · `"Önizleme"`
+  - Süre chip'leri: `"{dk}"` + `"dakika"` — 15 / 30 / 45 / 60 / 90 / 120
+  - Sebep satırları (başlık + meta): `"Anlık müşteri"` / `"Şu anda gelen müşteri için"` · `"Mola"` / `"Kahve / dinlenme arası"` · `"Kişisel"` / `"Telefon, evrak vs."`
+  - Önizleme kartı: `"{SEBEP_BÜYÜK} · {dur}DK"` (uppercase, dashed, blockInk)
+  - FAB: `"Kapat"` (navy, full-width)
+  - Başarı Alert: `"Takvim kapatıldı"` / `"{dur} dakika kapalı görünecek."`
+  - Çakışma Alert: `"Çakışma"` / `error.message` — tetikleyici: saat zaten bloklu/randevulu
+  - Genel hata Alert: `"Hata"` / `error.message`
 
-#### C1 · `(auth)/login.tsx` — Müşteri girişi
-- **Amaç:** müşterinin oturum açması.
-- **İçerik:** giriş alanı, kısa açıklama, devam CTA'sı.
+#### M11 · `(app)/settings.tsx` — Hesabım
+- **Amaç:** personelin hesap bilgilerini görmek ve çıkış yapmak.
+- **İçerik:** hesap kartı (avatar + ad + email), Çıkış Yap butonu (danger).
+- **Modals / Sheets:** yok (Alert kullanır).
+- **Navigasyon:** Çıkış Yap → `Alert` onay → `supabase.auth.signOut()`.
+- **Hata:** yok.
+- **Boş:** yok.
+- **UI Metinleri:**
+  - Eyebrow: `"AYARLAR"` · Başlık: `"Hesabım"`
+  - Çıkış CTA: `"Çıkış Yap"` (danger, redSoft zemin)
+  - Alert: `"Çıkış"` / `"Hesaptan çıkmak istediğine emin misin?"` → `"Vazgeç"` · `"Çıkış Yap"` (destructive)
+  - Alt not: `"Berber Panel · Usta Ekranı"`
 
-#### C2 · `(auth)/verify.tsx` — Doğrulama
-- **Amaç:** giriş sonrası kod/doğrulama adımı.
-- **İçerik:** kod giriş alanı, tekrar kod gönder, geri dön, süre bilgisi.
+---
 
-#### C3 · `(auth)/setup.tsx` — Profil kurulum
-- **Amaç:** ilk girişte temel müşteri bilgilerini tamamlama.
-- **İçerik:** ad soyad, iletişim bilgisi, kaydet CTA'sı.
+### Archived Customer Mobile App (`archive/customer/`)
 
-#### C4 · `(app)/_layout.tsx` — Customer app iskeleti
-- **Amaç:** giriş yapmış müşteri alanının ana navigasyonu.
-- **Ekranlar:** `Ana sayfa`, `Randevular`, `Profil`.
+> Yalnızca tarihsel referans. Müşteri rezervasyonu `apps/web`'de; usta/sahip operasyonu `apps/mobile`'da.
 
-#### C5 · `(app)/index.tsx` — Ana sayfa
-- **Amaç:** müşteriyi rezervasyon akışına yönlendirmek.
-- **İçerik:** öne çıkan CTA'lar, son işlemler veya berber keşif alanı.
+| Kod | Route | Amaç |
+|-----|-------|-------|
+| C1 | `(auth)/login.tsx` | Müşteri girişi |
+| C2 | `(auth)/verify.tsx` | SMS doğrulama |
+| C3 | `(auth)/setup.tsx` | İlk profil kurulumu |
+| C4 | `(app)/_layout.tsx` | Müşteri tab iskeleti |
+| C5 | `(app)/index.tsx` | Ana sayfa / yönlendirme |
+| C6 | `(app)/appointments.tsx` | Randevularım (liste + iptal) |
+| C7 | `(app)/profile.tsx` | Profil yönetimi |
+| C8 | `booking/step1-service.tsx` | Servis seçimi |
+| C9 | `booking/step2-barber.tsx` | Berber seçimi |
+| C10 | `booking/step3-slot.tsx` | Tarih + saat seçimi |
+| C11 | `booking/step4-confirm.tsx` | Onay özeti |
+| C12 | `booking/success.tsx` | Rezervasyon başarılı |
 
-#### C6 · `(app)/appointments.tsx` — Randevularım
-- **Amaç:** aktif ve geçmiş randevuları görmek, gerektiğinde iptal etmek.
-- **İçerik:** yaklaşan randevu kartları, geçmiş liste, durum etiketleri, iptal aksiyonu.
+---
 
-#### C7 · `(app)/profile.tsx` — Profil
-- **Amaç:** müşteri bilgilerinin yönetimi.
-- **İçerik:** kişisel bilgiler, iletişim bilgileri, hesap aksiyonları.
+### Web Booking (`apps/web/src/`)
 
-#### C8 · `booking/step1-service.tsx` — Servis seçimi
-- **Amaç:** rezervasyonun ilk adımında hizmet seçtirmek.
-- **İçerik:** servis kartları, süre/fiyat bilgisi, devam CTA'sı.
+#### W1 · `src/app/layout.tsx` — Web Root
+- **Amaç:** Next.js global container, `bg-bg` zemin, tipografi.
+- **Modals / Sheets:** yok.
+- **Navigasyon:** yok (shell).
+- **UI Metinleri:** yok (görünür metin içermez).
 
-#### C9 · `booking/step2-barber.tsx` — Berber seçimi
-- **Amaç:** uygun personeli seçtirmek.
-- **İçerik:** personel kartları, uygunluk ipuçları, devam CTA'sı.
+#### W2 · `src/app/[slug]/page.tsx` — Berber Profil + Rezervasyon Sayfası
+- **Amaç:** tek sayfada dükkanı tanıtıp rezervasyon akışını başlatmak.
+- **İçerik:** iki sütun grid (md: `380px + 1fr`); sol — `ProfileCard` (avatar/initials 4:3 görsel, eyebrow, dükkan adı, bio); sağ — `BookingFlow`.
+- **Modals / Sheets:** `BookingModal` (BookingFlow içinden tetiklenir).
+- **Navigasyon:** slug bulunamazsa → `notFound()` → W4; adım tamamlandıkça koşullu bölümler görünür.
+- **Hata:** slug DB'de yoksa → 404 sayfasına yönlendirme.
+- **Boş:** hizmet veya personel yoksa BookingFlow boş adım gösterir.
+- **UI Metinleri — ProfileCard:**
+  - Eyebrow: `"BERBER · ONLINE RANDEVU"`
+  - H1: `{shop.display_name}` (30/700, ink)
+  - Bio: `{shop.bio}` (13/normal, muted) — varsa gösterilir
+  - Avatar placeholder: baş harfler (44px bold, navy, blueSoft zemin)
 
-#### C10 · `booking/step3-slot.tsx` — Tarih ve saat seçimi
-- **Amaç:** uygun slot seçimi yaptırmak.
-- **İçerik:** tarih şeridi, saat listesi veya grid, dolu/uygun durumları.
+#### W3 · `src/app/[slug]/BookingFlow.tsx` — Rezervasyon Akışı
+- **Amaç:** 4 adımlı koşullu rezervasyon deneyimi.
+- **Adımlar (koşullu görünürlük):**
+  1. **Hizmet Seç** — `ServiceSelector` chip listesi; seçim → adım 2 açılır.
+  2. **Usta Seç** — "Fark Etmez" kartı + personel kartları; seçim → adım 3 açılır.
+  3. **Tarih** — 14 günlük yatay date strip; seçim → adım 4 açılır.
+  4. **Saat** — `SlotGrid`, "Devam Et" CTA (slot seçiliyse aktif).
+- **Modal:** `BookingModal` (W3a) — "Devam Et" basılınca overlay olarak açılır.
+- **Navigasyon:** hizmet veya usta değişince seçili slot sıfırlanır; Realtime — `appointment_slots` + `block_slots` kanalları.
+- **Hata:** slot fetch hatası → `slotError` → SlotGrid içinde gösterilir + "Tekrar Dene" butonu.
+- **Boş:** `isClosed = true` → SlotGrid "Bu gün için çalışma saati tanımlanmamış."; tüm slotlar dolu → "Bu günde müsait saat kalmadı. Başka bir gün seçin."
+- **UI Metinleri:**
+  - Adım numaraları: `1` `2` `3` `4` (22px navy daire, bold)
+  - Adım başlıkları: `"Hizmet Seç"` · `"Usta Seç"` · `"Tarih"` · `"Saat"` (11/600, uppercase, muted)
+  - "Usta Seç" özel kart: `"Fark Etmez"` + `"Uygun personele atanır"` (alt metin)
+  - Date strip gün kısaltmaları: `"Paz"` `"Pzt"` `"Sal"` `"Çar"` `"Per"` `"Cum"` `"Cmt"`
+  - Date strip ay kısaltmaları: `"Oca"` `"Şub"` `"Mar"` `"Nis"` `"May"` `"Haz"` `"Tem"` `"Ağu"` `"Eyl"` `"Eki"` `"Kas"` `"Ara"` (3 harf kırpılmış)
+  - CTA (slot yok): `"Saat Seç"` (pasif, surfaceAlt zemin, cursor not-allowed)
+  - CTA (slot seçili): `"{HH:MM}'da Devam Et"` (navy, aktif)
+  - ServiceSelector boş: `"Henüz hizmet tanımlanmamış."` (mutedAlt)
+  - Slot dolu — tooltip: `"Dolu"` (title attribute, üstü çizili)
+  - SlotGrid hata başlık: `"Müsaitlik bilgisi alınamadı."` (red, bold)
+  - SlotGrid hata alt: `"Bağlantıyı kontrol edip tekrar deneyin."` (muted)
+  - SlotGrid hata CTA: `"Tekrar Dene"` (navy button)
+  - SlotGrid kapalı / boş: `"Bu gün için çalışma saati tanımlanmamış."` (mutedAlt)
+  - SlotGrid tam dolu: `"Bu günde müsait saat kalmadı. Başka bir gün seçin."` (mutedAlt)
 
-#### C11 · `booking/step4-confirm.tsx` — Onay
-- **Amaç:** seçilen randevuyu son kez özetleyip tamamlatmak.
-- **İçerik:** servis + berber + zaman özeti, not alanı, onay CTA'sı.
-
-#### C12 · `booking/success.tsx` — Başarılı rezervasyon
-- **Amaç:** rezervasyon tamamlandı ekranı.
-- **İçerik:** başarı mesajı, tarih/saat özeti, sonraki adım CTA'ları.
-
-### Web Booking (`apps/web`)
-
-#### W1 · `src/app/layout.tsx` — Web root
-- **Amaç:** web uygulamasının temel iskeleti.
-- **İçerik:** global arka plan, tipografi, container mantığı.
-
-#### W2 · `src/app/[slug]/page.tsx` — Berber profil + rezervasyon sayfası
-- **Amaç:** tek sayfada berberi tanıtıp rezervasyon akışını başlatmak.
-- **İçerik:** berber kimliği, iletişim/adres, hizmet seçimi alanı, uygunluk akışı.
-
-#### W3 · `src/app/[slug]/BookingFlow.tsx` — Rezervasyon akışı modülü
-- **Amaç:** web'deki esas rezervasyon deneyimi.
-- **Alt parçalar:** `ServiceSelector`, tarih seçimi, `SlotGrid`, `BookingModal`.
-- **Durumlar:** loading, slot yok, seçim yapılmadı, başarı, hata.
+#### W3a · `BookingModal` — Rezervasyon Onay Overlay (web)
+- **Amaç:** seçilen randevuyu onaylatıp müşteri bilgilerini almak.
+- **4 durum / adım:** `form` → `loading` → `success` / `error`.
+- **Form:** Ad Soyad (zorunlu, min 2), Telefon (opsiyonel), Not (opsiyonel textarea); İptal + Onayla CTA'ları.
+- **Navigasyon:** `success` → overlay kapanır, slot listesi yenilenir; `error` çakışma → overlay kapanır, kullanıcı yeni slot seçer; `error` diğer → "Tekrar Dene" butonu ile form'a dönüş.
+- **Hata (409 çakışma):** "Bu saat az önce doldu. Lütfen başka saat seçin." + "Saat Seç" butonu.
+- **Hata (çalışma saati dışı):** "Bu saat artık çalışma saatleri dışında." + sayfa yenileme önerisi.
+- **Hata (diğer):** hata metni + "Tekrar Dene" butonu.
+- **Başarı:** "Onaylandı" rozeti, "Randevunuz alındı" başlığı, personel+hizmet+tarih özeti, SMS notu, "Yeni randevu" CTA.
+- **UI Metinleri:**
+  - Modal başlık: `"Randevuyu Onayla"` (20/700)
+  - Alt başlık: `"{staffLabel} · {service.name} · {dateLabel}, {timeLabel}"` (13/normal, muted)
+  - Alan etiketleri: `"Ad Soyad"` · `"Telefon"` · `"Not (opsiyonel)"`
+  - Placeholder ad: `"örn. Ahmet Yılmaz"` · Placeholder tel: `"0(5xx) xxx xx xx"` · Placeholder not: `"Saç uzunluğu, tercih, vs."`
+  - Butonlar form: `"İptal"` (surfaceAlt, flex-1) · `"Randevuyu Onayla"` (navy, flex-2; disabled: opacity 0.4 — ad < 2 karakter)
+  - Loading metin: `"Randevu oluşturuluyor..."`
+  - Başarı rozeti: `"Onaylandı"` (uppercase, blueSoft zemin, navy)
+  - Başarı başlık: `"Randevunuz alındı"` (24/700)
+  - Başarı meta: `"{staff_name} · {service_name}"` + `"{tarih saat}"` + `"Onay SMS'i yolda."` (mutedAlt)
+  - Başarı CTA: `"Yeni randevu"` (surfaceAlt, full-width)
+  - Hata rozeti: `"Hata"` (uppercase, redSoft zemin, red)
+  - Hata mesajı — çakışma: `"Bu saat az önce doldu. Lütfen listeden başka bir saat seçin."` — tetikleyici: HTTP 409 + `should_refetch_availability`
+  - Hata mesajı — çalışma saati: `"Bu saat artık çalışma saatleri dışında. Sayfayı yenileyip güncel saatleri görün."` — tetikleyici: HTTP 409 + response içinde `"calisma saati"`
+  - Hata mesajı — bağlantı: `"Bağlantı hatası. Lütfen tekrar deneyin."` — tetikleyici: fetch exception
+  - Hata mesajı — diğer: `data.error ?? "Randevu oluşturulamadı."` — tetikleyici: HTTP !ok, non-409
+  - Hata CTA — çakışma: `"Saat Seç"` (tek buton, overlay kapanır)
+  - Hata CTA — diğer: `"Kapat"` + `"Tekrar Dene"` (form adımına döner)
 
 #### W4 · `src/app/not-found.tsx` — 404
-- **Amaç:** bulunamayan sayfa veya slug durumunu karşılamak.
-- **İçerik:** net hata başlığı, açıklama, geri dönüş CTA'sı.
+- **Amaç:** geçersiz slug veya kayıp sayfa durumunu karşılamak.
+- **İçerik:** eyebrow "404 · SAYFA YOK", büyük "404" sayısı, berber direği animasyonu (CSS `animate-barber`), başlık, açıklama, "Ana Sayfaya Dön" CTA (navy).
+- **Modals / Sheets:** yok.
+- **Navigasyon:** "Ana Sayfaya Dön" → `/`.
+- **UI Metinleri:**
+  - Eyebrow: `"404 · SAYFA YOK"` (11/600, uppercase, red)
+  - Büyük sayı: `"404"` (96/extrabold, navy, letter-spacing -3px, tabular-nums)
+  - Başlık: `"Berber Bulunamadı"` (30/700, ink)
+  - Açıklama: `"Aradığın berber profili artık mevcut değil ya da bağlantı yanlış yazılmış olabilir. Ana sayfaya dönüp tekrar deneyebilirsin."` (14/normal, muted)
+  - CTA: `"Ana Sayfaya Dön"` (navy, href="/")
+  - Alt not: `"Berber · v1.0.0"` (11/600, uppercase, mutedAlt)
 
 ---
 

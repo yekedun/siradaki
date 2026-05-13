@@ -4,7 +4,7 @@
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS public.staff_schedules (
-  id            uuid        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   staff_id      uuid        NOT NULL REFERENCES public.staff(id) ON DELETE CASCADE,
   day_of_week   int         NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
   is_working    boolean     NOT NULL DEFAULT true,

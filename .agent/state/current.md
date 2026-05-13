@@ -4,26 +4,21 @@ No active implementation task.
 
 # Current Task
 
-- Session closeout completed after TASK-016.
-- User stated the owner agenda/randevular screen will not be used, so TASK-016 manual drag/drop smoke is no longer a blocking validation item.
+No active implementation task.
 
 # Current Problems
 
-- `20260518130000_non_scheduling_rls_advisor_cleanup.sql` is local only; review/deploy to linked Supabase when ready.
-- Supabase advisor intentionally still reports `btree_gist` in public; moving it would need a separate ADR-backed migration.
-- Supabase CLI remote query may need `--dns-resolver https`; native DNS timed out during staging smoke.
+- `btree_gist` extension is in `public` schema; Supabase advisor reports this intentionally — moving it requires ADR-backed migration (low priority).
 
 # Latest Check
 
-- TASK-016 implementation remains in `apps/mobile/app/(owner)/agenda.tsx`; `pnpm --filter @berber/mobile type-check` passed and `git diff --check -- apps/mobile/app/(owner)/agenda.tsx` passed with CRLF warning only.
-- Android owner app was reconnected to mobile Metro on port 8083 after clearing cache; app opened to owner UI.
-- TASK-016 moved to completed because the target screen is out of scope for manual product validation.
-- Non-scheduling RLS advisor cleanup migration passed `supabase db reset`; local advisors now only report the intentional `btree_gist` public extension warning.
+- TASK-001–TASK-014 all completed on branch `scheduling-hardening`.
+- All migrations deployed to Frankfurt project (`hnaxcntnntwvqhremzet`, eu-central-1).
+- `Designs/DESIGN.md` §8 complete: Step 1 (envanter: modal/sheet, navigasyon, hata/boş durum) + Step 2 (UI metinleri: tüm label, placeholder, buton, hata mesajı trigger koşulları) — M1–M11, W1–W4, W3a, arşiv C1–C12 tablo. 2026-05-13.
 
 # Active Files
 
-- `supabase/migrations/20260518130000_non_scheduling_rls_advisor_cleanup.sql`
-- `apps/mobile/app/(owner)/agenda.tsx`
+(none)
 
 # Rotation Rule
 

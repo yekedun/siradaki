@@ -14,7 +14,7 @@ END $$;
 
 -- staff (Personel/Koltuk) tablosu
 CREATE TABLE IF NOT EXISTS public.staff (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   shop_id uuid NOT NULL REFERENCES public.shops(id) ON DELETE CASCADE,
   user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   name text NOT NULL,
