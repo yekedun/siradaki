@@ -520,6 +520,10 @@ export type Database = {
         Args: { p_ends_at: string; p_shop_id: string; p_starts_at: string }
         Returns: string
       }
+      cancel_appointment_atomic: {
+        Args: { p_appointment_id: string }
+        Returns: Json
+      }
       complete_appointment_with_revenue: {
         Args: { p_appointment_id: string; p_final_price_cents?: number }
         Returns: Json
@@ -1317,3 +1321,4 @@ export const Constants = {
     },
   },
 } as const
+
