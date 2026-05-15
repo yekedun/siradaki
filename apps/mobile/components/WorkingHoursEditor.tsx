@@ -13,7 +13,7 @@ import DateTimePicker, {
   type DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { DAY_KEYS, type DayKey } from "@berber/shared/constants";
-import type { WorkingHours, WorkingDayHours } from "@berber/shared/types";
+import type { WorkingHours } from "@berber/shared/types";
 import { supabase } from "../lib/supabase";
 import { T, R, Shadow } from "../lib/theme";
 
@@ -108,6 +108,7 @@ export function WorkingHoursEditor({
   async function handleSave() {
     for (const day of ORDERED_DAYS) {
       const d = draft[day];
+      // Works because toTimeString always produces zero-padded "HH:MM" strings
       if (d.enabled && d.open && d.close && d.close <= d.open) {
         Alert.alert(
           "Geçersiz saat",
@@ -135,6 +136,7 @@ export function WorkingHoursEditor({
     onSaved?.();
   }
 
+  // Fallback to new Date() is unreachable — picker only renders when pickerTarget !== null
   const pickerValue = pickerTarget
     ? timeStringToDate(draft[pickerTarget.day][pickerTarget.field])
     : new Date();
@@ -217,7 +219,7 @@ export function WorkingHoursEditor({
         {saving ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.saveBtnText}>Kaydet</Text>
+          <Text style={[styles.saveBtnText, (!isDirty || saving) && styles.saveBtnTextDisabled]}>Kaydet</Text>
         )}
       </Pressable>
     </View>
@@ -309,5 +311,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#fff",
+  },
+  saveBtnTextDisabled: {
+    color: T.mutedAlt,
   },
 });
