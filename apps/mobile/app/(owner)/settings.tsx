@@ -172,15 +172,16 @@ export default function OwnerSettingsScreen() {
           </Text>
         </Pressable>
 
-        <View style={styles.secHead}>
-          <Text style={styles.secLabel}>ÇALIŞMA SAATLERİ</Text>
-        </View>
-
         {shopId && workingHours !== null && (
-          <WorkingHoursEditor
-            shopId={shopId}
-            initialHours={workingHours}
-          />
+          <>
+            <View style={styles.secHead}>
+              <Text style={styles.secLabel}>ÇALIŞMA SAATLERİ</Text>
+            </View>
+            <WorkingHoursEditor
+              shopId={shopId}
+              initialHours={workingHours}
+            />
+          </>
         )}
 
         <View style={styles.secHead}>
