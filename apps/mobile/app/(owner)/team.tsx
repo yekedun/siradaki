@@ -196,6 +196,7 @@ export default function TeamScreen() {
     setSavingCommission(false);
     setCommissionStaff(null);
     setCommissionInput("");
+    setCommissionOn(false);
   }
 
   function openSlugModal(staffMember: Staff) {
@@ -530,7 +531,6 @@ const styles = StyleSheet.create({
   },
   slugPreview: { marginTop: 6, fontSize: 11, color: T.muted, fontStyle: "italic" },
 
-  toggleBtn: { padding: 4 },
   iconBtn:   { padding: 4 },
   modalBackdrop: {
     flex: 1,
