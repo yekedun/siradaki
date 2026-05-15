@@ -9,6 +9,7 @@ import {
   Alert,
   Modal,
   TextInput,
+  Switch,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { supabase } from "../../lib/supabase";
@@ -55,9 +56,9 @@ export default function TeamScreen() {
   const [loading, setLoading]   = useState(true);
   const [inviting, setInviting] = useState(false);
   const [modalStaff, setModalStaff] = useState<Staff | null>(null);
-  const [commissionEnabled, setCommissionEnabled] = useState(false);
   const [commissionStaff, setCommissionStaff] = useState<Staff | null>(null);
   const [commissionInput, setCommissionInput] = useState("");
+  const [commissionOn, setCommissionOn] = useState(false);
   const [savingCommission, setSavingCommission] = useState(false);
   const [addStaffVisible, setAddStaffVisible] = useState(false);
   const [newStaffName, setNewStaffName] = useState("");
@@ -67,28 +68,18 @@ export default function TeamScreen() {
 
   const load = useCallback(async () => {
     if (!shopId) return;
-    const { data: shop } = await supabase
-      .from("shops")
-      .select("commission_enabled")
-      .eq("id", shopId)
-      .single();
-    setCommissionEnabled(Boolean(shop?.commission_enabled));
-
-    const { data } = await supabase
-      .from("staff")
-      .select("id, name, slug, is_active, user_id")
-      .eq("shop_id", shopId)
-      .order("created_at");
-    let commissionByStaff = new Map<string, StaffCommissionConfig>();
-    if (Boolean(shop?.commission_enabled)) {
-      const { data: commissionRows, error: commissionError } = await supabase.rpc("get_staff_commission_configs", {
-        p_shop_id: shopId,
-      });
-      if (commissionError) Alert.alert("Hata", commissionError.message);
-      commissionByStaff = new Map(
-        ((commissionRows as StaffCommissionConfig[] | null) ?? []).map((row) => [row.staff_id, row])
-      );
-    }
+    const [{ data }, { data: commissionRows, error: commissionError }] = await Promise.all([
+      supabase
+        .from("staff")
+        .select("id, name, slug, is_active, user_id")
+        .eq("shop_id", shopId)
+        .order("created_at"),
+      supabase.rpc("get_staff_commission_configs", { p_shop_id: shopId }),
+    ]);
+    if (commissionError) Alert.alert("Hata", commissionError.message);
+    const commissionByStaff = new Map(
+      ((commissionRows as StaffCommissionConfig[] | null) ?? []).map((row) => [row.staff_id, row])
+    );
     setStaffList(
       ((data as Omit<Staff, "commission_type" | "commission_rate_bps">[] | null) ?? []).map((staff) => {
         const commission = commissionByStaff.get(staff.id);
@@ -155,6 +146,7 @@ export default function TeamScreen() {
 
   function openCommissionModal(staffMember: Staff) {
     setCommissionStaff(staffMember);
+    setCommissionOn(staffMember.commission_type === "percentage");
     setCommissionInput(staffMember.commission_rate_bps != null ? String(staffMember.commission_rate_bps / 100) : "");
   }
 
@@ -162,13 +154,18 @@ export default function TeamScreen() {
     if (savingCommission) return;
     setCommissionStaff(null);
     setCommissionInput("");
+    setCommissionOn(false);
   }
 
   async function saveCommission() {
     if (!commissionStaff) return;
+    if (!commissionOn) {
+      await updateCommission(commissionStaff.id, "none", null);
+      return;
+    }
     const trimmed = commissionInput.trim().replace(",", ".");
     if (!trimmed) {
-      await updateCommission(commissionStaff.id, "none", null);
+      Alert.alert("Geçersiz", "Komisyon oranı gir.");
       return;
     }
     const percent = Number(trimmed);
@@ -295,23 +292,19 @@ export default function TeamScreen() {
                   ) : (
                     <Text style={styles.slugMissing}>slug yok</Text>
                   )}
-                  {commissionEnabled && (
-                    <Text style={styles.commissionText}>
-                      {b.commission_type === "percentage" && b.commission_rate_bps != null
-                        ? `%${b.commission_rate_bps / 100} komisyon`
-                        : "Komisyon yok"}
-                    </Text>
-                  )}
+                  <Text style={styles.commissionText}>
+                    {b.commission_type === "percentage" && b.commission_rate_bps != null
+                      ? `%${b.commission_rate_bps / 100} komisyon`
+                      : "Komisyon yok"}
+                  </Text>
                 </View>
-                {commissionEnabled && (
-                  <Pressable
-                    onPress={() => openCommissionModal(b)}
-                    style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
-                    hitSlop={8}
-                  >
-                    <Feather name="percent" size={18} color={T.navy} />
-                  </Pressable>
-                )}
+                <Pressable
+                  onPress={() => openCommissionModal(b)}
+                  style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
+                  hitSlop={8}
+                >
+                  <Feather name="percent" size={18} color={T.navy} />
+                </Pressable>
                 <Pressable
                   onPress={() => openSlugModal(b)}
                   style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
@@ -393,18 +386,31 @@ export default function TeamScreen() {
       <Modal visible={commissionStaff !== null} transparent animationType="fade" onRequestClose={closeCommissionModal}>
         <View style={styles.modalBackdrop}>
           <View style={styles.commissionModal}>
-            <Text style={styles.modalTitle}>Komisyon Oranı</Text>
-            <Text style={styles.modalText}>
-              {commissionStaff?.name} için yüzde oran gir. Boş bırakırsan komisyon kapanır.
-            </Text>
-            <TextInput
-              value={commissionInput}
-              onChangeText={setCommissionInput}
-              placeholder="Örn. 50"
-              keyboardType="decimal-pad"
-              style={styles.commissionInput}
-              editable={!savingCommission}
-            />
+            <Text style={styles.modalTitle}>Komisyon Ayarı</Text>
+            <Text style={styles.modalText}>{commissionStaff?.name} için komisyon ayarı.</Text>
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>Komisyon aktif</Text>
+              <Switch
+                value={commissionOn}
+                onValueChange={(v) => {
+                  setCommissionOn(v);
+                  if (!v) setCommissionInput("");
+                }}
+                trackColor={{ true: T.navy, false: T.line }}
+                thumbColor="#fff"
+                disabled={savingCommission}
+              />
+            </View>
+            {commissionOn && (
+              <TextInput
+                value={commissionInput}
+                onChangeText={setCommissionInput}
+                placeholder="Örn. 50"
+                keyboardType="decimal-pad"
+                style={styles.commissionInput}
+                editable={!savingCommission}
+              />
+            )}
             <View style={styles.modalActions}>
               <Pressable onPress={closeCommissionModal} disabled={savingCommission} style={styles.secondaryBtn}>
                 <Text style={styles.secondaryText}>Vazgeç</Text>
@@ -511,6 +517,17 @@ const styles = StyleSheet.create({
   slugText: { fontSize: 11, color: T.navy, marginTop: 2, fontWeight: "500" },
   slugMissing: { fontSize: 11, color: T.mutedAlt, marginTop: 2 },
   commissionText: { fontSize: 11, color: T.navy, marginTop: 3, fontWeight: "600" },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 14,
+  },
+  toggleLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: T.ink,
+  },
   slugPreview: { marginTop: 6, fontSize: 11, color: T.muted, fontStyle: "italic" },
 
   toggleBtn: { padding: 4 },
