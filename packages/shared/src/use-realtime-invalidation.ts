@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
 export type TableName =
   | "appointments"
@@ -51,8 +51,7 @@ export function useRealtimeInvalidation({
     };
 
     const parsed = JSON.parse(tableFiltersKey) as TableFilter[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let channel = client.channel(channelName) as any;
+    let channel: RealtimeChannel = client.channel(channelName);
 
     for (const { table, filters } of parsed) {
       if (filters.length === 0) {
@@ -76,7 +75,7 @@ export function useRealtimeInvalidation({
 
     return () => {
       if (debounceTimer) clearTimeout(debounceTimer);
-      void client.removeChannel(channel);
+      client.removeChannel(channel).catch(() => {});
     };
   // tableFiltersKey içerik-bazlı dep karşılaştırması sağlar; invalidate ref'e alındı
   // eslint-disable-next-line react-hooks/exhaustive-deps

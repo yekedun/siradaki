@@ -156,10 +156,10 @@ export default function AppointmentsScreen() {
     return () => clearInterval(id);
   }, []);
 
-  const realtimeTableFilters = useMemo(() => [
-    { table: "appointments" as const, filters: staffId ? [`staff_id=eq.${staffId}`] : [] },
-    { table: "blocks" as const,       filters: staffId ? [`staff_id=eq.${staffId}`] : [] },
-  ], [staffId]);
+  const realtimeTableFilters = useMemo(() => staffId ? [
+    { table: "appointments" as const, filters: [`staff_id=eq.${staffId}`] },
+    { table: "blocks" as const,       filters: [`staff_id=eq.${staffId}`] },
+  ] : [], [staffId]);
 
   useRealtimeInvalidation({
     client: supabase,
