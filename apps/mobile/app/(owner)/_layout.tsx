@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Tabs } from "expo-router";
-import { Feather } from "@expo/vector-icons";
+import { BarChart2, Calendar, Users, CreditCard, Settings } from "lucide-react-native";
 import { supabase } from "../../lib/supabase";
 import { T } from "../../lib/theme";
 import { useUserRole } from "../../lib/user-context";
@@ -23,11 +23,11 @@ export default function OwnerLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: T.navy,
-        tabBarInactiveTintColor: T.muted,
+        tabBarActiveTintColor: T.brand600,
+        tabBarInactiveTintColor: T.fg3,
         tabBarStyle: {
           backgroundColor: T.bg,
-          borderTopColor: T.line,
+          borderTopColor: T.border,
           borderTopWidth: 1,
           paddingTop: 8,
           paddingBottom: 28,
@@ -41,21 +41,21 @@ export default function OwnerLayout() {
         name="index"
         options={{
           title: "Özet",
-          tabBarIcon: ({ color }) => <Feather name="bar-chart-2" size={22} color={color} />,
+          tabBarIcon: ({ color }) => <BarChart2 size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="agenda"
         options={{
           title: "Ajanda",
-          tabBarIcon: ({ color }) => <Feather name="calendar" size={22} color={color} />,
+          tabBarIcon: ({ color }) => <Calendar size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="team"
         options={{
           title: "Ekip",
-          tabBarIcon: ({ color }) => <Feather name="users" size={22} color={color} />,
+          tabBarIcon: ({ color }) => <Users size={22} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -63,14 +63,14 @@ export default function OwnerLayout() {
         options={{
           title: "Kazanç",
           href: commissionEnabled ? undefined : null,
-          tabBarIcon: ({ color }) => <Feather name="credit-card" size={22} color={color} />,
+          tabBarIcon: ({ color }) => <CreditCard size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: "Ayarlar",
-          tabBarIcon: ({ color }) => <Feather name="settings" size={22} color={color} />,
+          tabBarIcon: ({ color }) => <Settings size={22} color={color} />,
         }}
       />
     </Tabs>

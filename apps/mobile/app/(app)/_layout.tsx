@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Feather } from "@expo/vector-icons";
+import { Calendar, Slash, Settings } from "lucide-react-native";
 import { T } from "../../lib/theme";
 
 export default function AppLayout() {
@@ -7,11 +7,11 @@ export default function AppLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: T.navy,
-        tabBarInactiveTintColor: T.muted,
+        tabBarActiveTintColor: T.brand600,
+        tabBarInactiveTintColor: T.fg3,
         tabBarStyle: {
           backgroundColor: T.bg,
-          borderTopColor: T.line,
+          borderTopColor: T.border,
           borderTopWidth: 1,
           paddingTop: 8,
           paddingBottom: 28,
@@ -25,21 +25,21 @@ export default function AppLayout() {
         name="index"
         options={{
           title: "Randevular",
-          tabBarIcon: ({ color }) => <Feather name="calendar" size={22} color={color} />,
+          tabBarIcon: ({ color }) => <Calendar size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="block"
         options={{
           title: "Blok",
-          tabBarIcon: ({ color }) => <Feather name="slash" size={22} color={color} />,
+          tabBarIcon: ({ color }) => <Slash size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: "Ayarlar",
-          tabBarIcon: ({ color }) => <Feather name="settings" size={22} color={color} />,
+          tabBarIcon: ({ color }) => <Settings size={22} color={color} />,
         }}
       />
     </Tabs>
