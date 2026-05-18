@@ -192,6 +192,10 @@ export function AddAppointmentModal({
       Alert.alert("Eksik", "Müşteri adı en az 2 karakter olmalı");
       return;
     }
+    if (phone.trim().length < 10) {
+      Alert.alert("Eksik", "Telefon numarası zorunlu");
+      return;
+    }
     if (!hasServices) {
       Alert.alert("Eksik", "Randevu eklemek için önce aktif bir hizmet tanımlanmalı.");
       return;
@@ -213,7 +217,7 @@ export function AddAppointmentModal({
           p_service_id: serviceId,
           p_starts_at: startsAt.toISOString(),
           p_customer_name: name.trim(),
-          p_customer_phone: phone.trim() || null,
+          p_customer_phone: phone.trim(),
           p_customer_notes: null,
         } as never)
       : await supabase.rpc("create_appointment_atomic" as never, {
@@ -223,7 +227,7 @@ export function AddAppointmentModal({
           p_staff_id: staffId,
           p_starts_at: startsAt.toISOString(),
           p_customer_name: name.trim(),
-          p_customer_phone: phone.trim() || null,
+          p_customer_phone: phone.trim(),
           p_customer_notes: null,
           p_customer_user_id: null,
         } as never);

@@ -401,6 +401,7 @@ export type Database = {
           name: string
           role: Database["public"]["Enums"]["staff_role"]
           shop_id: string
+          slug: string | null
           user_id: string | null
         }
         Insert: {
@@ -412,6 +413,7 @@ export type Database = {
           name: string
           role?: Database["public"]["Enums"]["staff_role"]
           shop_id: string
+          slug?: string | null
           user_id?: string | null
         }
         Update: {
@@ -423,6 +425,7 @@ export type Database = {
           name?: string
           role?: Database["public"]["Enums"]["staff_role"]
           shop_id?: string
+          slug?: string | null
           user_id?: string | null
         }
         Relationships: [

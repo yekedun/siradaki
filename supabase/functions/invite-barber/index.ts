@@ -3,11 +3,19 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createAdminClient } from "../_shared/supabase-admin.ts";
 import { corsOptions, error, json } from "../_shared/cors.ts";
 
+function toSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[çÇ]/g, "c").replace(/[ğĞ]/g, "g").replace(/[ıİ]/g, "i")
+    .replace(/[öÖ]/g, "o").replace(/[şŞ]/g, "s").replace(/[üÜ]/g, "u")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions();
   if (req.method !== "POST") return error("Method not allowed", 405);
 
-  // Dükkan sahibinin JWT'si gerekli
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) return error("Authorization header eksik", 401);
 
@@ -22,11 +30,11 @@ serve(async (req) => {
 
   const supabase = createAdminClient();
 
-  // Dükkan sahibi mi doğrula
+  // Dükkan sahibi veya admin yetkisi — hem owner_user_id hem owner_id kontrol et
   const { data: shop } = await supabase
     .from("shops")
     .select("id")
-    .eq("owner_user_id", user.id)
+    .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
     .single();
 
   if (!shop) return error("Dükkan sahibi yetkisi gerekli", 403);
@@ -50,23 +58,39 @@ serve(async (req) => {
 
   const invitedUserId = inviteData.user.id;
 
-  // Barbers tablosuna ekle (user_id şimdiden set ediliyor)
-  const { data: barber, error: insertError } = await supabase
-    .from("barbers")
+  // Slug çakışması olmayana kadar benzersiz slug bul
+  const baseSlug = toSlug(display_name.trim());
+  let slug = baseSlug;
+  let suffix = 2;
+  while (slug) {
+    const { data: existing } = await supabase
+      .from("staff")
+      .select("id")
+      .eq("shop_id", shop.id)
+      .eq("slug", slug)
+      .maybeSingle();
+    if (!existing) break;
+    slug = `${baseSlug}-${suffix++}`;
+  }
+
+  // Staff tablosuna ekle (barbers yerine)
+  const { data: staffMember, error: insertError } = await supabase
+    .from("staff")
     .insert({
       shop_id: shop.id,
       user_id: invitedUserId,
-      display_name: display_name.trim(),
-      invite_email: email.toLowerCase().trim(),
+      name: display_name.trim(),
+      role: "staff",
       is_active: true,
+      slug: slug || null,
     })
-    .select("id, display_name, invite_email")
+    .select("id, name, slug")
     .single();
 
   if (insertError) {
-    console.error("Barber insert error:", insertError);
-    return error("Usta kaydı oluşturulamadı: " + insertError.message, 500);
+    console.error("Staff insert error:", insertError);
+    return error("Personel kaydı oluşturulamadı: " + insertError.message, 500);
   }
 
-  return json({ barber }, 201);
+  return json({ staff: staffMember }, 201);
 });

@@ -37,6 +37,7 @@ export interface StaffPublic {
   shop_id: string;
   name: string;
   role: string;
+  slug: string | null;
 }
 
 // Hizmet: dükkan düzeyinde
