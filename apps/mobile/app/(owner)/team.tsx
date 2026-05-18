@@ -4,18 +4,28 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Pressable,
   ActivityIndicator,
   Alert,
-  Modal,
-  TextInput,
   Switch,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import {
+  UserPlus,
+  Percent,
+  Link,
+  Clock,
+  PauseCircle,
+  PlayCircle,
+} from "lucide-react-native";
 import { supabase } from "../../lib/supabase";
 import { useUserRole } from "../../lib/user-context";
 import { T, R, Shadow } from "../../lib/theme";
 import { StaffScheduleModal } from "../../components/StaffScheduleModal";
+import { Sheet } from "../../components/ds/Sheet";
+import { StaffRow } from "../../components/ds/StaffRow";
+import { TextField } from "../../components/ds/TextField";
+import { Button } from "../../components/ds/Button";
+import { Card } from "../../components/ds/Card";
+import { OverlineHeader } from "../../components/ds/OverlineHeader";
 
 interface Staff {
   id: string;
@@ -31,10 +41,6 @@ interface StaffCommissionConfig {
   staff_id: string;
   commission_type: "none" | "percentage";
   commission_rate_bps: number | null;
-}
-
-function initials(s: string): string {
-  return s.split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0]!.toUpperCase()).join("");
 }
 
 function toSlug(name: string): string {
@@ -245,91 +251,77 @@ export default function TeamScreen() {
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.eyebrow}>EKİP YÖNETİMİ</Text>
-        <Text style={styles.title}>Ustalar</Text>
+        <OverlineHeader eyebrow="EKİP YÖNETİMİ" title="Ustalar" />
 
-        <Pressable
-          onPress={() => {
-            setNewStaffName("");
-            setAddStaffVisible(true);
-          }}
-          disabled={inviting}
-          style={({ pressed }) => [styles.inviteBtn, (pressed || inviting) && { opacity: 0.8 }]}
-        >
-          {inviting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <>
-              <Feather name="user-plus" size={16} color="#fff" />
-              <Text style={styles.inviteBtnTxt}>Personel ekle</Text>
-            </>
-          )}
-        </Pressable>
+        <View style={styles.addBtnRow}>
+          <Button
+            variant="accent"
+            size="md"
+            full
+            onPress={() => {
+              setNewStaffName("");
+              setAddStaffVisible(true);
+            }}
+            disabled={inviting}
+          >
+            {inviting ? "Ekleniyor…" : "Personel ekle"}
+          </Button>
+        </View>
 
         {loading ? (
-          <ActivityIndicator color={T.navy} style={{ marginTop: 20 }} />
+          <ActivityIndicator color={T.brand600} style={{ marginTop: 20 }} />
         ) : staffList.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyTxt}>Henüz personel yok. Yeni personel ekleyin.</Text>
           </View>
         ) : (
-          <View style={{ gap: 10, marginTop: 8 }}>
+          <Card padded={false} style={{ marginTop: 8 }}>
             {staffList.map((b) => (
-              <View key={b.id} style={[styles.staffCard, !b.is_active && styles.inactiveCard]}>
-                <View style={[styles.avatar, !b.is_active && { backgroundColor: T.surfaceAlt }]}>
-                  <Text style={[styles.avatarTxt, !b.is_active && { color: T.muted }]}>
-                    {initials(b.name)}
-                  </Text>
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[styles.staffName, !b.is_active && { color: T.muted }]} numberOfLines={1}>
-                    {b.name}
-                  </Text>
-                  <Text style={[styles.statusChip, b.is_active ? styles.activeChip : styles.inactiveChip]}>
-                    {b.is_active ? "Aktif" : "Pasif"}
-                  </Text>
-                  {b.slug ? (
-                    <Text style={styles.slugText} numberOfLines={1}>/{b.slug}</Text>
-                  ) : (
-                    <Text style={styles.slugMissing}>slug yok</Text>
-                  )}
-                  <Text style={styles.commissionText}>
-                    {b.commission_type === "percentage" && b.commission_rate_bps != null
-                      ? `%${b.commission_rate_bps / 100} komisyon`
-                      : "Komisyon yok"}
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={() => openCommissionModal(b)}
-                  style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
-                  hitSlop={8}
-                >
-                  <Feather name="percent" size={18} color={T.navy} />
-                </Pressable>
-                <Pressable
-                  onPress={() => openSlugModal(b)}
-                  style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
-                  hitSlop={8}
-                >
-                  <Feather name="link" size={18} color={b.slug ? T.navy : T.muted} />
-                </Pressable>
-                <Pressable
-                  onPress={() => setModalStaff(b)}
-                  style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
-                  hitSlop={8}
-                >
-                  <Feather name="clock" size={18} color={T.blue} />
-                </Pressable>
-                <Pressable
-                  onPress={() => handleToggleActive(b)}
-                  style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
-                  hitSlop={8}
-                >
-                  <Feather name={b.is_active ? "pause-circle" : "play-circle"} size={22} color={b.is_active ? T.muted : T.navy} />
-                </Pressable>
-              </View>
+              <StaffRow
+                key={b.id}
+                name={b.name}
+                status={b.is_active ? "Aktif" : "Pasif"}
+                meta={[
+                  b.slug ? `/${b.slug}` : "slug yok",
+                  b.commission_type === "percentage" && b.commission_rate_bps != null
+                    ? `%${b.commission_rate_bps / 100} komisyon`
+                    : "Komisyon yok",
+                ].join(" · ")}
+                trailing={
+                  <View style={styles.trailingRow}>
+                    <Percent
+                      size={18}
+                      color={T.brand600}
+                      onPress={() => openCommissionModal(b)}
+                    />
+                    <Link
+                      size={18}
+                      color={b.slug ? T.brand600 : T.fg3}
+                      onPress={() => openSlugModal(b)}
+                    />
+                    <Clock
+                      size={18}
+                      color={T.brand500}
+                      onPress={() => setModalStaff(b)}
+                    />
+                    {b.is_active ? (
+                      <PauseCircle
+                        size={22}
+                        color={T.fg3}
+                        onPress={() => handleToggleActive(b)}
+                      />
+                    ) : (
+                      <PlayCircle
+                        size={22}
+                        color={T.brand600}
+                        onPress={() => handleToggleActive(b)}
+                      />
+                    )}
+                  </View>
+                }
+              />
             ))}
-          </View>
+          </Card>
         )}
       </ScrollView>
 
@@ -339,185 +331,158 @@ export default function TeamScreen() {
         onClose={() => setModalStaff(null)}
       />
 
-      {/* Personel Ekle Modalı */}
-      <Modal
+      {/* Personel Ekle Sheet */}
+      <Sheet
         visible={addStaffVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => { if (!inviting) setAddStaffVisible(false); }}
+        onClose={() => { if (!inviting) setAddStaffVisible(false); }}
+        title="Personel ekle"
+        footer={
+          <View style={styles.sheetFooter}>
+            <Button
+              variant="secondary"
+              size="md"
+              onPress={() => { if (!inviting) setAddStaffVisible(false); }}
+              disabled={inviting}
+            >
+              Vazgeç
+            </Button>
+            <Button
+              variant="accent"
+              size="md"
+              onPress={async () => {
+                const name = newStaffName.trim();
+                if (name.length < 2) { Alert.alert("Geçersiz", "Geçerli bir ad gir."); return; }
+                const created = await handleAddStaff(name);
+                if (created) { setAddStaffVisible(false); setNewStaffName(""); }
+              }}
+              disabled={inviting}
+            >
+              {inviting ? "Ekleniyor…" : "Ekle"}
+            </Button>
+          </View>
+        }
       >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.commissionModal}>
-            <Text style={styles.modalTitle}>Personel ekle</Text>
-            <Text style={styles.modalText}>Randevu alacak usta adını gir.</Text>
-            <TextInput
-              value={newStaffName}
-              onChangeText={setNewStaffName}
-              placeholder="Ad Soyad"
-              autoCapitalize="words"
-              style={styles.commissionInput}
-              editable={!inviting}
-            />
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => { if (!inviting) setAddStaffVisible(false); }}
-                disabled={inviting}
-                style={styles.secondaryBtn}
-              >
-                <Text style={styles.secondaryText}>Vazgeç</Text>
-              </Pressable>
-              <Pressable
-                onPress={async () => {
-                  const name = newStaffName.trim();
-                  if (name.length < 2) { Alert.alert("Geçersiz", "Geçerli bir ad gir."); return; }
-                  const created = await handleAddStaff(name);
-                  if (created) { setAddStaffVisible(false); setNewStaffName(""); }
-                }}
-                disabled={inviting}
-                style={({ pressed }) => [styles.primaryBtn, (pressed || inviting) && { opacity: 0.85 }]}
-              >
-                {inviting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Ekle</Text>}
-              </Pressable>
-            </View>
-          </View>
+        <Text style={styles.sheetSubtext}>Randevu alacak usta adını gir.</Text>
+        <View style={{ marginTop: 14 }}>
+          <TextField
+            label="Ad Soyad"
+            value={newStaffName}
+            onChange={setNewStaffName}
+            placeholder="Ad Soyad"
+          />
         </View>
-      </Modal>
+      </Sheet>
 
-      {/* Komisyon Modalı */}
-      <Modal visible={commissionStaff !== null} transparent animationType="fade" onRequestClose={closeCommissionModal}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.commissionModal}>
-            <Text style={styles.modalTitle}>Komisyon Ayarı</Text>
-            <Text style={styles.modalText}>{commissionStaff?.name} için komisyon ayarı.</Text>
-            <View style={styles.toggleRow}>
-              <Text style={styles.toggleLabel}>Komisyon aktif</Text>
-              <Switch
-                value={commissionOn}
-                onValueChange={(v) => {
-                  setCommissionOn(v);
-                  if (!v) setCommissionInput("");
-                }}
-                trackColor={{ true: T.navy, false: T.line }}
-                thumbColor="#fff"
-                disabled={savingCommission}
-              />
-            </View>
-            {commissionOn && (
-              <TextInput
-                value={commissionInput}
-                onChangeText={setCommissionInput}
-                placeholder="Örn. 50"
-                keyboardType="decimal-pad"
-                style={styles.commissionInput}
-                editable={!savingCommission}
-              />
-            )}
-            <View style={styles.modalActions}>
-              <Pressable onPress={closeCommissionModal} disabled={savingCommission} style={styles.secondaryBtn}>
-                <Text style={styles.secondaryText}>Vazgeç</Text>
-              </Pressable>
-              <Pressable
-                onPress={saveCommission}
-                disabled={savingCommission}
-                style={({ pressed }) => [styles.primaryBtn, (pressed || savingCommission) && { opacity: 0.85 }]}
-              >
-                {savingCommission ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Kaydet</Text>}
-              </Pressable>
-            </View>
+      {/* Komisyon Sheet */}
+      <Sheet
+        visible={commissionStaff !== null}
+        onClose={closeCommissionModal}
+        title="Komisyon Ayarı"
+        footer={
+          <View style={styles.sheetFooter}>
+            <Button
+              variant="secondary"
+              size="md"
+              onPress={closeCommissionModal}
+              disabled={savingCommission}
+            >
+              Vazgeç
+            </Button>
+            <Button
+              variant="accent"
+              size="md"
+              onPress={saveCommission}
+              disabled={savingCommission}
+            >
+              {savingCommission ? "Kaydediliyor…" : "Kaydet"}
+            </Button>
           </View>
+        }
+      >
+        <Text style={styles.sheetSubtext}>{commissionStaff?.name} için komisyon ayarı.</Text>
+        <View style={styles.toggleRow}>
+          <Text style={styles.toggleLabel}>Komisyon aktif</Text>
+          <Switch
+            value={commissionOn}
+            onValueChange={(v) => {
+              setCommissionOn(v);
+              if (!v) setCommissionInput("");
+            }}
+            trackColor={{ true: T.brand600, false: T.border }}
+            thumbColor="#fff"
+            disabled={savingCommission}
+          />
         </View>
-      </Modal>
-
-      {/* Slug Düzenleme Modalı */}
-      <Modal visible={slugStaff !== null} transparent animationType="fade" onRequestClose={closeSlugModal}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.commissionModal}>
-            <Text style={styles.modalTitle}>Randevu Linki</Text>
-            <Text style={styles.modalText}>
-              {slugStaff?.name} için kısa URL parçası gir (sadece harf, rakam, tire). Boş bırakırsan link devre dışı kalır.
-            </Text>
-            <TextInput
-              value={slugInput}
-              onChangeText={(v) => setSlugInput(v.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-              placeholder="ahmet-usta"
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={styles.commissionInput}
-              editable={!savingSlug}
+        {commissionOn && (
+          <View style={{ marginTop: 14 }}>
+            <TextField
+              label="Komisyon Oranı (%)"
+              value={commissionInput}
+              onChange={setCommissionInput}
+              placeholder="Örn. 50"
             />
-            {slugInput.length > 0 && (
-              <Text style={styles.slugPreview}>
-                siraladaki.app/…/u/{slugInput}
-              </Text>
-            )}
-            <View style={styles.modalActions}>
-              <Pressable onPress={closeSlugModal} disabled={savingSlug} style={styles.secondaryBtn}>
-                <Text style={styles.secondaryText}>Vazgeç</Text>
-              </Pressable>
-              <Pressable
-                onPress={saveSlug}
-                disabled={savingSlug}
-                style={({ pressed }) => [styles.primaryBtn, (pressed || savingSlug) && { opacity: 0.85 }]}
-              >
-                {savingSlug ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Kaydet</Text>}
-              </Pressable>
-            </View>
           </View>
+        )}
+      </Sheet>
+
+      {/* Slug Düzenleme Sheet */}
+      <Sheet
+        visible={slugStaff !== null}
+        onClose={closeSlugModal}
+        title="Randevu Linki"
+        footer={
+          <View style={styles.sheetFooter}>
+            <Button
+              variant="secondary"
+              size="md"
+              onPress={closeSlugModal}
+              disabled={savingSlug}
+            >
+              Vazgeç
+            </Button>
+            <Button
+              variant="accent"
+              size="md"
+              onPress={saveSlug}
+              disabled={savingSlug}
+            >
+              {savingSlug ? "Kaydediliyor…" : "Kaydet"}
+            </Button>
+          </View>
+        }
+      >
+        <Text style={styles.sheetSubtext}>
+          {slugStaff?.name} için kısa URL parçası gir (sadece harf, rakam, tire). Boş bırakırsan link devre dışı kalır.
+        </Text>
+        <View style={{ marginTop: 14 }}>
+          <TextField
+            label="Slug"
+            value={slugInput}
+            onChange={(v) => setSlugInput(v.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+            placeholder="ahmet-usta"
+          />
         </View>
-      </Modal>
+        {slugInput.length > 0 && (
+          <Text style={styles.slugPreview}>
+            siraladaki.app/…/u/{slugInput}
+          </Text>
+        )}
+      </Sheet>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
-  scroll: { paddingTop: 64, paddingHorizontal: 20, paddingBottom: 40 },
+  scroll: { paddingTop: 64, paddingBottom: 40 },
 
-  eyebrow: { fontSize: 11, fontWeight: "600", letterSpacing: 1.4, textTransform: "uppercase", color: T.red, marginBottom: 6 },
-  title: { fontSize: 30, fontWeight: "700", letterSpacing: -0.5, color: T.ink, marginBottom: 16 },
-
-  inviteBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    backgroundColor: T.navy,
-    borderRadius: R.cta,
-    marginBottom: 20,
-    ...Shadow.cta,
-  },
-  inviteBtnTxt: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  addBtnRow: { paddingHorizontal: 20, marginBottom: 8 },
 
   empty: { paddingTop: 40, alignItems: "center" },
-  emptyTxt: { fontSize: 13, color: T.mutedAlt },
+  emptyTxt: { fontSize: 13, color: T.fg4 },
 
-  staffCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 12,
-    backgroundColor: T.surface,
-    borderWidth: 1,
-    borderColor: T.line,
-    borderRadius: R.card,
-    ...Shadow.card,
-  },
-  inactiveCard: { opacity: 0.65 },
-  avatar: {
-    width: 44, height: 44, borderRadius: 12,
-    backgroundColor: T.avatarFrom,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarTxt: { fontSize: 16, fontWeight: "700", color: T.navy },
-  staffName: { fontSize: 14, fontWeight: "600", color: T.ink },
-  statusChip: { fontSize: 10, fontWeight: "600", marginTop: 4, alignSelf: "flex-start" },
-  activeChip: { color: "#16a34a" },
-  inactiveChip: { color: T.muted },
-  slugText: { fontSize: 11, color: T.navy, marginTop: 2, fontWeight: "500" },
-  slugMissing: { fontSize: 11, color: T.mutedAlt, marginTop: 2 },
-  commissionText: { fontSize: 11, color: T.navy, marginTop: 3, fontWeight: "600" },
+  trailingRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+
   toggleRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -527,41 +492,10 @@ const styles = StyleSheet.create({
   toggleLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: T.ink,
+    color: T.fg1,
   },
-  slugPreview: { marginTop: 6, fontSize: 11, color: T.muted, fontStyle: "italic" },
+  slugPreview: { marginTop: 6, fontSize: 11, color: T.fg3, fontStyle: "italic" },
 
-  iconBtn:   { padding: 4 },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.38)",
-    justifyContent: "center",
-    padding: 20,
-  },
-  commissionModal: {
-    backgroundColor: T.surface,
-    borderRadius: R.card,
-    borderWidth: 1,
-    borderColor: T.line,
-    padding: 16,
-    ...Shadow.card,
-  },
-  modalTitle: { fontSize: 18, fontWeight: "700", color: T.ink },
-  modalText: { marginTop: 6, fontSize: 13, lineHeight: 18, color: T.muted },
-  commissionInput: {
-    marginTop: 14,
-    borderWidth: 1,
-    borderColor: T.line,
-    borderRadius: R.card,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: T.ink,
-    backgroundColor: T.bg,
-  },
-  modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 10, marginTop: 14 },
-  secondaryBtn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: R.card, backgroundColor: T.surfaceAlt },
-  secondaryText: { fontSize: 13, fontWeight: "700", color: T.muted },
-  primaryBtn: { minWidth: 88, alignItems: "center", paddingHorizontal: 14, paddingVertical: 10, borderRadius: R.card, backgroundColor: T.navy },
-  primaryText: { fontSize: 13, fontWeight: "700", color: "#fff" },
+  sheetSubtext: { fontSize: 13, lineHeight: 18, color: T.fg3, marginBottom: 4 },
+  sheetFooter: { flexDirection: "row", justifyContent: "flex-end", gap: 10 },
 });
