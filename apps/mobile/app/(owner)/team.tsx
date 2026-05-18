@@ -4,21 +4,15 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  Pressable,
   ActivityIndicator,
   Alert,
   Switch,
 } from "react-native";
-import {
-  UserPlus,
-  Percent,
-  Link,
-  Clock,
-  PauseCircle,
-  PlayCircle,
-} from "lucide-react-native";
+import { Percent, Link, Clock, PauseCircle, PlayCircle } from "lucide-react-native";
 import { supabase } from "../../lib/supabase";
 import { useUserRole } from "../../lib/user-context";
-import { T, R, Shadow } from "../../lib/theme";
+import { T } from "../../lib/theme";
 import { StaffScheduleModal } from "../../components/StaffScheduleModal";
 import { Sheet } from "../../components/ds/Sheet";
 import { StaffRow } from "../../components/ds/StaffRow";
@@ -289,34 +283,21 @@ export default function TeamScreen() {
                 ].join(" · ")}
                 trailing={
                   <View style={styles.trailingRow}>
-                    <Percent
-                      size={18}
-                      color={T.brand600}
-                      onPress={() => openCommissionModal(b)}
-                    />
-                    <Link
-                      size={18}
-                      color={b.slug ? T.brand600 : T.fg3}
-                      onPress={() => openSlugModal(b)}
-                    />
-                    <Clock
-                      size={18}
-                      color={T.brand500}
-                      onPress={() => setModalStaff(b)}
-                    />
-                    {b.is_active ? (
-                      <PauseCircle
-                        size={22}
-                        color={T.fg3}
-                        onPress={() => handleToggleActive(b)}
-                      />
-                    ) : (
-                      <PlayCircle
-                        size={22}
-                        color={T.brand600}
-                        onPress={() => handleToggleActive(b)}
-                      />
-                    )}
+                    <Pressable onPress={() => openCommissionModal(b)} hitSlop={8}>
+                      <Percent size={18} color={T.brand600} />
+                    </Pressable>
+                    <Pressable onPress={() => openSlugModal(b)} hitSlop={8}>
+                      <Link size={18} color={b.slug ? T.brand600 : T.fg3} />
+                    </Pressable>
+                    <Pressable onPress={() => setModalStaff(b)} hitSlop={8}>
+                      <Clock size={18} color={T.brand500} />
+                    </Pressable>
+                    <Pressable onPress={() => handleToggleActive(b)} hitSlop={8}>
+                      {b.is_active
+                        ? <PauseCircle size={22} color={T.fg3} />
+                        : <PlayCircle size={22} color={T.brand600} />
+                      }
+                    </Pressable>
                   </View>
                 }
               />
