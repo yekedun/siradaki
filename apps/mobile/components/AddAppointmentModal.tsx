@@ -49,13 +49,13 @@ interface AddAppointmentModalProps {
 
 const T = {
   bg: Theme.bg,
-  surface: Theme.surface,
-  surfaceAlt: Theme.surfaceAlt,
-  line: Theme.line,
-  ink: Theme.ink,
-  muted: Theme.muted,
-  navy: Theme.navy,
-  blueSoft: Theme.blueSoft,
+  surface: Theme.bgElevated,
+  surfaceAlt: Theme.bgSunken,
+  line: Theme.border,
+  ink: Theme.fg1,
+  muted: Theme.fg3,
+  navy: Theme.brand600,
+  blueSoft: Theme.accentTint,
 };
 
 const FALLBACK_DURATIONS = [
