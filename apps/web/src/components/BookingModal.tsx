@@ -56,6 +56,7 @@ export function BookingModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (name.trim().length < 2) return;
+    if (phone.trim().length < 10) return;
     setStep("loading");
     setErrorMsg("");
     setIsConflict(false);
@@ -75,7 +76,7 @@ export function BookingModal({
             staff_id: staffId,
             starts_at: slot.startsAt.toISOString(),
             customer_name: name.trim(),
-            customer_phone: phone.trim() || undefined,
+            customer_phone: phone.trim(),
             customer_notes: note.trim() || undefined,
           }),
         }
@@ -140,6 +141,7 @@ export function BookingModal({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="0(5xx) xxx xx xx"
+                  required
                   className={inputCls}
                 />
               </Field>
@@ -162,7 +164,7 @@ export function BookingModal({
                 </button>
                 <button
                   type="submit"
-                  disabled={name.trim().length < 2}
+                  disabled={name.trim().length < 2 || phone.trim().length < 10}
                   className="flex-[2] rounded-cta bg-navy py-3.5 text-[14px] font-semibold text-white shadow-cta disabled:opacity-40"
                 >
                   Randevuyu Onayla

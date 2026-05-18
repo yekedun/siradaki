@@ -4,25 +4,16 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { createClient } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
-import { BookingFlow } from "./BookingFlow";
+import { BookingFlow } from "../../BookingFlow";
 import type { WorkingHours } from "@berber/shared/types";
 import type { Database } from "@berber/db/src/database.types";
 
 interface PageProps {
-  params: { slug: string };
+  params: { slug: string; barberSlug: string };
 }
 
 export const revalidate = 60;
 export const dynamicParams = true;
-
-export async function generateStaticParams() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anon) return [];
-  const supabase = createClient<Database>(url, anon);
-  const { data } = await supabase.from("shops").select("slug");
-  return (data ?? []).map(({ slug }) => ({ slug }));
-}
 
 const getShopBySlug = unstable_cache(
   async (slug: string) => {
@@ -44,7 +35,15 @@ const getShopBySlug = unstable_cache(
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const shop = await getShopBySlug(params.slug);
   if (!shop) return { title: "Dükkan bulunamadı" };
-  return { title: `${shop.display_name} — Randevu Al` };
+  const supabase = createSupabaseServerClient();
+  const { data: barber } = await supabase
+    .from("staff")
+    .select("name")
+    .eq("shop_id", shop.id)
+    .eq("slug", params.barberSlug)
+    .single();
+  if (!barber) return { title: `${shop.display_name} — Randevu Al` };
+  return { title: `${barber.name} · ${shop.display_name} — Randevu Al` };
 }
 
 function initials(name: string): string {
@@ -56,13 +55,13 @@ function initials(name: string): string {
     .join("");
 }
 
-export default async function BookingPage({ params }: PageProps) {
+export default async function BarberBookingPage({ params }: PageProps) {
   const shop = await getShopBySlug(params.slug);
   if (!shop) notFound();
 
   const supabase = createSupabaseServerClient();
 
-  const [{ data: services }, { data: staff }] = await Promise.all([
+  const [{ data: services }, { data: allStaff }] = await Promise.all([
     supabase
       .from("services")
       .select("id, shop_id, name, duration_min, price_cents, display_order")
@@ -71,11 +70,18 @@ export default async function BookingPage({ params }: PageProps) {
       .order("display_order"),
     supabase
       .from("staff")
-      .select("id, shop_id, name, role, slug")
+      .select("id, shop_id, name, role, slug, is_active")
       .eq("shop_id", shop.id)
-      .eq("is_active", true)
       .order("created_at"),
   ]);
+
+  const matched = (allStaff ?? []).find((s) => s.slug === params.barberSlug);
+  if (!matched) notFound();
+
+  const activeStaff = (allStaff ?? []).filter((s) => s.is_active);
+
+  const lockedBarber = matched.is_active ? matched : undefined;
+  const inactiveBarberName = !matched.is_active ? matched.name : undefined;
 
   return (
     <main className="min-h-screen bg-bg">
@@ -96,8 +102,10 @@ export default async function BookingPage({ params }: PageProps) {
               timezone: shop.timezone,
               working_hours: shop.working_hours as unknown as WorkingHours,
             }}
-            staff={staff ?? []}
+            staff={activeStaff}
             services={services ?? []}
+            lockedBarber={lockedBarber}
+            inactiveBarberName={inactiveBarberName}
           />
         </div>
       </div>
