@@ -37,12 +37,16 @@ export default function OwnerSettingsScreen() {
   const [workingHours, setWorkingHours] = useState<WorkingHours | null>(null);
 
   const loadAccount = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data: shop } = await supabase.from("shops").select("display_name, working_hours")
-      .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`).single();
-    setAccount({ name: shop?.display_name ?? "Dükkan", email: user.email ?? "" });
-    setWorkingHours((shop?.working_hours as unknown as WorkingHours) ?? null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: shop } = await supabase.from("shops").select("display_name, working_hours")
+        .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`).single();
+      setAccount({ name: shop?.display_name ?? "Dükkan", email: user.email ?? "" });
+      setWorkingHours((shop?.working_hours as unknown as WorkingHours) ?? null);
+    } catch {
+      // network error — retain defaults
+    }
   }, []);
 
   const loadTokens = useCallback(async () => {
