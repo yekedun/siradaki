@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useFonts } from "expo-font";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { UserProvider, useUserRole } from "../lib/user-context";
@@ -38,6 +39,12 @@ function RouterGuard({ session }: { session: Session | null | undefined }) {
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const [fontsLoaded] = useFonts({
+    "Montserrat":          require("../assets/fonts/Montserrat-Regular.otf"),
+    "Montserrat-Medium":   require("../assets/fonts/Montserrat-Medium.otf"),
+    "Montserrat-SemiBold": require("../assets/fonts/Montserrat-SemiBold.otf"),
+    "Montserrat-Bold":     require("../assets/fonts/Montserrat-Bold.otf"),
+  });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
@@ -49,9 +56,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <UserProvider>
         <RouterGuard session={session} />
-        {session === undefined ? (
+        {session === undefined || !fontsLoaded ? (
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: T.bg }}>
-            <ActivityIndicator color={T.navy} />
+            <ActivityIndicator color={T.brand600} />
           </View>
         ) : (
           <Slot />
