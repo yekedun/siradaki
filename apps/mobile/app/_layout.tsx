@@ -1,6 +1,6 @@
 import "react-native-gesture-handler";
 import { useEffect, useState } from "react";
-import { View, ActivityIndicator } from "react-native";
+import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useFonts } from "expo-font";
@@ -9,13 +9,13 @@ import { supabase } from "../lib/supabase";
 import { UserProvider, useUserRole } from "../lib/user-context";
 import { T } from "../lib/theme";
 
-function RouterGuard({ session }: { session: Session | null | undefined }) {
+function RouterGuard({ session, ready }: { session: Session | null | undefined; ready: boolean }) {
   const router   = useRouter();
   const segments = useSegments();
   const { role, loading, error } = useUserRole();
 
   useEffect(() => {
-    if (session === undefined || loading) return;
+    if (!ready || session === undefined || loading) return;
 
     const inAuth  = (segments[0] as string) === "(auth)";
     const inApp   = (segments[0] as string) === "(staff)";
@@ -38,7 +38,7 @@ function RouterGuard({ session }: { session: Session | null | undefined }) {
     }
     // role === null && error === null → tanımsız kullanıcı (auth user'ı var ama
     // henüz shop/staff oluşmamış); auth screen'inde kalıyor.
-  }, [session, role, loading, error, segments, router]);
+  }, [ready, session, role, loading, error, segments, router]);
 
   return null;
 }
@@ -58,20 +58,30 @@ export default function RootLayout() {
     return () => subscription.unsubscribe();
   }, []);
 
+  const ready = session !== undefined && fontsLoaded;
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <UserProvider>
-        {session === undefined || !fontsLoaded ? (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: T.bg }}>
+        {/* Slot her zaman mount edilir — navigator hazır olur, Reanimated root view hatası önlenir */}
+        <RouterGuard session={session} ready={ready} />
+        <Slot />
+        {/* Loading overlay: session ve fontlar hazır olana kadar içeriği gizler */}
+        {!ready && (
+          <View style={styles.loadingOverlay}>
             <ActivityIndicator color={T.brand600} />
           </View>
-        ) : (
-          <>
-            <RouterGuard session={session} />
-            <Slot />
-          </>
         )}
       </UserProvider>
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: T.bg,
+  },
+});
