@@ -8,7 +8,14 @@ import {
   Alert,
   ScrollView,
 } from "react-native";
+import { UserCheck, Coffee, User } from "lucide-react-native";
 import { T, R, Shadow } from "../../lib/theme";
+
+const REASON_ICONS: Record<"walkin" | "break" | "personal", React.ComponentType<{ size: number; color: string }>> = {
+  walkin: UserCheck,
+  break: Coffee,
+  personal: User,
+};
 import { supabase } from "../../lib/supabase";
 
 const DURATIONS = [15, 30, 45, 60, 90, 120] as const;
@@ -137,9 +144,10 @@ export default function BlockScreen() {
                   pressed && { transform: [{ scale: 0.985 }] },
                 ]}
               >
-                <View style={[styles.radio, sel && styles.radioSel]}>
-                  {sel && <View style={styles.radioInner} />}
-                </View>
+                {(() => {
+                  const Icon = REASON_ICONS[r.id];
+                  return <Icon size={22} color={sel ? "#fff" : T.ink900} />;
+                })()}
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.reasonLabel, sel && { color: "#fff" }]}>{r.label}</Text>
                   <Text style={styles.reasonMeta}>{r.meta}</Text>
@@ -195,7 +203,7 @@ const styles = StyleSheet.create({
     color: T.fg3,
     marginBottom: 6,
   },
-  title: { fontSize: 30, fontWeight: "700", letterSpacing: -0.5, color: T.fg1, marginBottom: 8 },
+  title: { fontSize: 34, fontWeight: "700", letterSpacing: -0.5, color: T.fg1, marginBottom: 8 },
   lead: { fontSize: 14, color: T.fg3, lineHeight: 21 },
 
   nowBadge: {
@@ -247,17 +255,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   reasonRowSel: { borderColor: T.ink900, backgroundColor: T.ink900 },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: T.slate300,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  radioSel: { borderColor: "#fff" },
-  radioInner: { width: 10, height: 10, borderRadius: 10, backgroundColor: "#fff" },
   reasonLabel: { fontSize: 14, fontWeight: "600", color: T.fg1 },
   reasonMeta: { fontSize: 12, color: T.fg3, marginTop: 2 },
 
