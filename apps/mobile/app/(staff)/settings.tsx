@@ -11,13 +11,13 @@ import {
   Image,
   TextInput,
 } from "react-native";
-import { Copy, Grid2x2, Share2 } from "lucide-react-native";
+import { Copy } from "lucide-react-native";
 import * as Clipboard from "expo-clipboard";
 import { supabase } from "../../lib/supabase";
 import { useUserRole } from "../../lib/user-context";
-import { T, R, Shadow } from "../../lib/theme";
+import { T, R, Shadow, Type } from "../../lib/theme";
+import { OverlineHeader, SectionLabel, Button } from "../../components/ds";
 import { Sheet } from "../../components/ds/Sheet";
-import { Button } from "../../components/ds/Button";
 
 const WEB_BASE = "https://siraladaki.app";
 
@@ -122,8 +122,7 @@ export default function SettingsScreen() {
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.eyebrow}>AYARLAR</Text>
-        <Text style={styles.title}>Hesabım</Text>
+        <OverlineHeader eyebrow="AYARLAR" title="Hesabım" />
 
         <View style={styles.accountCard}>
           <View style={styles.avatar}>
@@ -137,9 +136,7 @@ export default function SettingsScreen() {
 
         {bookingLink && (
           <>
-            <View style={styles.secHead}>
-              <Text style={styles.secLabel}>RANDEVU LİNKİM</Text>
-            </View>
+            <SectionLabel>RANDEVU LİNKİM</SectionLabel>
 
             <View style={styles.linkRow}>
               <Text style={styles.linkText} numberOfLines={1}>{bookingLink}</Text>
@@ -148,21 +145,13 @@ export default function SettingsScreen() {
               </Pressable>
             </View>
 
-            <Pressable
-              style={({ pressed }) => [styles.linkActionBtn, pressed && { opacity: 0.85 }]}
-              onPress={() => setQrVisible(true)}
-            >
-              <Grid2x2 size={15} color={T.brand600} />
-              <Text style={styles.linkActionText}>QR Kodu Göster</Text>
-            </Pressable>
+            <Button variant="secondary" size="md" full onPress={() => setQrVisible(true)} style={{ marginTop: 8 }}>
+              QR Kodu Göster
+            </Button>
 
-            <Pressable
-              style={({ pressed }) => [styles.storyBtn, pressed && { opacity: 0.85 }]}
-              onPress={handleShareLink}
-            >
-              <Share2 size={15} color="#fff" />
-              <Text style={styles.storyBtnText}>Linki Paylaş</Text>
-            </Pressable>
+            <Button variant="accent" size="md" full onPress={handleShareLink} style={{ marginTop: 8 }}>
+              Linki Paylaş
+            </Button>
           </>
         )}
 
@@ -184,19 +173,13 @@ export default function SettingsScreen() {
           </Pressable>
         </Modal>
 
-        <Pressable
-          style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.9 }]}
-          onPress={handleSignOut}
-        >
-          <Text style={styles.signOutText}>Çıkış Yap</Text>
-        </Pressable>
+        <Button variant="danger" size="md" full onPress={handleSignOut} style={styles.signOut}>
+          Çıkış Yap
+        </Button>
 
-        <Pressable
-          style={({ pressed }) => [styles.deleteAccount, pressed && { opacity: 0.9 }]}
-          onPress={openDeleteSheet}
-        >
-          <Text style={styles.deleteAccountText}>Hesabı Sil</Text>
-        </Pressable>
+        <Button variant="ghost" size="md" full onPress={openDeleteSheet} style={styles.deleteAccount}>
+          Hesabı Sil
+        </Button>
 
         <Text style={styles.version}>Berber Panel · Usta Ekranı</Text>
       </ScrollView>
@@ -239,13 +222,11 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
-  scrollContent: { paddingTop: 64, paddingHorizontal: 20, paddingBottom: 32 },
-
-  eyebrow: { fontSize: 11, fontWeight: "600", letterSpacing: 1.4, textTransform: "uppercase", color: T.fg3, marginBottom: 6 },
-  title: { fontSize: 30, fontWeight: "700", letterSpacing: -0.5, color: T.fg1, marginBottom: 8 },
+  scrollContent: { paddingTop: 64, paddingBottom: 32 },
 
   accountCard: {
     marginTop: 22,
+    marginHorizontal: 20,
     paddingVertical: 14,
     paddingHorizontal: 14,
     backgroundColor: T.bgElevated,
@@ -263,67 +244,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarTxt: { fontSize: 16, fontWeight: "700", color: T.brand600 },
-  accountName: { fontSize: 14, fontWeight: "600", color: T.fg1 },
-  accountEmail: { fontSize: 12, color: T.fg3, marginTop: 2 },
+  avatarTxt: { fontSize: 16, fontFamily: Type.family, fontWeight: "700", color: T.brand600 },
+  accountName: { fontSize: 14, fontFamily: Type.family, fontWeight: "600", color: T.fg1 },
+  accountEmail: { fontSize: 12, fontFamily: Type.family, color: T.fg3, marginTop: 2 },
 
-  signOut: {
-    marginTop: 28,
-    paddingVertical: 14,
-    backgroundColor: T.coral100,
-    borderWidth: 1,
-    borderColor: T.coral100,
-    borderRadius: R.md,
-    alignItems: "center",
-  },
-  signOutText: { color: T.coral600, fontSize: 14, fontWeight: "600" },
+  signOut: { marginTop: 28, marginHorizontal: 20 },
+  deleteAccount: { marginTop: 4, marginHorizontal: 20 },
 
-  deleteAccount: {
-    marginTop: 8,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  deleteAccountText: { color: T.fg4, fontSize: 13, fontWeight: "500" },
-
-  version: { marginTop: 18, textAlign: "center", fontSize: 11, color: T.fg4 },
-
-  secHead: { marginTop: 26, marginBottom: 12, flexDirection: "row", alignItems: "baseline" },
-  secLabel: { fontSize: 11, fontWeight: "600", color: T.fg3, letterSpacing: 0.6, textTransform: "uppercase" },
+  version: { marginTop: 18, textAlign: "center", fontSize: 11, fontFamily: Type.family, color: T.fg4 },
 
   linkRow: {
     flexDirection: "row", alignItems: "center", gap: 10,
     backgroundColor: T.bgElevated, borderWidth: 1, borderColor: T.border,
-    borderRadius: R.md, paddingVertical: 12, paddingHorizontal: 14, ...Shadow.sm,
+    borderRadius: R.md, paddingVertical: 12, paddingHorizontal: 14,
+    marginHorizontal: 20,
+    ...Shadow.sm,
   },
-  linkText: { flex: 1, fontSize: 12, color: T.brand600, fontWeight: "500" },
+  linkText: { flex: 1, fontSize: 12, fontFamily: Type.family, color: T.brand600, fontWeight: "500" },
   iconBtn: { padding: 4 },
-
-  linkActionBtn: {
-    marginTop: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    paddingVertical: 12, backgroundColor: T.bgSunken,
-    borderWidth: 1, borderColor: T.border, borderRadius: R.md,
-  },
-  linkActionText: { fontSize: 13, fontWeight: "600", color: T.brand600 },
-
-  storyBtn: {
-    marginTop: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    paddingVertical: 12, backgroundColor: T.brand600, borderRadius: R.md, ...Shadow.md,
-  },
-  storyBtnText: { fontSize: 13, fontWeight: "600", color: "#fff" },
 
   qrOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" },
   qrCard: {
     width: 290, backgroundColor: T.bgElevated, borderRadius: R.md,
     padding: 24, alignItems: "center", gap: 14, ...Shadow.sm,
   },
-  qrTitle: { fontSize: 16, fontWeight: "700", color: T.fg1 },
+  qrTitle: { fontSize: 16, fontFamily: Type.family, fontWeight: "700", color: T.fg1 },
   qrImage: { width: 200, height: 200, borderRadius: 8 },
-  qrHint: { fontSize: 11, color: T.fg3, textAlign: "center" },
+  qrHint: { fontSize: 11, fontFamily: Type.family, color: T.fg3, textAlign: "center" },
   qrClose: {
     paddingVertical: 10, paddingHorizontal: 24,
     backgroundColor: T.brand600, borderRadius: R.md,
   },
-  qrCloseText: { color: "#fff", fontSize: 13, fontWeight: "600" },
+  qrCloseText: { color: "#fff", fontFamily: Type.family, fontSize: 13, fontWeight: "600" },
 
   sheetFooter: { flexDirection: "row", justifyContent: "flex-end", gap: 10 },
   deleteWarning: {
@@ -333,9 +285,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 6,
   },
-  deleteWarningTitle: { fontSize: 13, fontWeight: "700", color: T.coral600 },
-  deleteWarningText: { fontSize: 13, color: T.coral600, lineHeight: 19 },
-  deleteLabel: { fontSize: 12, fontWeight: "600", color: T.fg3, marginBottom: 8 },
+  deleteWarningTitle: { fontSize: 13, fontFamily: Type.family, fontWeight: "700", color: T.coral600 },
+  deleteWarningText: { fontSize: 13, fontFamily: Type.family, color: T.coral600, lineHeight: 19 },
+  deleteLabel: { fontSize: 12, fontFamily: Type.family, fontWeight: "600", color: T.fg3, marginBottom: 8 },
   deleteInput: {
     borderWidth: 1.5,
     borderColor: T.coral600,
@@ -343,6 +295,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
+    fontFamily: Type.family,
     fontWeight: "700",
     color: T.coral600,
     letterSpacing: 2,
