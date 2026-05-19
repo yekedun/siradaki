@@ -42,6 +42,10 @@ build/
 supabase/.branches/
 supabase/.temp/
 
+# Sensitive SQL dumps — never commit
+*_backup.sql
+*.dump.sql
+
 # OS
 .DS_Store
 Thumbs.db
