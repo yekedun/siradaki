@@ -71,3 +71,7 @@ import_map = "./functions/import_map.json"
 [functions.app-book-appointment]
 verify_jwt = true
 import_map = "./functions/import_map.json"
+
+[functions.delete-account]
+verify_jwt = true
+import_map = "./functions/import_map.json"

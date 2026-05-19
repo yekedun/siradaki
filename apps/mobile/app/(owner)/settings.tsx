@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-  View, Text, StyleSheet, ActivityIndicator, Alert, ScrollView,
+  View, Text, StyleSheet, ActivityIndicator, Alert, ScrollView, TextInput,
 } from "react-native";
 import { Key, Lock } from "lucide-react-native";
 import { supabase } from "../../lib/supabase";
@@ -10,6 +10,7 @@ import { generateWidgetToken, listWidgetTokens, deleteWidgetToken } from "../../
 import type { WorkingHours } from "@berber/shared/types";
 import { WorkingHoursEditor } from "../../components/WorkingHoursEditor";
 import { OverlineHeader, SectionLabel, Card, Button } from "../../components/ds";
+import { Sheet } from "../../components/ds/Sheet";
 
 interface TokenMeta {
   id: string;
@@ -35,6 +36,10 @@ export default function OwnerSettingsScreen() {
   const [generating, setGenerating] = useState(false);
   const [account, setAccount] = useState<{ name: string; email: string }>({ name: "Sahip", email: "" });
   const [workingHours, setWorkingHours] = useState<WorkingHours | null>(null);
+
+  const [deleteSheetVisible, setDeleteSheetVisible] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const loadAccount = useCallback(async () => {
     try {
@@ -71,7 +76,7 @@ export default function OwnerSettingsScreen() {
     } finally { setGenerating(false); }
   }
 
-  function handleDelete(tokenId: string) {
+  function handleDeleteToken(tokenId: string) {
     Alert.alert("Token sil", "Bu token silinirse widget çalışmayı durduracak.", [
       { text: "İptal", style: "cancel" },
       {
@@ -91,6 +96,40 @@ export default function OwnerSettingsScreen() {
       { text: "Vazgeç", style: "cancel" },
       { text: "Çıkış yap", style: "destructive", onPress: () => supabase.auth.signOut() },
     ]);
+  }
+
+  function openDeleteSheet() {
+    setDeleteConfirm("");
+    setDeleteSheetVisible(true);
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirm.trim().toUpperCase() !== "SİL") {
+      Alert.alert("Hatalı Onay", "Onaylamak için tam olarak «SİL» yazmalısın.");
+      return;
+    }
+    setDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-account`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? "Silme başarısız.");
+      }
+      await supabase.auth.signOut();
+    } catch (err) {
+      Alert.alert("Hata", (err as Error).message);
+      setDeleting(false);
+    }
   }
 
   return (
@@ -150,7 +189,7 @@ export default function OwnerSettingsScreen() {
                     {shortId(t.id)} · son {t.last_used_at ? fmtDate(t.last_used_at) : fmtDate(t.created_at)}
                   </Text>
                 </View>
-                <Button variant="danger" size="sm" onPress={() => handleDelete(t.id)}>
+                <Button variant="danger" size="sm" onPress={() => handleDeleteToken(t.id)}>
                   Sil
                 </Button>
               </Card>
@@ -162,8 +201,45 @@ export default function OwnerSettingsScreen() {
           Çıkış yap
         </Button>
 
+        <Button variant="ghost" size="md" full onPress={openDeleteSheet} style={styles.deleteAccount}>
+          Hesabı Sil
+        </Button>
+
         <Text style={styles.version}>Berber Panel · Sahip Ekranı</Text>
       </ScrollView>
+
+      <Sheet
+        visible={deleteSheetVisible}
+        onClose={() => { if (!deleting) setDeleteSheetVisible(false); }}
+        title="Hesabı Sil"
+        footer={
+          <View style={styles.sheetFooter}>
+            <Button variant="secondary" size="md" onPress={() => setDeleteSheetVisible(false)} disabled={deleting}>
+              Vazgeç
+            </Button>
+            <Button variant="danger" size="md" onPress={handleDeleteAccount} disabled={deleting}>
+              {deleting ? "Siliniyor…" : "Kalıcı Olarak Sil"}
+            </Button>
+          </View>
+        }
+      >
+        <View style={styles.deleteWarning}>
+          <Text style={styles.deleteWarningTitle}>⚠️ Bu işlem geri alınamaz</Text>
+          <Text style={styles.deleteWarningText}>
+            Dükkanın, tüm personel kayıtları, randevular ve widget tokenları kalıcı olarak silinecek.
+          </Text>
+        </View>
+        <Text style={styles.deleteLabel}>Onaylamak için «SİL» yaz:</Text>
+        <TextInput
+          style={styles.deleteInput}
+          value={deleteConfirm}
+          onChangeText={setDeleteConfirm}
+          placeholder="SİL"
+          placeholderTextColor={T.fg4}
+          autoCapitalize="characters"
+          editable={!deleting}
+        />
+      </Sheet>
     </View>
   );
 }
@@ -187,5 +263,29 @@ const styles = StyleSheet.create({
   empty: { paddingVertical: 30, alignItems: "center", gap: 8 },
   emptyTitle: { fontSize: 14, color: T.fg3 },
   signOut: { marginHorizontal: S.s5, marginTop: 28 },
+  deleteAccount: { marginHorizontal: S.s5, marginTop: 8 },
   version: { marginTop: 18, textAlign: "center", fontSize: 11, color: T.fg4 },
+
+  sheetFooter: { flexDirection: "row", justifyContent: "flex-end", gap: 10 },
+  deleteWarning: {
+    backgroundColor: T.coral100,
+    borderRadius: R.sm,
+    padding: 14,
+    marginBottom: 16,
+    gap: 6,
+  },
+  deleteWarningTitle: { fontSize: 13, fontWeight: "700", color: T.coral600 },
+  deleteWarningText: { fontSize: 13, color: T.coral600, lineHeight: 19 },
+  deleteLabel: { fontSize: 12, fontWeight: "600", color: T.fg3, marginBottom: 8 },
+  deleteInput: {
+    borderWidth: 1.5,
+    borderColor: T.coral600,
+    borderRadius: R.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    fontWeight: "700",
+    color: T.coral600,
+    letterSpacing: 2,
+  },
 });

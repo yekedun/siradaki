@@ -9,12 +9,15 @@ import {
   Share,
   Modal,
   Image,
+  TextInput,
 } from "react-native";
 import { Copy, Grid2x2, Share2 } from "lucide-react-native";
 import * as Clipboard from "expo-clipboard";
 import { supabase } from "../../lib/supabase";
 import { useUserRole } from "../../lib/user-context";
 import { T, R, Shadow } from "../../lib/theme";
+import { Sheet } from "../../components/ds/Sheet";
+import { Button } from "../../components/ds/Button";
 
 const WEB_BASE = "https://siraladaki.app";
 
@@ -30,6 +33,10 @@ export default function SettingsScreen() {
   });
   const [bookingLink, setBookingLink] = useState<string | null>(null);
   const [qrVisible, setQrVisible] = useState(false);
+
+  const [deleteSheetVisible, setDeleteSheetVisible] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const loadAccount = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -76,6 +83,40 @@ export default function SettingsScreen() {
       { text: "Vazgeç", style: "cancel" },
       { text: "Çıkış Yap", style: "destructive", onPress: () => supabase.auth.signOut() },
     ]);
+  }
+
+  function openDeleteSheet() {
+    setDeleteConfirm("");
+    setDeleteSheetVisible(true);
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirm.trim().toUpperCase() !== "SİL") {
+      Alert.alert("Hatalı Onay", "Onaylamak için tam olarak «SİL» yazmalısın.");
+      return;
+    }
+    setDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/delete-account`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? "Silme başarısız.");
+      }
+      await supabase.auth.signOut();
+    } catch (err) {
+      Alert.alert("Hata", (err as Error).message);
+      setDeleting(false);
+    }
   }
 
   return (
@@ -150,8 +191,48 @@ export default function SettingsScreen() {
           <Text style={styles.signOutText}>Çıkış Yap</Text>
         </Pressable>
 
+        <Pressable
+          style={({ pressed }) => [styles.deleteAccount, pressed && { opacity: 0.9 }]}
+          onPress={openDeleteSheet}
+        >
+          <Text style={styles.deleteAccountText}>Hesabı Sil</Text>
+        </Pressable>
+
         <Text style={styles.version}>Berber Panel · Usta Ekranı</Text>
       </ScrollView>
+
+      <Sheet
+        visible={deleteSheetVisible}
+        onClose={() => { if (!deleting) setDeleteSheetVisible(false); }}
+        title="Hesabı Sil"
+        footer={
+          <View style={styles.sheetFooter}>
+            <Button variant="secondary" size="md" onPress={() => setDeleteSheetVisible(false)} disabled={deleting}>
+              Vazgeç
+            </Button>
+            <Button variant="danger" size="md" onPress={handleDeleteAccount} disabled={deleting}>
+              {deleting ? "Siliniyor…" : "Kalıcı Olarak Sil"}
+            </Button>
+          </View>
+        }
+      >
+        <View style={styles.deleteWarning}>
+          <Text style={styles.deleteWarningTitle}>⚠️ Bu işlem geri alınamaz</Text>
+          <Text style={styles.deleteWarningText}>
+            Hesabın silinecek. Usta kaydın dükkan listesinde kalır ama hesabına erişim kapanır.
+          </Text>
+        </View>
+        <Text style={styles.deleteLabel}>Onaylamak için «SİL» yaz:</Text>
+        <TextInput
+          style={styles.deleteInput}
+          value={deleteConfirm}
+          onChangeText={setDeleteConfirm}
+          placeholder="SİL"
+          placeholderTextColor={T.fg4}
+          autoCapitalize="characters"
+          editable={!deleting}
+        />
+      </Sheet>
     </View>
   );
 }
@@ -197,6 +278,13 @@ const styles = StyleSheet.create({
   },
   signOutText: { color: T.coral600, fontSize: 14, fontWeight: "600" },
 
+  deleteAccount: {
+    marginTop: 8,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  deleteAccountText: { color: T.fg4, fontSize: 13, fontWeight: "500" },
+
   version: { marginTop: 18, textAlign: "center", fontSize: 11, color: T.fg4 },
 
   secHead: { marginTop: 26, marginBottom: 12, flexDirection: "row", alignItems: "baseline" },
@@ -236,4 +324,27 @@ const styles = StyleSheet.create({
     backgroundColor: T.brand600, borderRadius: R.md,
   },
   qrCloseText: { color: "#fff", fontSize: 13, fontWeight: "600" },
+
+  sheetFooter: { flexDirection: "row", justifyContent: "flex-end", gap: 10 },
+  deleteWarning: {
+    backgroundColor: T.coral100,
+    borderRadius: R.sm,
+    padding: 14,
+    marginBottom: 16,
+    gap: 6,
+  },
+  deleteWarningTitle: { fontSize: 13, fontWeight: "700", color: T.coral600 },
+  deleteWarningText: { fontSize: 13, color: T.coral600, lineHeight: 19 },
+  deleteLabel: { fontSize: 12, fontWeight: "600", color: T.fg3, marginBottom: 8 },
+  deleteInput: {
+    borderWidth: 1.5,
+    borderColor: T.coral600,
+    borderRadius: R.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    fontWeight: "700",
+    color: T.coral600,
+    letterSpacing: 2,
+  },
 });

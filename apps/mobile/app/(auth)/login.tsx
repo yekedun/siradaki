@@ -10,10 +10,12 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import { T, R, Shadow } from "../../lib/theme";
 
 export default function LoginScreen() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -81,9 +83,11 @@ export default function LoginScreen() {
 
         <View style={styles.spacer} />
 
-        <Text style={styles.footer}>
-          Hesabın yok mu? <Text style={styles.footerLink}>Kayıt ol</Text>
-        </Text>
+        <TouchableOpacity onPress={() => router.push("/(auth)/register" as any)} disabled={loading}>
+          <Text style={styles.footer}>
+            Hesabın yok mu? <Text style={styles.footerLink}>Kayıt ol</Text>
+          </Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
