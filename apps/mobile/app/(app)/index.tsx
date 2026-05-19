@@ -13,7 +13,7 @@ import {
   Easing,
   type LayoutChangeEvent,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Calendar, ChevronRight, Check, Plus } from "lucide-react-native";
 import { addDays, startOfDay, startOfWeek, isSameDay } from "date-fns";
 import { DEFAULT_TIMEZONE } from "@berber/shared/constants";
 import { getDayBoundsUTC } from "@berber/shared/slot-utils";
@@ -212,12 +212,12 @@ export default function AppointmentsScreen() {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={T.navy} />
+          <ActivityIndicator size="large" color={T.brand600} />
         </View>
       ) : timeline.length === 0 ? (
         <ScrollView
           contentContainerStyle={styles.emptyWrap}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.navy} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.brand600} />}
         >
           <EmptyDay date={selectedDay} />
         </ScrollView>
@@ -226,7 +226,7 @@ export default function AppointmentsScreen() {
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.navy} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.brand600} />}
         >
           <Timeline
             items={timeline}
@@ -244,7 +244,7 @@ export default function AppointmentsScreen() {
             style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
             onPress={() => setAddModalVisible(true)}
           >
-            <Feather name="plus" size={18} color="#fff" />
+            <Plus size={18} color="#fff" />
             <Text style={styles.fabText}>Yeni Randevu</Text>
           </Pressable>
         </View>
@@ -492,7 +492,7 @@ function DoneRow({ appt }: { appt: Appointment }) {
           </Text>
         </View>
         <View style={styles.doneCheck}>
-          <Feather name="check" size={11} color={T.muted} />
+          <Check size={11} color={T.fg3} />
         </View>
       </View>
     </View>
@@ -512,7 +512,7 @@ function UpcomingRow({ appt, onPress }: { appt: Appointment; onPress: () => void
           <Text style={styles.upName} numberOfLines={1}>{appt.customer_name}</Text>
           <Text style={styles.upSub} numberOfLines={1}>{appt.services?.name ?? "Randevu"}</Text>
         </View>
-        <Feather name="chevron-right" size={16} color={T.muted} />
+        <ChevronRight size={16} color={T.fg3} />
       </Pressable>
     </View>
   );
@@ -571,7 +571,7 @@ function EmptyDay({ date }: { date: Date }) {
   return (
     <View style={styles.empty}>
       <View style={styles.emptyIconWrap}>
-        <Feather name="calendar" size={28} color={T.muted} />
+        <Calendar size={28} color={T.fg3} />
       </View>
       <Text style={styles.emptyTitle}>Henüz randevu yok</Text>
       <Text style={styles.emptyBody}>
@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: T.bg,
     borderBottomWidth: 1,
-    borderBottomColor: T.line,
+    borderBottomColor: T.border,
     paddingTop: 56,
     paddingBottom: 12,
   },
@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 1.4,
     textTransform: "uppercase",
-    color: T.red,
+    color: T.fg3,
     marginBottom: 4,
   },
   titleRow: {
@@ -608,8 +608,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 12,
   },
-  title: { fontSize: 30, fontWeight: "700", letterSpacing: -0.5, color: T.ink },
-  dateLabel: { fontSize: 12, color: T.muted, fontWeight: "500" },
+  title: { fontSize: 30, fontWeight: "700", letterSpacing: -0.5, color: T.fg1 },
+  dateLabel: { fontSize: 12, color: T.fg3, fontWeight: "500" },
 
   stripContent: { paddingHorizontal: 20, paddingBottom: 4, gap: 8 },
   day: {
@@ -617,31 +617,31 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: T.line,
-    backgroundColor: T.surface,
+    borderColor: T.border,
+    backgroundColor: T.bgElevated,
     alignItems: "center",
     justifyContent: "center",
   },
-  dayToday: { borderWidth: 1.5, borderColor: T.red },
+  dayToday: { borderWidth: 1.5, borderColor: T.positive },
   daySelected: {
-    backgroundColor: T.ink,
-    borderColor: T.ink,
-    ...Shadow.pill,
+    backgroundColor: T.fg1,
+    borderColor: T.fg1,
+    ...Shadow.md,
   },
   dow: {
     fontSize: 10,
     fontWeight: "600",
     letterSpacing: 0.5,
     textTransform: "uppercase",
-    color: T.muted,
+    color: T.fg3,
     marginBottom: 2,
   },
   dowSelected: { color: "rgba(255,255,255,0.7)" },
-  dnum: { fontSize: 20, fontWeight: "700", color: T.ink },
+  dnum: { fontSize: 20, fontWeight: "700", color: T.fg1 },
   dnumSelected: { color: "#fff" },
   todayDot: {
     width: 4, height: 4, borderRadius: 4,
-    backgroundColor: T.red,
+    backgroundColor: T.positive,
     marginTop: 3,
   },
   todayDotOnSel: { backgroundColor: "#fff" },
@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: T.past,
+    backgroundColor: T.slate300,
     borderRadius: 2,
   },
   trackFuture: { position: "absolute", left: 0, right: 0, bottom: 0, borderRadius: 2, backgroundColor: T.brand100, opacity: 0.6 },
@@ -675,16 +675,16 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 12,
     fontWeight: "600",
-    color: T.ink,
+    color: T.fg1,
     fontVariant: ["tabular-nums"],
   },
   timeEnd: {
     fontSize: 11,
     fontWeight: "500",
-    color: T.muted,
+    color: T.fg3,
     fontVariant: ["tabular-nums"],
   },
-  timePast: { color: T.mutedAlt, fontWeight: "500" },
+  timePast: { color: T.fg4, fontWeight: "500" },
   trackCol: {
     width: TRACK_COL,
     alignItems: "center",
@@ -698,15 +698,15 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   diamondPast: {
-    backgroundColor: T.past,
+    backgroundColor: T.slate300,
     borderWidth: 2,
     borderColor: T.bg,
   },
   diamondNavy: {
-    backgroundColor: T.navy,
+    backgroundColor: T.brand600,
     borderWidth: 2,
     borderColor: "#fff",
-    ...Shadow.card,
+    ...Shadow.sm,
   },
   diamondSlate: {
     backgroundColor: "#94A3B8",
@@ -728,14 +728,14 @@ const styles = StyleSheet.create({
   doneName: {
     fontSize: 14,
     fontWeight: "600",
-    color: T.mutedAlt,
+    color: T.fg4,
     textDecorationLine: "line-through",
-    textDecorationColor: T.mutedAlt,
+    textDecorationColor: T.fg4,
   },
-  doneSub: { fontSize: 12, color: T.mutedAlt, marginTop: 2 },
+  doneSub: { fontSize: 12, color: T.fg4, marginTop: 2 },
   doneCheck: {
     width: 18, height: 18, borderRadius: 9,
-    backgroundColor: T.line,
+    backgroundColor: T.border,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -746,34 +746,34 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: T.surface,
-    borderRadius: R.card,
+    backgroundColor: T.bgElevated,
+    borderRadius: R.md,
     borderWidth: 1,
-    borderColor: T.line,
+    borderColor: T.border,
     paddingVertical: 12,
     paddingHorizontal: 14,
     marginRight: 14,
     marginBottom: 14,
-    ...Shadow.card,
+    ...Shadow.sm,
   },
   avatar: {
     width: 36, height: 36, borderRadius: 10,
-    backgroundColor: T.avatarFrom,
+    backgroundColor: T.brand100,
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarTxt: { fontSize: 14, fontWeight: "700", color: T.navy },
+  avatarTxt: { fontSize: 14, fontWeight: "700", color: T.brand600 },
   upMain: { flex: 1, minWidth: 0 },
-  upName: { fontSize: 14, fontWeight: "600", color: T.ink },
-  upSub: { fontSize: 12, color: T.blue, marginTop: 2, fontWeight: "500" },
+  upName: { fontSize: 14, fontWeight: "600", color: T.fg1 },
+  upSub: { fontSize: 12, color: T.brand500, marginTop: 2, fontWeight: "500" },
 
   // Block card
   blockCard: {
     flex: 1,
-    backgroundColor: T.surfaceAlt,
-    borderRadius: R.card,
+    backgroundColor: T.bgSunken,
+    borderRadius: R.md,
     borderWidth: 1,
-    borderColor: T.hairAlt,
+    borderColor: T.slate300,
     borderStyle: "dashed",
     paddingVertical: 14,
     paddingHorizontal: 14,
@@ -785,7 +785,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 2,
-    color: T.blockInk,
+    color: T.fg3,
     textTransform: "uppercase",
   },
 
@@ -799,23 +799,23 @@ const styles = StyleSheet.create({
   nowTime: {
     fontSize: 12,
     fontWeight: "700",
-    color: T.red,
+    color: T.positive,
     fontVariant: ["tabular-nums"],
   },
   nowDotWrap: { width: 14, height: 14, alignItems: "center", justifyContent: "center" },
   nowHalo: {
     position: "absolute",
     width: 14, height: 14, borderRadius: 14,
-    backgroundColor: T.red,
+    backgroundColor: T.positive,
   },
   nowDot: {
     width: 14, height: 14, borderRadius: 14,
-    backgroundColor: T.red,
+    backgroundColor: T.positive,
   },
   nowLine: {
     flex: 1,
     height: 2,
-    backgroundColor: T.red,
+    backgroundColor: T.positive,
     borderRadius: 2,
     marginRight: 18,
   },
@@ -825,13 +825,13 @@ const styles = StyleSheet.create({
   empty: { padding: 60, alignItems: "center" },
   emptyIconWrap: {
     width: 64, height: 64, borderRadius: 32,
-    backgroundColor: T.surfaceAlt,
+    backgroundColor: T.bgSunken,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
   },
-  emptyTitle: { fontSize: 16, fontWeight: "600", color: T.ink, marginBottom: 6 },
-  emptyBody: { fontSize: 13, color: T.muted, textAlign: "center", lineHeight: 19 },
+  emptyTitle: { fontSize: 16, fontWeight: "600", color: T.fg1, marginBottom: 6 },
+  emptyBody: { fontSize: 13, color: T.fg3, textAlign: "center", lineHeight: 19 },
 
   // FAB
   fabWrap: {
@@ -844,13 +844,13 @@ const styles = StyleSheet.create({
   fab: {
     width: "100%",
     paddingVertical: 16,
-    backgroundColor: T.navy,
-    borderRadius: R.fab,
+    backgroundColor: T.brand600,
+    borderRadius: R.md,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    ...Shadow.cta,
+    ...Shadow.md,
   },
   fabPressed: { transform: [{ scale: 0.985 }] },
   fabText: { color: "#fff", fontSize: 15, fontWeight: "600" },
