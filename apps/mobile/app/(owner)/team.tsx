@@ -9,7 +9,7 @@ import {
   Alert,
   Switch,
 } from "react-native";
-import { UserPlus, Percent, Link, Clock, PauseCircle, PlayCircle } from "lucide-react-native";
+import { Percent, Link, Clock, PauseCircle, PlayCircle, ChevronRight } from "lucide-react-native";
 import { supabase } from "../../lib/supabase";
 import { useUserRole } from "../../lib/user-context";
 import { T, R, S, Type, Shadow } from "../../lib/theme";

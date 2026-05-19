@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import {
   View, Text, StyleSheet, Pressable, ActivityIndicator, Alert, ScrollView,
 } from "react-native";
-import { Plus, Key, Lock } from "lucide-react-native";
+import { Key, Lock } from "lucide-react-native";
 import { supabase } from "../../lib/supabase";
 import { useUserRole } from "../../lib/user-context";
 import { T, R, S, Type, Shadow } from "../../lib/theme";

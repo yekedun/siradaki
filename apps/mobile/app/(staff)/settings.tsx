@@ -16,7 +16,7 @@ import * as Clipboard from "expo-clipboard";
 import { supabase } from "../../lib/supabase";
 import { useUserRole } from "../../lib/user-context";
 import { T, R, Shadow, Type } from "../../lib/theme";
-import { OverlineHeader, SectionLabel, Button } from "../../components/ds";
+import { OverlineHeader, SectionLabel, Card, Button } from "../../components/ds";
 import { Sheet } from "../../components/ds/Sheet";
 
 const WEB_BASE = "https://siraladaki.app";
@@ -124,7 +124,7 @@ export default function SettingsScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <OverlineHeader eyebrow="AYARLAR" title="Hesabım" />
 
-        <View style={styles.accountCard}>
+        <Card style={styles.accountCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarTxt}>{initials(account.name) || "U"}</Text>
           </View>
@@ -132,7 +132,7 @@ export default function SettingsScreen() {
             <Text style={styles.accountName} numberOfLines={1}>{account.name}</Text>
             <Text style={styles.accountEmail} numberOfLines={1}>{account.email}</Text>
           </View>
-        </View>
+        </Card>
 
         {bookingLink && (
           <>
@@ -227,16 +227,10 @@ const styles = StyleSheet.create({
   accountCard: {
     marginTop: 22,
     marginHorizontal: 20,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    backgroundColor: T.bgElevated,
-    borderWidth: 1,
-    borderColor: T.border,
-    borderRadius: R.md,
+    marginBottom: 4,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    ...Shadow.sm,
   },
   avatar: {
     width: 44, height: 44, borderRadius: 12,

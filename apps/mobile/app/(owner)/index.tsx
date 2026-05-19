@@ -9,7 +9,7 @@ import {
   Pressable,
   Text,
 } from "react-native";
-import { Star, TrendingUp, ChevronRight } from "lucide-react-native";
+import { ChevronRight } from "lucide-react-native";
 import { startOfDay, addDays } from "date-fns";
 import { supabase } from "../../lib/supabase";
 import { useUserRole } from "../../lib/user-context";
@@ -192,23 +192,21 @@ export default function OwnerDashboard() {
         ) : stats ? (
           <>
             <View style={styles.kpiRow}>
-              <KpiCard label="Bugün" value={String(stats.total)} />
-              <KpiCard label="Tamamlanan" value={String(stats.completed)} accent />
-              <KpiCard label="Tahmini ₺" value={String(stats.revenue)} />
+              <KpiCard label="Bugün Toplam" value={String(stats.total)} />
+              <KpiCard label="Tamamlanan" value={String(stats.completed)} />
+              <KpiCard label="Tahmini" value={String(stats.revenue)} unit="TL" accent />
             </View>
 
             <SectionLabel>ÖNGÖRÜLER (30 GÜN)</SectionLabel>
-            <Card style={styles.insightCard}>
-              <View style={styles.insightItem}>
-                <Star size={16} color={T.brand600} />
+            <Card style={styles.insightCard} padded={false}>
+              <View style={styles.insightRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.insightLabel}>En Çok Tercih Edilen</Text>
                   <Text style={styles.insightValue}>{stats.topStaff || "Veri Yok"}</Text>
                 </View>
               </View>
               <View style={styles.insightDivider} />
-              <View style={styles.insightItem}>
-                <TrendingUp size={16} color={T.brand600} />
+              <View style={styles.insightRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.insightLabel}>En Yoğun Gün</Text>
                   <Text style={styles.insightValue}>
@@ -226,24 +224,26 @@ export default function OwnerDashboard() {
             {stats.staffStats.length === 0 ? (
               <Text style={styles.emptyTxt}>Bu personele ait randevu yok.</Text>
             ) : (
-              stats.staffStats.map((b) => (
-                <Pressable
-                  key={b.id}
-                  onPress={() => handleSelectStaff(selectedStaffId === b.id ? null : b.id)}
-                  style={({ pressed }) => [styles.staffRow, pressed && { opacity: 0.8 }]}
-                >
-                  <View style={[styles.avatar, selectedStaffId === b.id && { backgroundColor: T.brand100 }]}>
-                    <Text style={styles.avatarText}>
-                      {b.name.split(" ").map((n: string) => n[0] ?? "").join("").slice(0, 2).toUpperCase()}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.staffName}>{b.name}</Text>
-                    <Text style={styles.staffCount}>{b.count} randevu</Text>
-                  </View>
-                  <ChevronRight size={16} color={T.fg4} />
-                </Pressable>
-              ))
+              <View style={styles.staffList}>
+                {stats.staffStats.map((b) => (
+                  <Pressable
+                    key={b.id}
+                    onPress={() => handleSelectStaff(selectedStaffId === b.id ? null : b.id)}
+                    style={({ pressed }) => [styles.staffCard, pressed && { opacity: 0.8 }]}
+                  >
+                    <View style={[styles.avatar, selectedStaffId === b.id && { backgroundColor: T.brand100 }]}>
+                      <Text style={styles.avatarText}>
+                        {b.name.split(" ").map((n: string) => n[0] ?? "").join("").slice(0, 2).toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.staffName}>{b.name}</Text>
+                      <Text style={styles.staffCount}>{b.count} randevu</Text>
+                    </View>
+                    <ChevronRight size={18} color={T.slate400} strokeWidth={1.75} />
+                  </Pressable>
+                ))}
+              </View>
             )}
           </>
         ) : null}
@@ -256,28 +256,67 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scroll: { paddingTop: 64, paddingBottom: 40 },
   chipRow: { marginBottom: S.s5 },
-  kpiRow: { flexDirection: "row", gap: 10, marginBottom: 28, paddingHorizontal: S.s5 },
-  insightCard: { marginHorizontal: S.s5, marginBottom: 24, padding: 16 },
-  insightItem: { flexDirection: "row", alignItems: "center", gap: 12 },
-  insightDivider: { height: 1, backgroundColor: T.border, marginVertical: 12 },
-  insightLabel: { fontSize: 11, fontFamily: Type.family, color: T.fg3, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 },
-  insightValue: { fontSize: 14, fontFamily: Type.family, fontWeight: Type.weight.bold, color: T.fg1 },
-  staffRow: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    paddingVertical: 12, paddingHorizontal: 16,
-    backgroundColor: T.bgElevated, borderWidth: 1, borderColor: T.border,
-    borderRadius: R.md, marginHorizontal: S.s5, marginBottom: 8, ...Shadow.sm,
+
+  kpiRow: { flexDirection: "row", gap: 8, marginBottom: 28, paddingHorizontal: S.s5 },
+
+  insightCard: { marginHorizontal: S.s5, marginBottom: 24 },
+  insightRow: { padding: 16 },
+  insightDivider: { height: 1, backgroundColor: T.slate100 },
+  insightLabel: {
+    fontSize: 11,
+    fontFamily: Type.family,
+    fontWeight: Type.weight.semibold,
+    letterSpacing: 0.56,
+    textTransform: "uppercase",
+    color: T.slate500,
+    marginBottom: 4,
+  },
+  insightValue: {
+    fontSize: 15,
+    fontFamily: Type.family,
+    fontWeight: Type.weight.semibold,
+    color: T.fg1,
+  },
+
+  staffList: { paddingHorizontal: S.s5, gap: 8 },
+  staffCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    backgroundColor: T.bgElevated,
+    borderWidth: 1,
+    borderColor: T.border,
+    borderRadius: R.md,
+    ...Shadow.sm,
   },
   avatar: {
-    width: 36, height: 36, borderRadius: R.pill,
+    width: 36,
+    height: 36,
+    borderRadius: R.pill,
     backgroundColor: T.slate100,
-    alignItems: "center", justifyContent: "center",
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarText: {
-    fontSize: 13, fontFamily: Type.family,
-    fontWeight: Type.weight.bold, color: T.ink900,
+    fontSize: 13,
+    fontFamily: Type.family,
+    fontWeight: Type.weight.bold,
+    color: T.ink900,
   },
-  staffName: { fontSize: 15, fontFamily: Type.family, fontWeight: Type.weight.semibold, color: T.fg1 },
+  staffName: {
+    fontSize: 15,
+    fontFamily: Type.family,
+    fontWeight: Type.weight.semibold,
+    color: T.fg1,
+  },
   staffCount: { fontSize: 12, fontFamily: Type.family, color: T.fg3, marginTop: 2 },
-  emptyTxt: { fontSize: 13, fontFamily: Type.family, color: T.fg4, textAlign: "center", paddingVertical: 20 },
+  emptyTxt: {
+    fontSize: 13,
+    fontFamily: Type.family,
+    color: T.fg4,
+    textAlign: "center",
+    paddingVertical: 20,
+    paddingHorizontal: S.s5,
+  },
 });

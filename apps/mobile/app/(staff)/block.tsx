@@ -7,11 +7,11 @@ import {
   Alert,
   ScrollView,
 } from "react-native";
-import { UserCheck, Coffee, User } from "lucide-react-native";
+import { UserCheck, Coffee, User, type LucideIcon } from "lucide-react-native";
 import { T, R, Type, Shadow } from "../../lib/theme";
 import { OverlineHeader, SectionLabel, Button } from "../../components/ds";
 
-const REASON_ICONS: Record<"walkin" | "break" | "personal", React.ComponentType<{ size: number; color: string }>> = {
+const REASON_ICONS: Record<"walkin" | "break" | "personal", LucideIcon> = {
   walkin: UserCheck,
   break: Coffee,
   personal: User,
@@ -148,7 +148,7 @@ export default function BlockScreen() {
                 })()}
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.reasonLabel, sel && { color: "#fff" }]}>{r.label}</Text>
-                  <Text style={styles.reasonMeta}>{r.meta}</Text>
+                  <Text style={[styles.reasonMeta, sel && { color: "rgba(255,255,255,0.65)" }]}>{r.meta}</Text>
                 </View>
               </Pressable>
             );

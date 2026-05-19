@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  Pressable,
   ScrollView,
   RefreshControl,
 } from "react-native";
@@ -15,13 +14,14 @@ import { addDays, startOfDay, startOfWeek } from "date-fns";
 import { DEFAULT_TIMEZONE } from "@berber/shared/constants";
 import { getDayBoundsUTC } from "@berber/shared/slot-utils";
 import { supabase } from "../../lib/supabase";
-import { T, R, Shadow, Type } from "../../lib/theme";
+import { T, R, Shadow, Type, S } from "../../lib/theme";
 import {
   AppointmentCard,
   BlokCard,
   OverlineHeader,
   SectionLabel,
   DayPicker,
+  Button,
 } from "../../components/ds";
 import { AddAppointmentModal } from "../../components/AddAppointmentModal";
 import { AppointmentDetailSheet } from "../../components/AppointmentDetailSheet";
@@ -56,16 +56,11 @@ const APPT_COLS =
 
 function fmtHM(iso: string | Date): string {
   const d = typeof iso === "string" ? new Date(iso) : iso;
-  return d.toLocaleTimeString("tr-TR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: TZ,
-  });
+  return d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
 }
 function durationMin(start: string, end: string): number {
   return Math.max(0, Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000));
 }
-
 function getApptState(appt: Appointment, now: Date): "done" | "active" | "upcoming" {
   if (appt.status === "completed" || appt.status === "cancelled") return "done";
   const start = new Date(appt.starts_at);
@@ -87,15 +82,9 @@ export default function AppointmentsScreen() {
   const [detailAppt, setDetailAppt] = useState<Appointment | null>(null);
   const [statusActionLoading, setStatusActionLoading] = useState(false);
   const [now, setNow] = useState<Date>(() => new Date());
-
   const reqIdRef = useRef(0);
 
-  const weekStart = useMemo(
-    () => startOfWeek(selectedDay, { weekStartsOn: 1 }),
-    [selectedDay]
-  );
-
-  // DayPicker uses numeric index (0-6) within the week starting at weekStart
+  const weekStart = useMemo(() => startOfWeek(selectedDay, { weekStartsOn: 1 }), [selectedDay]);
   const selectedDayIndex = useMemo(() => {
     const diffMs = startOfDay(selectedDay).getTime() - weekStart.getTime();
     const idx = Math.round(diffMs / (24 * 60 * 60 * 1000));
@@ -103,9 +92,7 @@ export default function AppointmentsScreen() {
   }, [selectedDay, weekStart]);
 
   const handleDayPickerChange = useCallback(
-    (index: number) => {
-      setSelectedDay(startOfDay(addDays(weekStart, index)));
-    },
+    (index: number) => setSelectedDay(startOfDay(addDays(weekStart, index))),
     [weekStart]
   );
 
@@ -115,35 +102,23 @@ export default function AppointmentsScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const { data: staff } = await supabase
-      .from("staff")
-      .select("id, shop_id")
-      .eq("user_id", user.id)
-      .single();
-    if (staff) {
-      setStaffId(staff.id);
-      setShopId(staff.shop_id);
-    }
+      .from("staff").select("id, shop_id").eq("user_id", user.id).single();
+    if (staff) { setStaffId(staff.id); setShopId(staff.shop_id); }
   }, []);
 
   const fetchDay = useCallback(async (bid: string, day: Date) => {
     const reqId = ++reqIdRef.current;
     const { start, end } = getDayBoundsUTC(day, TZ);
-    const dayStart = start.toISOString();
-    const dayEnd = end.toISOString();
     const [{ data: appts }, { data: blks }] = await Promise.all([
-      supabase
-        .from("appointments")
-        .select(APPT_COLS)
+      supabase.from("appointments").select(APPT_COLS)
         .eq("staff_id", bid)
-        .gte("starts_at", dayStart)
-        .lt("starts_at", dayEnd)
+        .gte("starts_at", start.toISOString())
+        .lt("starts_at", end.toISOString())
         .order("starts_at", { ascending: true }),
-      supabase
-        .from("blocks")
-        .select("id, starts_at, ends_at")
+      supabase.from("blocks").select("id, starts_at, ends_at")
         .eq("staff_id", bid)
-        .gte("starts_at", dayStart)
-        .lt("starts_at", dayEnd),
+        .gte("starts_at", start.toISOString())
+        .lt("starts_at", end.toISOString()),
     ]);
     if (reqId !== reqIdRef.current) return;
     setAppointments((appts as unknown as Appointment[]) ?? []);
@@ -153,13 +128,11 @@ export default function AppointmentsScreen() {
   }, []);
 
   useEffect(() => { fetchStaff(); }, [fetchStaff]);
-
   useEffect(() => {
     if (!staffId) return;
     setLoading(true);
     fetchDay(staffId, selectedDay);
   }, [staffId, selectedDay, fetchDay]);
-
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
@@ -186,53 +159,32 @@ export default function AppointmentsScreen() {
 
   const dateLabel = `${selectedDay.getDate()} ${MONTH_NAMES[selectedDay.getMonth()]} ${selectedDay.getFullYear()}, ${DAY_NAMES[(selectedDay.getDay() + 6) % 7]}`;
 
-  // Group appointments by state
   const doneItems = useMemo(
-    () =>
-      appointments
-        .filter((a) => getApptState(a, now) === "done")
-        .sort((x, y) => x.starts_at.localeCompare(y.starts_at)),
+    () => appointments.filter((a) => getApptState(a, now) === "done").sort((x, y) => x.starts_at.localeCompare(y.starts_at)),
     [appointments, now]
   );
-
   const activeItems = useMemo(
-    () =>
-      appointments
-        .filter((a) => getApptState(a, now) === "active")
-        .sort((x, y) => x.starts_at.localeCompare(y.starts_at)),
+    () => appointments.filter((a) => getApptState(a, now) === "active").sort((x, y) => x.starts_at.localeCompare(y.starts_at)),
     [appointments, now]
   );
-
   const upcomingItems = useMemo(
-    () =>
-      appointments
-        .filter((a) => getApptState(a, now) === "upcoming")
-        .sort((x, y) => x.starts_at.localeCompare(y.starts_at)),
+    () => appointments.filter((a) => getApptState(a, now) === "upcoming").sort((x, y) => x.starts_at.localeCompare(y.starts_at)),
     [appointments, now]
   );
-
-  // Upcoming mixed list: appointments + blocks sorted by starts_at
   const upcomingMixed: TimelineItem[] = useMemo(() => {
     const items: TimelineItem[] = [
-      ...upcomingItems.map((a): TimelineItem => ({
-        kind: "appt", key: a.id, starts_at: a.starts_at, appt: a,
-      })),
-      ...blocks.map((b): TimelineItem => ({
-        kind: "block", key: `block-${b.id}`, starts_at: b.starts_at, block: b,
-      })),
+      ...upcomingItems.map((a): TimelineItem => ({ kind: "appt", key: a.id, starts_at: a.starts_at, appt: a })),
+      ...blocks.map((b): TimelineItem => ({ kind: "block", key: `block-${b.id}`, starts_at: b.starts_at, block: b })),
     ];
     return items.sort((x, y) => x.starts_at.localeCompare(y.starts_at));
   }, [upcomingItems, blocks]);
 
-  const isEmpty =
-    doneItems.length === 0 &&
-    activeItems.length === 0 &&
-    upcomingMixed.length === 0;
+  const isEmpty = doneItems.length === 0 && activeItems.length === 0 && upcomingMixed.length === 0;
 
   return (
     <View style={styles.root}>
       <OverlineHeader
-        eyebrow="Berber · Dükkan Paneli"
+        eyebrow="BERBER · DÜKKAN PANELİ"
         title="Randevular"
         meta={dateLabel}
       />
@@ -253,14 +205,9 @@ export default function AppointmentsScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={T.brand600}
-            />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.brand600} />
           }
         >
-          {/* Done section */}
           {doneItems.length > 0 && (
             <>
               <SectionLabel>Tamamlandı</SectionLabel>
@@ -281,7 +228,6 @@ export default function AppointmentsScreen() {
             </>
           )}
 
-          {/* Active section */}
           {activeItems.length > 0 && (
             <>
               <SectionLabel>Şu Anda</SectionLabel>
@@ -303,7 +249,6 @@ export default function AppointmentsScreen() {
             </>
           )}
 
-          {/* Upcoming section (appointments + blocks mixed) */}
           {upcomingMixed.length > 0 && (
             <>
               <SectionLabel>Gelecek</SectionLabel>
@@ -328,11 +273,7 @@ export default function AppointmentsScreen() {
                   const dur = durationMin(block.starts_at, block.ends_at);
                   return (
                     <View key={item.key} style={styles.cardWrap}>
-                      <BlokCard
-                        time={fmtHM(block.starts_at)}
-                        duration={dur}
-                        label="Bloke"
-                      />
+                      <BlokCard time={fmtHM(block.starts_at)} duration={dur} label="Bloke" />
                     </View>
                   );
                 }
@@ -340,10 +281,12 @@ export default function AppointmentsScreen() {
             </>
           )}
 
-          {/* Empty state */}
           {isEmpty && (
             <View style={styles.emptyWrap}>
-              <Text style={styles.emptyText}>Bugün randevu yok.</Text>
+              <Text style={styles.emptyTitle}>Henüz randevu yok</Text>
+              <Text style={styles.emptyText}>
+                {`${selectedDay.getDate()} ${MONTH_NAMES[selectedDay.getMonth()]} için randevu bulunmuyor.\nYeni Randevu butonuna basarak ekleyebilirsiniz.`}
+              </Text>
             </View>
           )}
         </ScrollView>
@@ -351,13 +294,16 @@ export default function AppointmentsScreen() {
 
       {staffId && (
         <View style={styles.fabWrap} pointerEvents="box-none">
-          <Pressable
-            style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+          <Button
+            variant="accent"
+            size="lg"
+            full
             onPress={() => setAddModalVisible(true)}
+            style={styles.fabBtn}
           >
-            <Plus size={18} color="#fff" />
-            <Text style={styles.fabText}>Yeni Randevu</Text>
-          </Pressable>
+            <Plus size={18} color="#fff" strokeWidth={2} />
+            Yeni Randevu
+          </Button>
         </View>
       )}
 
@@ -369,10 +315,7 @@ export default function AppointmentsScreen() {
           initialDate={selectedDay}
           editingAppt={editingAppt}
           onSaved={() => fetchDay(staffId, selectedDay)}
-          onClose={() => {
-            setAddModalVisible(false);
-            setEditingAppt(null);
-          }}
+          onClose={() => { setAddModalVisible(false); setEditingAppt(null); }}
         />
       )}
 
@@ -388,10 +331,7 @@ export default function AppointmentsScreen() {
               p_appointment_id: detailAppt.id,
             });
             setStatusActionLoading(false);
-            if (error) {
-              Alert.alert("Hata", error.message || "Randevu tamamlanamadi.");
-              return;
-            }
+            if (error) { Alert.alert("Hata", error.message || "Randevu tamamlanamadi."); return; }
             if (staffId) await fetchDay(staffId, selectedDay);
             setDetailAppt(null);
             return;
@@ -402,10 +342,7 @@ export default function AppointmentsScreen() {
               p_appointment_id: detailAppt.id,
             } as never);
             setStatusActionLoading(false);
-            if (error) {
-              Alert.alert("Hata", error.message || "Randevu iptal edilemedi.");
-              return;
-            }
+            if (error) { Alert.alert("Hata", error.message || "Randevu iptal edilemedi."); return; }
             if (staffId) await fetchDay(staffId, selectedDay);
             setDetailAppt(null);
             return;
@@ -423,48 +360,28 @@ export default function AppointmentsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
-
   scroll: { flex: 1, backgroundColor: T.bg },
   scrollContent: { paddingTop: 8, paddingBottom: 110 },
+  cardWrap: { paddingHorizontal: S.s4, marginBottom: 8 },
 
-  cardWrap: {
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-
-  emptyWrap: {
-    paddingHorizontal: 16,
-    paddingTop: 40,
-    alignItems: "center",
+  emptyWrap: { paddingHorizontal: S.s4, paddingTop: 48, alignItems: "center", gap: 8 },
+  emptyTitle: {
+    fontSize: 15,
+    fontFamily: Type.family,
+    fontWeight: Type.weight.semibold,
+    color: T.fg1,
+    textAlign: "center",
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: Type.family,
     color: T.fg3,
     textAlign: "center",
+    lineHeight: 20,
   },
 
-  // FAB
-  fabWrap: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    bottom: 24,
-    zIndex: 20,
-  },
-  fab: {
-    width: "100%",
-    paddingVertical: 16,
-    backgroundColor: T.brand600,
-    borderRadius: R.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    ...Shadow.md,
-  },
-  fabPressed: { transform: [{ scale: 0.985 }] },
-  fabText: { color: "#fff", fontSize: 15, fontFamily: Type.family, fontWeight: Type.weight.semibold },
+  fabWrap: { position: "absolute", left: S.s4, right: S.s4, bottom: 24, zIndex: 20 },
+  fabBtn: { ...Shadow.md },
 
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
 });

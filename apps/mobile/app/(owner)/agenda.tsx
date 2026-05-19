@@ -11,22 +11,25 @@ import {
   PanResponder,
   type PanResponderGestureState,
 } from "react-native";
+import { Plus } from "lucide-react-native";
 import { addDays, startOfDay, startOfWeek, differenceInDays } from "date-fns";
 import { DEFAULT_TIMEZONE } from "@berber/shared/constants";
 import { getDayBoundsUTC } from "@berber/shared/slot-utils";
 import { supabase } from "../../lib/supabase";
 import { useUserRole } from "../../lib/user-context";
 import { AddAppointmentModal } from "../../components/AddAppointmentModal";
-import { T, R, Shadow, Type } from "../../lib/theme";
+import { T, R, Shadow, Type, S } from "../../lib/theme";
 import { DayPicker } from "../../components/ds/DayPicker";
 import { AppointmentCard } from "../../components/ds/AppointmentCard";
 import { BlokCard } from "../../components/ds/BlokCard";
 import { Button } from "../../components/ds/Button";
+import { Sheet } from "../../components/ds/Sheet";
+import { OverlineHeader } from "../../components/ds";
 
 const TZ = DEFAULT_TIMEZONE;
-const CARD_WIDTH = 200;
-const COLUMN_GAP = 10;
-const COLUMN_PADDING = 12;
+const CARD_WIDTH = 220;
+const COLUMN_GAP = 12;
+const COLUMN_PADDING = 16;
 const COLUMN_STEP = CARD_WIDTH + COLUMN_GAP;
 
 function fmtHM(iso: string): string {
@@ -110,6 +113,7 @@ export default function OwnerAgenda() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDay, setSelectedDay] = useState<Date>(() => startOfDay(new Date()));
   const [modalStaff, setModalStaff] = useState<Staff | null>(null);
+  const [staffPickerVisible, setStaffPickerVisible] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragTargetStaffId, setDragTargetStaffId] = useState<string | null>(null);
   const [scrollX, setScrollX] = useState(0);
@@ -155,8 +159,6 @@ export default function OwnerAgenda() {
       .eq("shop_id", shopId);
 
     if (!staffData) { setLoading(false); setRefreshing(false); return; }
-    // Referans ancak içerik gerçekten değişmişse güncellenir; aksi halde
-    // subscription useEffect gereksiz yere yeniden kurulur.
     setStaff((prev) => {
       if (
         prev.length === staffData.length &&
@@ -216,6 +218,15 @@ export default function OwnerAgenda() {
 
   function onRefresh() { setRefreshing(true); load(); }
 
+  function handleFabPress() {
+    if (staff.length === 0) return;
+    if (staff.length === 1) {
+      setModalStaff(staff[0]!);
+    } else {
+      setStaffPickerVisible(true);
+    }
+  }
+
   const resolveDropStaff = useCallback((moveX: number): Staff | null => {
     const contentX = scrollX + moveX - COLUMN_PADDING;
     const index = Math.floor(contentX / COLUMN_STEP);
@@ -224,7 +235,7 @@ export default function OwnerAgenda() {
 
   const moveAppointment = useCallback(async (appt: Appt, targetStaff: Staff) => {
     if (!appt.service_id) {
-      Alert.alert("Tasinamadi", "Bu randevunun kayitli hizmeti yok.");
+      Alert.alert("Taşınamadı", "Bu randevunun kayıtlı hizmeti yok.");
       return;
     }
     if (targetStaff.id === appt.staff_id) return;
@@ -246,9 +257,9 @@ export default function OwnerAgenda() {
     if (error) {
       await load();
       if (error.code === "23P01" || error.code === "P0001") {
-        Alert.alert("Cakisma", error.message || "Hedef personelde bu saat artik musait degil.");
+        Alert.alert("Çakışma", error.message || "Hedef personelde bu saat artık müsait değil.");
       } else {
-        Alert.alert("Tasinamadi", error.message);
+        Alert.alert("Taşınamadı", error.message);
       }
       return;
     }
@@ -281,17 +292,15 @@ export default function OwnerAgenda() {
 
   return (
     <View style={styles.root}>
-      {/* Hafta strip */}
-      <View style={styles.weekStrip}>
-        <DayPicker
-          value={selectedIndex}
-          onChange={(i) => setSelectedDay(startOfDay(addDays(weekStart, i)))}
-          days={7}
-          startDate={weekStart}
-        />
-      </View>
+      <OverlineHeader eyebrow="BERBER · DÜKKAN PANELİ" title="Ajanda" />
 
-      {/* Ustalar yan yana */}
+      <DayPicker
+        value={selectedIndex}
+        onChange={(i) => setSelectedDay(startOfDay(addDays(weekStart, i)))}
+        days={7}
+        startDate={weekStart}
+      />
+
       {loading ? (
         <ActivityIndicator color={T.brand600} style={{ marginTop: 40 }} />
       ) : (
@@ -343,23 +352,53 @@ export default function OwnerAgenda() {
                     )
                   )
                 )}
-
-                {/* Manuel randevu ekle */}
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  full
-                  onPress={() => setModalStaff(st)}
-                >
-                  + Randevu Ekle
-                </Button>
               </View>
             );
           })}
         </ScrollView>
       )}
 
-      {/* Manuel randevu modal */}
+      {/* Floating accent button — Randevu Ekle */}
+      {!loading && staff.length > 0 && (
+        <View style={styles.fabWrap} pointerEvents="box-none">
+          <Button
+            variant="accent"
+            size="lg"
+            onPress={handleFabPress}
+            style={styles.fab}
+          >
+            <Plus size={18} color="#fff" strokeWidth={2} />
+            Randevu Ekle
+          </Button>
+        </View>
+      )}
+
+      {/* Staff picker sheet (multi-staff) */}
+      <Sheet
+        visible={staffPickerVisible}
+        onClose={() => setStaffPickerVisible(false)}
+        title="Usta Seç"
+      >
+        <View style={styles.staffPickerList}>
+          {staff.map((st) => (
+            <Button
+              key={st.id}
+              variant="secondary"
+              size="md"
+              full
+              onPress={() => {
+                setStaffPickerVisible(false);
+                setModalStaff(st);
+              }}
+              style={styles.staffPickerBtn}
+            >
+              {st.name}
+            </Button>
+          ))}
+        </View>
+      </Sheet>
+
+      {/* Randevu ekleme modal */}
       {modalStaff && shopId && (
         <AddAppointmentModal
           visible={!!modalStaff}
@@ -377,15 +416,7 @@ export default function OwnerAgenda() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
 
-  weekStrip: {
-    paddingTop: 56,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: T.border,
-    backgroundColor: T.bg,
-  },
-
-  columnsContainer: { padding: 12, gap: 10, alignItems: "flex-start" },
+  columnsContainer: { padding: COLUMN_PADDING, gap: COLUMN_GAP, alignItems: "flex-start", paddingBottom: 110 },
   column: {
     width: CARD_WIDTH,
     backgroundColor: T.bgElevated,
@@ -401,8 +432,21 @@ const styles = StyleSheet.create({
     backgroundColor: T.accentTint,
   },
   colHeader: { borderBottomWidth: 1, borderBottomColor: T.border, paddingBottom: 8 },
-  colName: { fontSize: 14, fontFamily: Type.family, fontWeight: Type.weight.bold, color: T.brand600 },
-  colCount: { fontSize: 11, fontFamily: Type.family, color: T.fg3, marginTop: 2 },
+  colName: {
+    fontSize: 15,
+    fontFamily: Type.family,
+    fontWeight: Type.weight.bold,
+    color: T.fg1,
+  },
+  colCount: {
+    fontSize: 11,
+    fontFamily: Type.family,
+    fontWeight: Type.weight.semibold,
+    letterSpacing: 0.48,
+    textTransform: "uppercase",
+    color: T.slate500,
+    marginTop: 4,
+  },
 
   emptyCol: { paddingVertical: 20, alignItems: "center" },
   emptyTxt: { fontSize: 12, fontFamily: Type.family, color: T.fg4 },
@@ -412,4 +456,17 @@ const styles = StyleSheet.create({
     opacity: 0.65,
     transform: [{ scale: 0.98 }],
   },
+
+  fabWrap: {
+    position: "absolute",
+    bottom: 24,
+    right: 20,
+    zIndex: 20,
+  },
+  fab: {
+    ...Shadow.md,
+  },
+
+  staffPickerList: { gap: 10, paddingBottom: 8 },
+  staffPickerBtn: { marginBottom: 0 },
 });
