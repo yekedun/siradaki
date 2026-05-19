@@ -18,7 +18,7 @@ function RouterGuard({ session }: { session: Session | null | undefined }) {
     if (session === undefined || loading) return;
 
     const inAuth  = (segments[0] as string) === "(auth)";
-    const inApp   = (segments[0] as string) === "(app)";
+    const inApp   = (segments[0] as string) === "(staff)";
     const inOwner = (segments[0] as string) === "(owner)";
 
     if (!session) {
@@ -29,7 +29,7 @@ function RouterGuard({ session }: { session: Session | null | undefined }) {
     if (role === "owner" && !inOwner) {
       router.replace("/(owner)" as any);
     } else if (role === "staff" && !inApp) {
-      router.replace("/(app)" as any);
+      router.replace("/(staff)" as any);
     }
     // role === null → loading veya tanımsız kullanıcı (oturum açık ama DB'de yok)
   }, [session, role, loading, segments, router]);
