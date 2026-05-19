@@ -15,7 +15,7 @@ import { addDays, startOfDay, startOfWeek } from "date-fns";
 import { DEFAULT_TIMEZONE } from "@berber/shared/constants";
 import { getDayBoundsUTC } from "@berber/shared/slot-utils";
 import { supabase } from "../../lib/supabase";
-import { T, R, Shadow } from "../../lib/theme";
+import { T, R, Shadow, Type } from "../../lib/theme";
 import {
   AppointmentCard,
   BlokCard,
@@ -439,6 +439,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
+    fontFamily: Type.family,
     color: T.fg3,
     textAlign: "center",
   },
@@ -463,7 +464,7 @@ const styles = StyleSheet.create({
     ...Shadow.md,
   },
   fabPressed: { transform: [{ scale: 0.985 }] },
-  fabText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  fabText: { color: "#fff", fontSize: 15, fontFamily: Type.family, fontWeight: Type.weight.semibold },
 
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
 });
