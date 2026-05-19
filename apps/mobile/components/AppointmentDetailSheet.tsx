@@ -109,7 +109,7 @@ export function AppointmentDetailSheet({
                 onPress={() => a.customer_phone && Linking.openURL(`sms:${a.customer_phone}`)}
                 disabled={!a.customer_phone}
               />
-              <ActionBtn icon="edit-2" label="Düzenle" onPress={() => onAction("edit")} variant="muted" />
+              <ActionBtn icon="edit-2" label="Düzenle" onPress={() => onAction("edit")} />
             </View>
 
             <View style={styles.foot}>
@@ -136,24 +136,21 @@ const ICON_MAP: Record<IconName, typeof Phone> = {
 };
 
 function ActionBtn({
-  icon, label, onPress, variant = "blue", disabled = false,
+  icon, label, onPress, disabled = false,
 }: {
   icon: IconName;
   label: string;
   onPress: () => void;
-  variant?: "blue" | "muted";
   disabled?: boolean;
 }) {
-  const bg = variant === "muted" ? T.bgSunken : T.accentTint;
-  const tone = variant === "muted" ? T.fg1 : T.brand600;
   const IconComponent = ICON_MAP[icon];
   return (
     <Pressable
-      style={[styles.action, { backgroundColor: bg, opacity: disabled ? 0.5 : 1 }]}
+      style={[styles.action, { opacity: disabled ? 0.5 : 1 }]}
       onPress={disabled ? undefined : onPress}
     >
-      <IconComponent size={18} color={tone} />
-      <Text style={[styles.actionLbl, { color: tone }]}>{label}</Text>
+      <IconComponent size={18} color={T.ink900} />
+      <Text style={[styles.actionLbl, { color: T.ink900 }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -176,11 +173,11 @@ const styles = StyleSheet.create({
   eyebrow: {
     fontSize: 11,
     fontWeight: "700",
-    color: T.brand500,
+    color: T.fg3,
     letterSpacing: 1.2,
     textTransform: "uppercase",
   },
-  name: { fontSize: 24, fontWeight: "700", color: T.fg1, marginTop: 4 },
+  name: { fontSize: 22, fontWeight: "700", color: T.fg1, marginTop: 4 },
   svc: { fontSize: 14, color: T.fg3, marginTop: 2 },
 
   actions: {
@@ -194,6 +191,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderRadius: R.md,
+    borderWidth: 1,
+    borderColor: T.ink900,
+    backgroundColor: "transparent",
     alignItems: "center",
     gap: 4,
   },
@@ -207,17 +207,17 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: R.md,
-    backgroundColor: T.coral100,
+    backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: T.coral100,
+    borderColor: T.coral600,
     alignItems: "center",
   },
   cancelTxt: { color: T.coral600, fontSize: 14, fontWeight: "600" },
   doneBtn: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: R.md,
     backgroundColor: T.brand600,
     alignItems: "center",
