@@ -28,7 +28,7 @@ export function SlotGrid({
         {Array.from({ length: 12 }).map((_, i) => (
           <div
             key={i}
-            className="h-11 animate-pulse rounded-input bg-hair opacity-50"
+            className="h-11 animate-pulse rounded-sm bg-hair opacity-50"
           />
         ))}
       </div>
@@ -37,18 +37,18 @@ export function SlotGrid({
 
   if (errorMessage) {
     return (
-      <div className="rounded-input border border-red-soft bg-red-soft/40 p-4">
-        <p className="m-0 text-sm font-semibold text-red">
+      <div className="rounded-sm border border-coral-100 bg-coral-100/40 p-4">
+        <p className="m-0 text-sm font-semibold text-coral-600">
           Müsaitlik bilgisi alınamadı.
         </p>
-        <p className="mb-0 mt-1 text-sm text-muted">
+        <p className="mb-0 mt-1 text-sm text-slate-500">
           Bağlantıyı kontrol edip tekrar deneyin.
         </p>
         {onRetry && (
           <button
             type="button"
             onClick={onRetry}
-            className="mt-3 rounded-cta bg-navy px-4 py-2 text-[13px] font-semibold text-white"
+            className="mt-3 rounded-md bg-brand-600 px-4 py-2 text-[13px] font-semibold text-white"
           >
             Tekrar Dene
           </button>
@@ -61,7 +61,7 @@ export function SlotGrid({
 
   if (isClosed || slots.length === 0) {
     return (
-      <p className="text-sm text-mutedAlt">
+      <p className="text-sm text-slate-400">
         Bu gün için çalışma saati tanımlanmamış.
       </p>
     );
@@ -69,7 +69,7 @@ export function SlotGrid({
 
   if (available.length === 0) {
     return (
-      <p className="text-sm text-mutedAlt">
+      <p className="text-sm text-slate-400">
         Bu günde müsait saat kalmadı. Başka bir gün seçin.
       </p>
     );
@@ -87,7 +87,7 @@ export function SlotGrid({
           return (
             <div
               key={slot.startsAt.toISOString()}
-              className="flex h-11 items-center justify-center rounded-input bg-surfaceAlt text-[13px] font-semibold tabular-nums text-mutedAlt line-through"
+              className="flex h-11 items-center justify-center rounded-sm bg-bgSunken text-[13px] font-semibold tabular-nums text-slate-400 line-through"
               title="Dolu"
             >
               {timeLabel}
@@ -99,10 +99,10 @@ export function SlotGrid({
           <button
             key={slot.startsAt.toISOString()}
             onClick={() => onSelect(slot)}
-            className={`flex h-11 items-center justify-center rounded-input border text-[13px] tabular-nums transition-colors ${
+            className={`flex h-11 items-center justify-center rounded-sm border text-[13px] tabular-nums transition-colors ${
               isSelected
-                ? "border-navy bg-navy font-bold text-white"
-                : "border-hair bg-surface font-semibold text-ink hover:border-navy/40"
+                ? "border-brand-600 bg-brand-600 font-bold text-white"
+                : "border-border bg-bgElevated font-semibold text-ink hover:border-brand-600/40"
             }`}
           >
             {timeLabel}

@@ -114,12 +114,12 @@ export function BookingModal({
       className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(15,23,42,0.45)] p-4 sm:items-center"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="max-h-[calc(100dvh-2rem)] w-full max-w-[440px] overflow-hidden rounded-sheet bg-surface shadow-[0_30px_80px_rgba(15,23,42,0.3)]">
+      <div className="max-h-[calc(100dvh-2rem)] w-full max-w-[440px] overflow-hidden rounded-lg bg-bgElevated shadow-[0_30px_80px_rgba(15,23,42,0.3)]">
         {step === "form" && (
           <div className="flex max-h-[calc(100dvh-2rem)] flex-col">
-            <div className="border-b border-hair px-[22px] pb-2 pt-5">
+            <div className="border-b border-border px-[22px] pb-2 pt-5">
               <h2 className="m-0 text-[20px] font-bold text-ink">Randevuyu Onayla</h2>
-              <p className="mt-1.5 text-[13px] text-muted">
+              <p className="mt-1.5 text-[13px] text-slate-500">
                 {staffLabel} · {service.name} · {dateLabel}, {timeLabel}
               </p>
             </div>
@@ -158,14 +158,14 @@ export function BookingModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 rounded-cta bg-surfaceAlt py-3.5 text-[14px] font-semibold text-ink"
+                  className="flex-1 rounded-md bg-bgSunken py-3.5 text-[14px] font-semibold text-ink"
                 >
                   İptal
                 </button>
                 <button
                   type="submit"
                   disabled={name.trim().length < 2 || phone.trim().length < 10}
-                  className="flex-[2] rounded-cta bg-navy py-3.5 text-[14px] font-semibold text-white shadow-cta disabled:opacity-40"
+                  className="flex-[2] rounded-md bg-brand-600 py-3.5 text-[14px] font-semibold text-white shadow-md disabled:opacity-40"
                 >
                   Randevuyu Onayla
                 </button>
@@ -176,18 +176,18 @@ export function BookingModal({
 
         {step === "loading" && (
           <div className="flex max-h-[calc(100dvh-2rem)] flex-col items-center overflow-y-auto py-12 text-center">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-navy border-t-transparent" />
-            <p className="mt-4 text-sm text-muted">Randevu oluşturuluyor...</p>
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-600 border-t-transparent" />
+            <p className="mt-4 text-sm text-slate-500">Randevu oluşturuluyor...</p>
           </div>
         )}
 
         {step === "success" && confirmation && (
           <div className="flex max-h-[calc(100dvh-2rem)] flex-col items-center overflow-y-auto px-7 py-9 text-center">
-            <span className="mb-3 inline-block rounded-full bg-blue-soft px-3 py-1 text-[11px] font-bold uppercase tracking-[1.2px] text-navy">
+            <span className="mb-3 inline-block rounded-full bg-brand-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[1.2px] text-brand-600">
               Onaylandı
             </span>
             <h3 className="m-0 text-[24px] font-bold text-ink">Randevunuz alındı</h3>
-            <p className="mt-2 text-[14px] leading-6 text-muted">
+            <p className="mt-2 text-[14px] leading-6 text-slate-500">
               {confirmation.staff_name} · {confirmation.service_name}
               <br />
               {new Date(confirmation.starts_at).toLocaleDateString("tr-TR", {
@@ -199,11 +199,11 @@ export function BookingModal({
                 timeZone: timezone,
               })}
               <br />
-              <span className="text-mutedAlt">Onay SMS&apos;i yolda.</span>
+              <span className="text-slate-400">Onay SMS&apos;i yolda.</span>
             </p>
             <button
               onClick={onClose}
-              className="mt-6 w-full rounded-cta bg-surfaceAlt py-3.5 text-[14px] font-semibold text-ink"
+              className="mt-6 w-full rounded-md bg-bgSunken py-3.5 text-[14px] font-semibold text-ink"
             >
               Yeni randevu
             </button>
@@ -212,21 +212,21 @@ export function BookingModal({
 
         {step === "error" && (
           <div className="flex max-h-[calc(100dvh-2rem)] flex-col items-center overflow-y-auto px-7 py-9 text-center">
-            <span className="mb-3 inline-block rounded-full bg-red-soft px-3 py-1 text-[11px] font-bold uppercase tracking-[1.2px] text-red">
+            <span className="mb-3 inline-block rounded-full bg-coral-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[1.2px] text-coral-600">
               Hata
             </span>
-            <p className="mt-1 text-[14px] text-muted">{errorMsg}</p>
+            <p className="mt-1 text-[14px] text-slate-500">{errorMsg}</p>
             <div className="mt-6 flex w-full gap-2">
               <button
                 onClick={onClose}
-                className="flex-1 rounded-cta bg-surfaceAlt py-3.5 text-[14px] font-semibold text-ink"
+                className="flex-1 rounded-md bg-bgSunken py-3.5 text-[14px] font-semibold text-ink"
               >
                 {isConflict ? "Saat Seç" : "Kapat"}
               </button>
               {!isConflict && (
                 <button
                   onClick={() => setStep("form")}
-                  className="flex-1 rounded-cta bg-navy py-3.5 text-[14px] font-semibold text-white"
+                  className="flex-1 rounded-md bg-brand-600 py-3.5 text-[14px] font-semibold text-white"
                 >
                   Tekrar Dene
                 </button>
@@ -240,7 +240,7 @@ export function BookingModal({
 }
 
 const inputCls =
-  "w-full rounded-input border-[1.5px] border-hair bg-bg px-3.5 py-3 text-[14px] text-ink outline-none focus:border-navy";
+  "w-full rounded-sm border-[1.5px] border-border bg-bg px-3.5 py-3 text-[14px] text-ink outline-none focus:border-brand-600";
 
 function Field({
   label,
@@ -251,7 +251,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.6px] text-muted">
+      <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.6px] text-slate-500">
         {label}
       </span>
       {children}
