@@ -45,7 +45,7 @@ export default function LoginScreen() {
           <TextInput
             style={styles.input}
             placeholder="berber@dukkan.com"
-            placeholderTextColor={T.mutedAlt}
+            placeholderTextColor={T.fg4}
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -59,7 +59,7 @@ export default function LoginScreen() {
           <TextInput
             style={styles.input}
             placeholder="••••••••"
-            placeholderTextColor={T.mutedAlt}
+            placeholderTextColor={T.fg4}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -111,11 +111,11 @@ const brandStyles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 14,
-    backgroundColor: T.navy,
+    backgroundColor: T.brand600,
     overflow: "hidden",
     marginBottom: 24,
     position: "relative",
-    ...Shadow.cta,
+    ...Shadow.md,
   },
   stripe: {
     position: "absolute",
@@ -142,19 +142,19 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 1.4,
     textTransform: "uppercase",
-    color: T.red,
+    color: T.coral600,
     marginBottom: 6,
   },
   title: {
     fontSize: 30,
     fontWeight: "700",
     letterSpacing: -0.5,
-    color: T.ink,
+    color: T.fg1,
     marginBottom: 8,
   },
   lead: {
     fontSize: 14,
-    color: T.muted,
+    color: T.fg3,
     lineHeight: 21,
     marginBottom: 32,
   },
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     letterSpacing: 0.6,
-    color: T.muted,
+    color: T.fg3,
     textTransform: "uppercase",
     marginBottom: 6,
   },
@@ -175,20 +175,20 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     backgroundColor: T.bg,
     borderWidth: 1.5,
-    borderColor: T.line,
-    borderRadius: R.input,
+    borderColor: T.border,
+    borderRadius: R.sm,
     fontSize: 14,
-    color: T.ink,
+    color: T.fg1,
   },
   button: {
     marginTop: 8,
     width: "100%",
     paddingVertical: 16,
-    backgroundColor: T.navy,
-    borderRadius: R.cta,
+    backgroundColor: T.brand600,
+    borderRadius: R.md,
     alignItems: "center",
     justifyContent: "center",
-    ...Shadow.cta,
+    ...Shadow.md,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -202,11 +202,11 @@ const styles = StyleSheet.create({
   footer: {
     textAlign: "center",
     fontSize: 13,
-    color: T.muted,
+    color: T.fg3,
     paddingBottom: 16,
   },
   footerLink: {
-    color: T.navy,
+    color: T.brand600,
     fontWeight: "600",
   },
 });

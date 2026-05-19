@@ -9,7 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Lock, TrendingUp, Percent, CreditCard, LucideIcon } from "lucide-react-native";
 import { addDays, format, startOfDay } from "date-fns";
 import { supabase } from "../../lib/supabase";
 import { useUserRole } from "../../lib/user-context";
@@ -104,7 +104,7 @@ export default function OwnerEarningsScreen() {
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.navy} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.brand600} />}
       >
         <Text style={styles.eyebrow}>KOMİSYON</Text>
         <Text style={styles.title}>Kazanç</Text>
@@ -126,19 +126,19 @@ export default function OwnerEarningsScreen() {
         </View>
 
         {loading ? (
-          <ActivityIndicator color={T.navy} style={{ marginTop: 40 }} />
+          <ActivityIndicator color={T.brand600} style={{ marginTop: 40 }} />
         ) : !enabled ? (
           <View style={styles.empty}>
-            <Feather name="lock" size={24} color={T.mutedAlt} />
+            <Lock size={24} color={T.fg4} />
             <Text style={styles.emptyTitle}>Komisyon takibi kapalı</Text>
             <Text style={styles.emptyText}>Ayarlardan açılınca kazanç raporu görünür.</Text>
           </View>
         ) : report ? (
           <>
             <View style={styles.kpiGrid}>
-              <Kpi label="Tamamlanan ciro" value={money(report.total_revenue_cents)} icon="trending-up" />
-              <Kpi label="Usta komisyonu" value={money(report.total_commission_cents)} icon="percent" />
-              <Kpi label="Dükkan payı" value={money(report.total_shop_share_cents)} icon="credit-card" />
+              <Kpi label="Tamamlanan ciro" value={money(report.total_revenue_cents)} icon={TrendingUp} />
+              <Kpi label="Usta komisyonu" value={money(report.total_commission_cents)} icon={Percent} />
+              <Kpi label="Dükkan payı" value={money(report.total_shop_share_cents)} icon={CreditCard} />
             </View>
 
             <Text style={styles.sectionLabel}>PERSONEL DAĞILIMI</Text>
@@ -164,10 +164,10 @@ export default function OwnerEarningsScreen() {
   );
 }
 
-function Kpi({ icon, label, value }: { icon: keyof typeof Feather.glyphMap; label: string; value: string }) {
+function Kpi({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
   return (
     <View style={styles.kpi}>
-      <Feather name={icon} size={18} color={T.navy} />
+      <Icon size={18} color={T.brand600} />
       <Text style={styles.kpiLabel}>{label}</Text>
       <Text style={styles.kpiValue}>{value}</Text>
     </View>
@@ -177,25 +177,25 @@ function Kpi({ icon, label, value }: { icon: keyof typeof Feather.glyphMap; labe
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: T.bg },
   scroll: { paddingTop: 64, paddingHorizontal: 20, paddingBottom: 40 },
-  eyebrow: { fontSize: 11, fontWeight: "600", letterSpacing: 1.4, textTransform: "uppercase", color: T.red, marginBottom: 6 },
-  title: { fontSize: 30, fontWeight: "700", color: T.ink, marginBottom: 18 },
+  eyebrow: { fontSize: 11, fontWeight: "600", letterSpacing: 1.4, textTransform: "uppercase", color: T.coral600, marginBottom: 6 },
+  title: { fontSize: 30, fontWeight: "700", color: T.fg1, marginBottom: 18 },
   rangeRow: { flexDirection: "row", gap: 8, marginBottom: 18 },
-  rangeBtn: { flex: 1, paddingVertical: 10, borderRadius: R.pill, borderWidth: 1, borderColor: T.line, alignItems: "center", backgroundColor: T.surface },
-  rangeBtnActive: { backgroundColor: T.navy, borderColor: T.navy },
-  rangeText: { fontSize: 12, fontWeight: "700", color: T.muted },
+  rangeBtn: { flex: 1, paddingVertical: 10, borderRadius: R.pill, borderWidth: 1, borderColor: T.border, alignItems: "center", backgroundColor: T.bgElevated },
+  rangeBtnActive: { backgroundColor: T.brand600, borderColor: T.brand600 },
+  rangeText: { fontSize: 12, fontWeight: "700", color: T.fg3 },
   rangeTextActive: { color: "#fff" },
   kpiGrid: { gap: 10 },
-  kpi: { padding: 14, borderRadius: R.card, borderWidth: 1, borderColor: T.line, backgroundColor: T.surface, ...Shadow.card },
-  kpiLabel: { marginTop: 8, fontSize: 12, color: T.muted, fontWeight: "600" },
-  kpiValue: { marginTop: 2, fontSize: 22, color: T.ink, fontWeight: "800" },
-  sectionLabel: { marginTop: 24, marginBottom: 10, fontSize: 11, fontWeight: "700", color: T.muted, letterSpacing: 0.6 },
-  staffRow: { padding: 12, borderRadius: R.card, borderWidth: 1, borderColor: T.line, backgroundColor: T.surface, flexDirection: "row", gap: 12, ...Shadow.card },
-  staffName: { fontSize: 14, fontWeight: "700", color: T.ink },
-  staffMeta: { marginTop: 3, fontSize: 11, color: T.muted },
+  kpi: { padding: 14, borderRadius: R.md, borderWidth: 1, borderColor: T.border, backgroundColor: T.bgElevated, ...Shadow.sm },
+  kpiLabel: { marginTop: 8, fontSize: 12, color: T.fg3, fontWeight: "600" },
+  kpiValue: { marginTop: 2, fontSize: 22, color: T.fg1, fontWeight: "800" },
+  sectionLabel: { marginTop: 24, marginBottom: 10, fontSize: 11, fontWeight: "700", color: T.fg3, letterSpacing: 0.6 },
+  staffRow: { padding: 12, borderRadius: R.md, borderWidth: 1, borderColor: T.border, backgroundColor: T.bgElevated, flexDirection: "row", gap: 12, ...Shadow.sm },
+  staffName: { fontSize: 14, fontWeight: "700", color: T.fg1 },
+  staffMeta: { marginTop: 3, fontSize: 11, color: T.fg3 },
   amounts: { alignItems: "flex-end" },
-  amountPrimary: { fontSize: 14, fontWeight: "800", color: T.navy },
-  amountMeta: { marginTop: 2, fontSize: 10, color: T.muted },
+  amountPrimary: { fontSize: 14, fontWeight: "800", color: T.brand600 },
+  amountMeta: { marginTop: 2, fontSize: 10, color: T.fg3 },
   empty: { marginTop: 36, alignItems: "center", gap: 8, padding: 20 },
-  emptyTitle: { fontSize: 15, fontWeight: "700", color: T.ink },
-  emptyText: { fontSize: 12, color: T.muted, textAlign: "center" },
+  emptyTitle: { fontSize: 15, fontWeight: "700", color: T.fg1 },
+  emptyText: { fontSize: 12, color: T.fg3, textAlign: "center" },
 });

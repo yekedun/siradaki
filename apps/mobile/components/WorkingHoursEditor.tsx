@@ -179,7 +179,7 @@ export function WorkingHoursEditor({
               <Switch
                 value={d.enabled}
                 onValueChange={() => toggleDay(day)}
-                trackColor={{ true: T.navy, false: T.line }}
+                trackColor={{ true: T.brand600, false: T.border }}
                 thumbColor="#fff"
               />
             </View>
@@ -228,12 +228,12 @@ export function WorkingHoursEditor({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: T.surface,
+    backgroundColor: T.bgElevated,
     borderWidth: 1,
-    borderColor: T.line,
-    borderRadius: R.card,
+    borderColor: T.border,
+    borderRadius: R.md,
     overflow: "hidden",
-    ...Shadow.card,
+    ...Shadow.sm,
   },
   dayRow: {
     flexDirection: "row",
@@ -244,16 +244,16 @@ const styles = StyleSheet.create({
   },
   dayRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: T.line,
+    borderBottomColor: T.border,
   },
   dayLabel: {
     width: 90,
     fontSize: 14,
     fontWeight: "600",
-    color: T.ink,
+    color: T.fg1,
   },
   dayLabelMuted: {
-    color: T.muted,
+    color: T.fg3,
   },
   timePair: {
     flex: 1,
@@ -262,9 +262,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   timeChip: {
-    backgroundColor: T.surfaceAlt,
+    backgroundColor: T.bgSunken,
     borderWidth: 1,
-    borderColor: T.line,
+    borderColor: T.border,
     borderRadius: 8,
     paddingVertical: 4,
     paddingHorizontal: 10,
@@ -272,16 +272,16 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 13,
     fontWeight: "600",
-    color: T.navy,
+    color: T.brand600,
   },
   timeSep: {
     fontSize: 13,
-    color: T.muted,
+    color: T.fg3,
   },
   closedLabel: {
     flex: 1,
     fontSize: 13,
-    color: T.mutedAlt,
+    color: T.fg4,
   },
   pickerDismiss: {
     alignSelf: "flex-end",
@@ -292,20 +292,20 @@ const styles = StyleSheet.create({
   pickerDismissText: {
     fontSize: 15,
     fontWeight: "600",
-    color: T.navy,
+    color: T.brand600,
   },
   saveBtn: {
     marginTop: 12,
     paddingVertical: 14,
-    backgroundColor: T.navy,
-    borderRadius: R.cta,
+    backgroundColor: T.brand600,
+    borderRadius: R.md,
     alignItems: "center",
     justifyContent: "center",
-    ...Shadow.cta,
+    ...Shadow.md,
   },
   saveBtnDisabled: {
-    backgroundColor: T.surfaceAlt,
-    ...Shadow.card,
+    backgroundColor: T.bgSunken,
+    ...Shadow.sm,
   },
   saveBtnText: {
     fontSize: 14,
@@ -313,6 +313,6 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   saveBtnTextDisabled: {
-    color: T.mutedAlt,
+    color: T.fg4,
   },
 });

@@ -18,7 +18,7 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { addMinutes, isSameDay } from "date-fns";
 import { supabase } from "../lib/supabase";
-import { T as Theme, R } from "../lib/theme";
+import { T, R } from "../lib/theme";
 
 interface ServiceRow {
   id: string;
@@ -47,16 +47,6 @@ interface AddAppointmentModalProps {
   onClose: () => void;
 }
 
-const T = {
-  bg: Theme.bg,
-  surface: Theme.bgElevated,
-  surfaceAlt: Theme.bgSunken,
-  line: Theme.border,
-  ink: Theme.fg1,
-  muted: Theme.fg3,
-  navy: Theme.brand600,
-  blueSoft: Theme.accentTint,
-};
 
 const FALLBACK_DURATIONS = [
   { label: "15 dk", value: 15 },
@@ -279,7 +269,7 @@ export function AddAppointmentModal({
           </Text>
           <TouchableOpacity onPress={handleSave} disabled={loading || !hasServices}>
             {loading ? (
-              <ActivityIndicator color={T.navy} />
+              <ActivityIndicator color={T.brand600} />
             ) : (
               <Text style={styles.headerSave}>Kaydet</Text>
             )}
@@ -292,7 +282,7 @@ export function AddAppointmentModal({
             value={name}
             onChangeText={setName}
             placeholder="Örn. Ahmet Yılmaz"
-            placeholderTextColor={T.muted}
+            placeholderTextColor={T.fg3}
             style={styles.input}
             autoCapitalize="words"
             returnKeyType="next"
@@ -303,7 +293,7 @@ export function AddAppointmentModal({
             value={phone}
             onChangeText={setPhone}
             placeholder="0(5xx) xxx xx xx"
-            placeholderTextColor={T.muted}
+            placeholderTextColor={T.fg3}
             style={styles.input}
             keyboardType="phone-pad"
           />
@@ -319,7 +309,7 @@ export function AddAppointmentModal({
                     onPress={() => pickService(s)}
                     style={[styles.serviceChip, sel && styles.serviceChipSel]}
                   >
-                    <Text style={[styles.serviceName, sel && { color: T.navy }]}>{s.name}</Text>
+                    <Text style={[styles.serviceName, sel && { color: T.brand600 }]}>{s.name}</Text>
                     <Text style={styles.serviceMeta}>
                       {s.duration_min} dk
                       {s.price_cents != null ? ` · ${Math.round(s.price_cents / 100)}₺` : ""}
@@ -412,7 +402,7 @@ export function AddAppointmentModal({
                     key={d.value}
                     style={[styles.durChip, sel && styles.durChipSel, styles.durChipDisabled]}
                   >
-                    <Text style={[styles.durText, sel && { color: T.navy, fontWeight: "700" }]}>
+                    <Text style={[styles.durText, sel && { color: T.brand600, fontWeight: "700" }]}>
                       {d.label}
                     </Text>
                   </View>
@@ -444,15 +434,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: T.line,
+    borderBottomColor: T.border,
     backgroundColor: T.bg,
   },
-  headerCancel: { fontSize: 15, color: T.muted, minWidth: 60 },
-  headerTitle: { fontSize: 16, fontWeight: "700", color: T.ink },
+  headerCancel: { fontSize: 15, color: T.fg3, minWidth: 60 },
+  headerTitle: { fontSize: 16, fontWeight: "700", color: T.fg1 },
   headerSave: {
     fontSize: 15,
     fontWeight: "700",
-    color: T.navy,
+    color: T.brand600,
     minWidth: 60,
     textAlign: "right",
   },
@@ -461,95 +451,95 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     letterSpacing: 0.6,
-    color: T.muted,
+    color: T.fg3,
     textTransform: "uppercase",
     marginTop: 18,
     marginBottom: 8,
   },
   input: {
     backgroundColor: T.bg,
-    borderRadius: R.input,
+    borderRadius: R.sm,
     borderWidth: 1.5,
-    borderColor: T.line,
+    borderColor: T.border,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 14,
-    color: T.ink,
+    color: T.fg1,
   },
   pickerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: T.bg,
-    borderRadius: R.input,
+    borderRadius: R.sm,
     borderWidth: 1.5,
-    borderColor: T.line,
+    borderColor: T.border,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
-  pickerValue: { fontSize: 14, color: T.ink, fontWeight: "600" },
-  pickerChevron: { fontSize: 22, color: T.muted, fontWeight: "400" },
+  pickerValue: { fontSize: 14, color: T.fg1, fontWeight: "600" },
+  pickerChevron: { fontSize: 22, color: T.fg3, fontWeight: "400" },
 
   serviceGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   serviceChip: {
     width: "48%",
     paddingVertical: 12,
     paddingHorizontal: 12,
-    backgroundColor: T.surface,
+    backgroundColor: T.bgElevated,
     borderWidth: 1.5,
-    borderColor: T.line,
-    borderRadius: R.input,
+    borderColor: T.border,
+    borderRadius: R.sm,
   },
-  serviceChipSel: { borderColor: T.navy, backgroundColor: T.blueSoft },
-  serviceName: { fontSize: 13, fontWeight: "600", color: T.ink },
-  serviceMeta: { fontSize: 11, color: T.muted, marginTop: 2 },
+  serviceChipSel: { borderColor: T.brand600, backgroundColor: T.accentTint },
+  serviceName: { fontSize: 13, fontWeight: "600", color: T.fg1 },
+  serviceMeta: { fontSize: 11, color: T.fg3, marginTop: 2 },
   emptyServices: {
     padding: 14,
-    backgroundColor: T.surface,
+    backgroundColor: T.bgElevated,
     borderWidth: 1.5,
-    borderColor: T.line,
-    borderRadius: R.input,
+    borderColor: T.border,
+    borderRadius: R.sm,
   },
-  emptyServicesTitle: { fontSize: 13, fontWeight: "700", color: T.ink },
-  emptyServicesText: { marginTop: 4, fontSize: 12, color: T.muted, lineHeight: 17 },
+  emptyServicesTitle: { fontSize: 13, fontWeight: "700", color: T.fg1 },
+  emptyServicesText: { marginTop: 4, fontSize: 12, color: T.fg3, lineHeight: 17 },
 
   durRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   durChip: {
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: T.surface,
+    backgroundColor: T.bgElevated,
     borderWidth: 1.5,
-    borderColor: T.line,
-    borderRadius: R.input,
+    borderColor: T.border,
+    borderRadius: R.sm,
   },
-  durChipSel: { borderColor: T.navy, backgroundColor: T.blueSoft },
+  durChipSel: { borderColor: T.brand600, backgroundColor: T.accentTint },
   durChipDisabled: { opacity: 0.55 },
-  durText: { fontSize: 13, color: T.ink, fontWeight: "500" },
+  durText: { fontSize: 13, color: T.fg1, fontWeight: "500" },
   durationInfo: {
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: T.surface,
+    backgroundColor: T.bgElevated,
     borderWidth: 1.5,
-    borderColor: T.line,
-    borderRadius: R.input,
+    borderColor: T.border,
+    borderRadius: R.sm,
   },
-  durationInfoText: { fontSize: 13, color: T.muted, fontWeight: "600" },
+  durationInfoText: { fontSize: 13, color: T.fg3, fontWeight: "600" },
 
   preview: {
     marginTop: 24,
     padding: 14,
-    backgroundColor: T.blueSoft,
-    borderRadius: R.input,
+    backgroundColor: T.accentTint,
+    borderRadius: R.sm,
     borderLeftWidth: 4,
-    borderLeftColor: T.navy,
+    borderLeftColor: T.brand600,
   },
   previewLabel: {
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.6,
-    color: T.navy,
+    color: T.brand600,
     marginBottom: 4,
   },
-  previewText: { fontSize: 14, color: T.ink, fontWeight: "600" },
-  previewSub: { marginTop: 2, fontSize: 12, color: T.muted },
+  previewText: { fontSize: 14, color: T.fg1, fontWeight: "600" },
+  previewSub: { marginTop: 2, fontSize: 12, color: T.fg3 },
 });
