@@ -11,7 +11,7 @@ import {
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
-import { T, S, Type } from "../../lib/theme";
+import { T, S } from "../../lib/theme";
 import { TextField } from "../../components/ds/TextField";
 import { Button } from "../../components/ds/Button";
 
@@ -120,8 +120,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontSize: 11,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     letterSpacing: 1.76,
     textTransform: "uppercase",
     color: T.fg3,
@@ -129,8 +128,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 34,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.bold,
+    fontFamily: 'Montserrat-Bold',
     letterSpacing: -0.68,
     color: T.fg1,
     marginBottom: 10,
@@ -138,7 +136,7 @@ const styles = StyleSheet.create({
   },
   lead: {
     fontSize: 16,
-    fontFamily: Type.family,
+    fontFamily: 'Montserrat',
     color: T.fg2,
     lineHeight: 24,
     marginBottom: 32,
@@ -153,12 +151,12 @@ const styles = StyleSheet.create({
   },
   registerText: {
     fontSize: 13,
-    fontFamily: Type.family,
+    fontFamily: 'Montserrat',
     color: T.fg3,
     textAlign: "center",
   },
   registerLink: {
+    fontFamily: 'Montserrat-SemiBold',
     color: T.brand600,
-    fontWeight: Type.weight.semibold,
   },
 });

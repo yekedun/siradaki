@@ -99,7 +99,7 @@ export const Type = {
   family: "Montserrat",
   weight: { regular: "400", medium: "500", semibold: "600", bold: "700" } as const,
   size: {
-    overline:   12,
+    overline:   11,
     caption:    12,
     meta:       13,
     body:       15,
@@ -113,9 +113,9 @@ export const Type = {
     displayXl:  64,
   },
   track: {
-    overline: 1.92,   // 0.16em × 12px
-    tight:    -0.18,  // -0.012em × 15px
-    display:  -0.68,  // -0.02em × 34px
+    overline: 2.5,    // 0.16em × ~15px
+    tight:    -0.3,
+    display:  -0.5,
   },
   lineHeight: {
     tight: 1.08,

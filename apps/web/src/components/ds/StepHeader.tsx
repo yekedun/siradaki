@@ -10,7 +10,7 @@ interface StepHeaderProps {
 
 const circleClasses: Record<Status, string> = {
   done:   "bg-[var(--ink-900)] text-white border-[var(--ink-900)]",
-  active: "bg-white text-[var(--ink-900)] border-[var(--ink-900)]",
+  active: "bg-slate-0 text-[var(--ink-900)] border-[var(--ink-900)]",
   idle:   "bg-[var(--bg)] text-[var(--fg-4)] border-[var(--border)]",
 };
 

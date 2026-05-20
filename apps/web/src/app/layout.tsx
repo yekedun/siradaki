@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -6,12 +7,16 @@ export const metadata: Metadata = {
   description: "Online berber randevu sistemi",
 };
 
-const FONT_PRELOADS = [
-  "/fonts/Montserrat-Regular.otf",
-  "/fonts/Montserrat-Medium.otf",
-  "/fonts/Montserrat-SemiBold.otf",
-  "/fonts/Montserrat-Bold.otf",
-] as const;
+const montserrat = localFont({
+  src: [
+    { path: "../fonts/Montserrat-Regular.otf",  weight: "400", style: "normal" },
+    { path: "../fonts/Montserrat-Medium.otf",   weight: "500", style: "normal" },
+    { path: "../fonts/Montserrat-SemiBold.otf", weight: "600", style: "normal" },
+    { path: "../fonts/Montserrat-Bold.otf",     weight: "700", style: "normal" },
+  ],
+  variable: "--font-montserrat",
+  display: "swap",
+});
 
 export default function RootLayout({
   children,
@@ -19,19 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="tr">
-      <head>
-        {FONT_PRELOADS.map((href) => (
-          <link
-            key={href}
-            rel="preload"
-            href={href}
-            as="font"
-            type="font/otf"
-            crossOrigin="anonymous"
-          />
-        ))}
-      </head>
+    <html lang="tr" className={montserrat.variable}>
       <body className="bg-bg text-ink antialiased font-sans">{children}</body>
     </html>
   );

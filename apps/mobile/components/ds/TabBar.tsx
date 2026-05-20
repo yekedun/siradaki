@@ -1,5 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { T, Type } from "../../lib/theme";
+import { T } from "../../lib/theme";
 
 export interface TabBarItem {
   key: string;
@@ -68,8 +68,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 10,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     letterSpacing: 0.4,
   },
 });

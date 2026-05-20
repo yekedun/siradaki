@@ -1,5 +1,5 @@
 import { Modal, View, Text, Pressable, ScrollView, StyleSheet } from "react-native";
-import { T, R, Type, S } from "../../lib/theme";
+import { T, R, S } from "../../lib/theme";
 
 interface SheetProps {
   visible: boolean;
@@ -68,15 +68,13 @@ const styles = StyleSheet.create({
   },
   titleText: {
     fontSize: 20,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.bold,
+    fontFamily: 'Montserrat-Bold',
     letterSpacing: -0.3,
     color: T.fg1,
   },
   cancelText: {
     fontSize: 14,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     color: T.slate500,
   },
   body: {

@@ -78,6 +78,7 @@ const config: Config = {
         md: "12px",
         lg: "18px",
         xl: "24px",
+        pill: "9999px",
       },
       boxShadow: {
         xs: "0 1px 0 rgba(11,18,32,0.04)",
@@ -87,7 +88,7 @@ const config: Config = {
         now:  "0 0 0 1px #1E3A8A, 0 6px 18px -10px rgba(30,58,138,0.45)",
       },
       fontFamily: {
-        sans: ['"Montserrat"', "Helvetica Neue", "Arial", "sans-serif"],
+        sans: ["var(--font-montserrat)", '"Montserrat"', "Helvetica Neue", "Arial", "sans-serif"],
         mono: ["ui-monospace", '"SF Mono"', '"JetBrains Mono"', "Menlo", "monospace"],
       },
       fontSize: {

@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from "react-native";
-import { T, Type, S } from "../../lib/theme";
+import { T, S } from "../../lib/theme";
 
 interface OverlineHeaderProps {
   eyebrow: string;
@@ -45,22 +45,20 @@ const styles = StyleSheet.create({
   left: { flex: 1, minWidth: 0 },
   eyebrow: {
     fontSize: 11,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     letterSpacing: 1.76,
     lineHeight: 11,
   },
   title: {
     fontSize: 32,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.bold,
+    fontFamily: 'Montserrat-Bold',
     letterSpacing: -0.64,
     lineHeight: 34,
     marginTop: 10,
   },
   meta: {
     fontSize: 13,
-    fontFamily: Type.family,
+    fontFamily: 'Montserrat',
     color: T.fg3,
     marginTop: 8,
   },

@@ -14,7 +14,7 @@ import { addDays, startOfDay, startOfWeek } from "date-fns";
 import { DEFAULT_TIMEZONE } from "@berber/shared/constants";
 import { getDayBoundsUTC } from "@berber/shared/slot-utils";
 import { supabase } from "../../lib/supabase";
-import { T, R, Shadow, Type, S } from "../../lib/theme";
+import { T, R, Shadow, S } from "../../lib/theme";
 import {
   AppointmentCard,
   BlokCard,
@@ -367,14 +367,13 @@ const styles = StyleSheet.create({
   emptyWrap: { paddingHorizontal: S.s4, paddingTop: 48, alignItems: "center", gap: 8 },
   emptyTitle: {
     fontSize: 15,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     color: T.fg1,
     textAlign: "center",
   },
   emptyText: {
     fontSize: 13,
-    fontFamily: Type.family,
+    fontFamily: 'Montserrat',
     color: T.fg3,
     textAlign: "center",
     lineHeight: 20,

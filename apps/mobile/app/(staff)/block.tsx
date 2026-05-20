@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from "react-native";
 import { UserCheck, Coffee, User, type LucideIcon } from "lucide-react-native";
-import { T, R, Type, Shadow } from "../../lib/theme";
+import { T, R, Shadow } from "../../lib/theme";
 import { OverlineHeader, SectionLabel, Button } from "../../components/ds";
 
 const REASON_ICONS: Record<"walkin" | "break" | "personal", LucideIcon> = {
@@ -194,8 +194,8 @@ const styles = StyleSheet.create({
     borderColor: T.border,
     borderRadius: R.md,
   },
-  nowLabel: { fontFamily: Type.family, fontWeight: Type.weight.bold, fontSize: 12, color: T.fg1, letterSpacing: 0.4 },
-  nowSub: { fontFamily: Type.family, fontSize: 12, color: T.fg3, marginTop: 2 },
+  nowLabel: { fontFamily: 'Montserrat-Bold', fontSize: 12, color: T.fg1, letterSpacing: 0.4 },
+  nowSub: { fontFamily: 'Montserrat', fontSize: 12, color: T.fg3, marginTop: 2 },
 
   durGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   durChip: {
@@ -208,9 +208,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   durChipSel: { borderColor: T.ink900, backgroundColor: T.ink900 },
-  durNum: { fontFamily: Type.family, fontWeight: Type.weight.bold, fontSize: 18, color: T.fg1 },
+  durNum: { fontFamily: 'Montserrat-Bold', fontSize: 18, color: T.fg1 },
   durNumSel: { color: "#fff" },
-  durMin: { fontFamily: Type.family, fontSize: 11, color: T.fg3, marginTop: 2 },
+  durMin: { fontFamily: 'Montserrat', fontSize: 11, color: T.fg3, marginTop: 2 },
 
   reasonList: { gap: 8 },
   reasonRow: {
@@ -224,8 +224,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   reasonRowSel: { borderColor: T.ink900, backgroundColor: T.ink900 },
-  reasonLabel: { fontFamily: Type.family, fontWeight: Type.weight.semibold, fontSize: 14, color: T.fg1 },
-  reasonMeta: { fontFamily: Type.family, fontSize: 12, color: T.fg3, marginTop: 2 },
+  reasonLabel: { fontFamily: 'Montserrat-SemiBold', fontSize: 14, color: T.fg1 },
+  reasonMeta: { fontFamily: 'Montserrat', fontSize: 12, color: T.fg3, marginTop: 2 },
 
   preview: {
     paddingVertical: 14,
@@ -238,8 +238,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   previewText: {
-    fontFamily: Type.family,
-    fontWeight: Type.weight.bold,
+    fontFamily: 'Montserrat-Bold',
     fontSize: 12,
     letterSpacing: 2,
     color: T.fg3,

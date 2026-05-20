@@ -1,5 +1,5 @@
 import { Pressable, Text, ActivityIndicator, StyleSheet, ViewStyle } from "react-native";
-import { T, R, Type } from "../../lib/theme";
+import { T, R } from "../../lib/theme";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "accent";
 type Size = "sm" | "md" | "lg";
@@ -80,8 +80,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   label: {
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     letterSpacing: -0.07,
   },
 });

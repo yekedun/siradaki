@@ -1,5 +1,5 @@
 import { Text, StyleSheet } from "react-native";
-import { T, Type } from "../../lib/theme";
+import { T } from "../../lib/theme";
 
 export type Tone = "ok" | "warn" | "bad" | "neu";
 
@@ -27,8 +27,7 @@ export function StatusPill({ tone = "ok", children }: StatusPillProps) {
 const styles = StyleSheet.create({
   pill: {
     fontSize: 10,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.bold,
+    fontFamily: 'Montserrat-Bold',
     letterSpacing: 1.4,
     paddingHorizontal: 9,
     paddingVertical: 4,

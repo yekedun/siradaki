@@ -12,7 +12,7 @@ import {
 import Svg, { Rect, Path, Circle } from "react-native-svg";
 import { useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
-import { T, Type } from "../../lib/theme";
+import { T } from "../../lib/theme";
 import { TextField } from "../../components/ds/TextField";
 import { Button } from "../../components/ds/Button";
 
@@ -255,26 +255,23 @@ const styles = StyleSheet.create({
   },
   markWrap: { marginBottom: 24 },
   eyebrow: {
-    fontFamily: Type.family,
+    fontFamily: 'Montserrat-SemiBold',
     fontSize: 11,
-    fontWeight: Type.weight.semibold,
     letterSpacing: 1.4,
     textTransform: "uppercase",
     color: T.fg3,
     marginBottom: 6,
   },
   title: {
-    fontFamily: Type.family,
+    fontFamily: 'Montserrat-Bold',
     fontSize: 30,
-    fontWeight: Type.weight.bold,
     letterSpacing: -0.5,
     color: T.fg1,
     marginBottom: 8,
   },
   lead: {
-    fontFamily: Type.family,
+    fontFamily: 'Montserrat',
     fontSize: 14,
-    fontWeight: Type.weight.regular,
     color: T.fg3,
     lineHeight: 21,
     marginBottom: 20,
@@ -288,16 +285,14 @@ const styles = StyleSheet.create({
   backBtnWrap: { marginTop: 4, alignItems: "center" },
   spacer: { flex: 1, minHeight: 24 },
   footer: {
-    fontFamily: Type.family,
+    fontFamily: 'Montserrat',
     textAlign: "center",
     fontSize: 13,
-    fontWeight: Type.weight.regular,
     color: T.fg3,
     paddingBottom: 16,
   },
   footerLink: {
-    fontFamily: Type.family,
+    fontFamily: 'Montserrat-SemiBold',
     color: T.brand600,
-    fontWeight: Type.weight.semibold,
   },
 });

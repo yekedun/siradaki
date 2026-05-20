@@ -172,13 +172,13 @@ const styles = StyleSheet.create({
   head: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
   eyebrow: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: 'Montserrat-Bold',
     color: T.fg3,
     letterSpacing: 1.2,
     textTransform: "uppercase",
   },
-  name: { fontSize: 22, fontWeight: "700", color: T.fg1, marginTop: 4 },
-  svc: { fontSize: 14, color: T.fg3, marginTop: 2 },
+  name: { fontSize: 22, fontFamily: 'Montserrat-Bold', color: T.fg1, marginTop: 4 },
+  svc: { fontSize: 14, fontFamily: 'Montserrat', color: T.fg3, marginTop: 2 },
 
   actions: {
     paddingHorizontal: 20,
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
-  actionLbl: { fontSize: 12, fontWeight: "600" },
+  actionLbl: { fontSize: 12, fontFamily: 'Montserrat-SemiBold' },
 
   foot: {
     paddingHorizontal: 20,
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     borderColor: T.coral600,
     alignItems: "center",
   },
-  cancelTxt: { color: T.coral600, fontSize: 14, fontWeight: "600" },
+  cancelTxt: { color: T.coral600, fontSize: 14, fontFamily: 'Montserrat-SemiBold' },
   doneBtn: {
     flex: 1,
     paddingVertical: 14,
@@ -222,5 +222,5 @@ const styles = StyleSheet.create({
     backgroundColor: T.brand600,
     alignItems: "center",
   },
-  doneTxt: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  doneTxt: { color: "#fff", fontSize: 14, fontFamily: 'Montserrat-SemiBold' },
 });

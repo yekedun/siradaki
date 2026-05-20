@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from "react-native";
-import { T, R, Type } from "../../lib/theme";
+import { T, R } from "../../lib/theme";
 
 interface BlokCardProps {
   time: string;
@@ -35,14 +35,12 @@ const styles = StyleSheet.create({
   timeCol: { minWidth: 56 },
   time: {
     fontSize: 14,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.bold,
+    fontFamily: 'Montserrat-Bold',
     color: T.slate700,
   },
   dur: {
     fontSize: 10,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     letterSpacing: 1.4,
     color: T.slate500,
     marginTop: 5,
@@ -50,8 +48,7 @@ const styles = StyleSheet.create({
   labelCol: { flex: 1, justifyContent: "center" },
   label: {
     fontSize: 11,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.bold,
+    fontFamily: 'Montserrat-Bold',
     letterSpacing: 1.98,
     color: T.fg2,
   },

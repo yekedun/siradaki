@@ -13,7 +13,7 @@ import { ChevronRight } from "lucide-react-native";
 import { startOfDay, addDays } from "date-fns";
 import { supabase } from "../../lib/supabase";
 import { useUserRole } from "../../lib/user-context";
-import { T, R, S, Type, Shadow } from "../../lib/theme";
+import { T, R, S, Shadow } from "../../lib/theme";
 import {
   OverlineHeader,
   SectionLabel,
@@ -192,8 +192,8 @@ export default function OwnerDashboard() {
         ) : stats ? (
           <>
             <View style={styles.kpiRow}>
-              <KpiCard label="Bugün Toplam" value={String(stats.total)} />
-              <KpiCard label="Tamamlanan" value={String(stats.completed)} />
+              <KpiCard label="Toplam" value={String(stats.total)} />
+              <KpiCard label="Tamam" value={String(stats.completed)} />
               <KpiCard label="Tahmini" value={String(stats.revenue)} unit="TL" accent />
             </View>
 
@@ -211,7 +211,7 @@ export default function OwnerDashboard() {
                   <Text style={styles.insightLabel}>En Yoğun Gün</Text>
                   <Text style={styles.insightValue}>
                     {stats.busiestDay
-                      ? `${stats.busiestDay.date} (${stats.busiestDay.count} rdv)`
+                      ? `${new Date(stats.busiestDay.date).toLocaleDateString("tr-TR", { weekday: "long" })} (${stats.busiestDay.count} randevu)`
                       : "Veri Yok"}
                   </Text>
                 </View>
@@ -264,8 +264,7 @@ const styles = StyleSheet.create({
   insightDivider: { height: 1, backgroundColor: T.slate100 },
   insightLabel: {
     fontSize: 11,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     letterSpacing: 0.56,
     textTransform: "uppercase",
     color: T.slate500,
@@ -273,8 +272,7 @@ const styles = StyleSheet.create({
   },
   insightValue: {
     fontSize: 15,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     color: T.fg1,
   },
 
@@ -300,20 +298,18 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 13,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.bold,
+    fontFamily: 'Montserrat-Bold',
     color: T.ink900,
   },
   staffName: {
     fontSize: 15,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     color: T.fg1,
   },
-  staffCount: { fontSize: 12, fontFamily: Type.family, color: T.fg3, marginTop: 2 },
+  staffCount: { fontSize: 12, fontFamily: 'Montserrat', color: T.fg3, marginTop: 2 },
   emptyTxt: {
     fontSize: 13,
-    fontFamily: Type.family,
+    fontFamily: 'Montserrat',
     color: T.fg4,
     textAlign: "center",
     paddingVertical: 20,

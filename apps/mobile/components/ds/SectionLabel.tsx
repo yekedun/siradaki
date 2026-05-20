@@ -1,5 +1,5 @@
 import { Text, StyleSheet, ViewStyle } from "react-native";
-import { T, Type, S } from "../../lib/theme";
+import { T, S } from "../../lib/theme";
 
 interface SectionLabelProps {
   children: React.ReactNode;
@@ -17,8 +17,7 @@ export function SectionLabel({ children, style }: SectionLabelProps) {
 const styles = StyleSheet.create({
   label: {
     fontSize: 11,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     letterSpacing: 1.76,
     color: T.slate500,
     paddingHorizontal: S.s5,

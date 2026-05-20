@@ -1,5 +1,5 @@
 import { Pressable, View, Text, StyleSheet } from "react-native";
-import { T, R, Type, Shadow } from "../../lib/theme";
+import { T, R, Shadow } from "../../lib/theme";
 
 type State = "upcoming" | "active" | "done";
 
@@ -70,27 +70,24 @@ const styles = StyleSheet.create({
   timeCol: { minWidth: 56 },
   time: {
     fontSize: 14,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.bold,
+    fontFamily: 'Montserrat-Bold',
     lineHeight: 14,
   },
   dur: {
     fontSize: 10,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     letterSpacing: 1.4,
     marginTop: 5,
   },
   infoCol: { flex: 1 },
   customer: {
     fontSize: 15,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     lineHeight: 18,
   },
   service: {
     fontSize: 12,
-    fontFamily: Type.family,
+    fontFamily: 'Montserrat',
     marginTop: 2,
   },
 });

@@ -1,5 +1,5 @@
 import { ScrollView, Pressable, View, Text, StyleSheet } from "react-native";
-import { T, R, Type } from "../../lib/theme";
+import { T, R } from "../../lib/theme";
 
 const TR_DAYS_SHORT = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 
@@ -74,13 +74,11 @@ const styles = StyleSheet.create({
   },
   dayLabel: {
     fontSize: 10,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     letterSpacing: 1.2,
   },
   dateNum: {
     fontSize: 18,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.bold,
+    fontFamily: 'Montserrat-Bold',
   },
 });

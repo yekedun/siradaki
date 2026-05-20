@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   dayLabel: {
     width: 90,
     fontSize: 14,
-    fontWeight: "600",
+    fontFamily: 'Montserrat-SemiBold',
     color: T.fg1,
   },
   dayLabelMuted: {
@@ -271,16 +271,18 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 13,
-    fontWeight: "600",
+    fontFamily: 'Montserrat-SemiBold',
     color: T.brand600,
   },
   timeSep: {
     fontSize: 13,
+    fontFamily: 'Montserrat',
     color: T.fg3,
   },
   closedLabel: {
     flex: 1,
     fontSize: 13,
+    fontFamily: 'Montserrat',
     color: T.fg4,
   },
   pickerDismiss: {
@@ -291,7 +293,7 @@ const styles = StyleSheet.create({
   },
   pickerDismissText: {
     fontSize: 15,
-    fontWeight: "600",
+    fontFamily: 'Montserrat-SemiBold',
     color: T.brand600,
   },
   saveBtn: {
@@ -309,7 +311,7 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     fontSize: 14,
-    fontWeight: "600",
+    fontFamily: 'Montserrat-SemiBold',
     color: "#fff",
   },
   saveBtnTextDisabled: {

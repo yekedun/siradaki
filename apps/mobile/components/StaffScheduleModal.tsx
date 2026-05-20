@@ -357,7 +357,7 @@ function TimeField({
 }
 
 const tf = StyleSheet.create({
-  label: { fontSize: 11, fontWeight: "600", color: T.fg3, marginBottom: 6, letterSpacing: 0.3 },
+  label: { fontSize: 11, fontFamily: 'Montserrat-SemiBold', color: T.fg3, marginBottom: 6, letterSpacing: 0.3 },
   input: {
     backgroundColor: T.bgElevated,
     borderWidth: 1.5,
@@ -366,7 +366,7 @@ const tf = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 11,
     fontSize: 16,
-    fontWeight: "600",
+    fontFamily: 'Montserrat-SemiBold',
     color: T.fg1,
     textAlign: "center",
   },
@@ -390,8 +390,8 @@ const styles = StyleSheet.create({
     backgroundColor: T.bgElevated,
     ...Shadow.sm,
   },
-  eyebrow: { fontSize: 10, fontWeight: "700", letterSpacing: 1.4, color: T.coral600, textTransform: "uppercase", marginBottom: 4 },
-  title: { fontSize: 22, fontWeight: "700", color: T.fg1 },
+  eyebrow: { fontSize: 10, fontFamily: 'Montserrat-Bold', letterSpacing: 1.4, color: T.coral600, textTransform: "uppercase", marginBottom: 4 },
+  title: { fontSize: 22, fontFamily: 'Montserrat-Bold', color: T.fg1 },
   closeBtn: { padding: 8, backgroundColor: T.bgSunken, borderRadius: R.md },
 
   dayPicker: { paddingHorizontal: 20, paddingVertical: 14, gap: 8 },
@@ -407,12 +407,12 @@ const styles = StyleSheet.create({
   },
   dayChipActive: { backgroundColor: T.brand600, borderColor: T.brand600 },
   dayChipOff:    { opacity: 0.55 },
-  dayChipTxt:    { fontSize: 12, fontWeight: "600", color: T.fg1 },
+  dayChipTxt:    { fontSize: 12, fontFamily: 'Montserrat-SemiBold', color: T.fg1 },
   dayChipTxtActive: { color: "#fff" },
   offDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: T.coral600, marginTop: 3 },
 
   detail: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 20 },
-  dayTitle: { fontSize: 18, fontWeight: "700", color: T.fg1, marginBottom: 16 },
+  dayTitle: { fontSize: 18, fontFamily: 'Montserrat-Bold', color: T.fg1, marginBottom: 16 },
 
   row: {
     flexDirection: "row",
@@ -425,14 +425,14 @@ const styles = StyleSheet.create({
     gap: 12,
     ...Shadow.sm,
   },
-  rowLabel: { fontSize: 14, fontWeight: "600", color: T.fg1 },
-  rowSub:   { fontSize: 12, color: T.fg3, marginTop: 2 },
+  rowLabel: { fontSize: 14, fontFamily: 'Montserrat-SemiBold', color: T.fg1 },
+  rowSub:   { fontSize: 12, fontFamily: 'Montserrat', color: T.fg3, marginTop: 2 },
 
   divider: { height: 1, backgroundColor: T.border, marginVertical: 16 },
 
   sectionLabel: {
     fontSize: 10,
-    fontWeight: "700",
+    fontFamily: 'Montserrat-Bold',
     letterSpacing: 1.2,
     color: T.fg3,
     textTransform: "uppercase",
@@ -458,5 +458,5 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     ...Shadow.md,
   },
-  saveBtnTxt: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  saveBtnTxt: { color: "#fff", fontSize: 14, fontFamily: 'Montserrat-Bold' },
 });

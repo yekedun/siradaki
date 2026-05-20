@@ -1,5 +1,5 @@
 import { Pressable, View, Text, StyleSheet } from "react-native";
-import { T, R, Type, S } from "../../lib/theme";
+import { T, R, S } from "../../lib/theme";
 import { StatusPill } from "./StatusPill";
 import type { Tone } from "./StatusPill";
 
@@ -62,21 +62,19 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 13,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.bold,
+    fontFamily: 'Montserrat-Bold',
     letterSpacing: 0.52,
     color: T.ink900,
   },
   info: { flex: 1 },
   name: {
     fontSize: 15,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     color: T.fg1,
   },
   meta: {
     fontSize: 12,
-    fontFamily: Type.family,
+    fontFamily: 'Montserrat',
     color: T.fg3,
     marginTop: 2,
   },

@@ -1,5 +1,5 @@
 import { Pressable, Text, ScrollView, StyleSheet, ViewStyle } from "react-native";
-import { T, R, Type, S } from "../../lib/theme";
+import { T, R, S } from "../../lib/theme";
 
 interface ChipProps {
   children: React.ReactNode;
@@ -57,8 +57,7 @@ const styles = StyleSheet.create({
     marginRight: S.s2,
   },
   label: {
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     fontSize: 13,
   },
   row: {

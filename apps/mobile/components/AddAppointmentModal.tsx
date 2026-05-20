@@ -402,7 +402,7 @@ export function AddAppointmentModal({
                     key={d.value}
                     style={[styles.durChip, sel && styles.durChipSel, styles.durChipDisabled]}
                   >
-                    <Text style={[styles.durText, sel && { color: T.brand600, fontWeight: "700" }]}>
+                    <Text style={[styles.durText, sel && { color: T.brand600, fontFamily: 'Montserrat-Bold' }]}>
                       {d.label}
                     </Text>
                   </View>
@@ -437,11 +437,11 @@ const styles = StyleSheet.create({
     borderBottomColor: T.border,
     backgroundColor: T.bg,
   },
-  headerCancel: { fontSize: 15, color: T.fg3, minWidth: 60 },
-  headerTitle: { fontSize: 16, fontWeight: "700", color: T.fg1 },
+  headerCancel: { fontSize: 15, fontFamily: 'Montserrat', color: T.fg3, minWidth: 60 },
+  headerTitle: { fontSize: 16, fontFamily: 'Montserrat-Bold', color: T.fg1 },
   headerSave: {
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: 'Montserrat-Bold',
     color: T.brand600,
     minWidth: 60,
     textAlign: "right",
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 60 },
   label: {
     fontSize: 11,
-    fontWeight: "600",
+    fontFamily: 'Montserrat-SemiBold',
     letterSpacing: 0.6,
     color: T.fg3,
     textTransform: "uppercase",
@@ -477,8 +477,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
-  pickerValue: { fontSize: 14, color: T.fg1, fontWeight: "600" },
-  pickerChevron: { fontSize: 22, color: T.fg3, fontWeight: "400" },
+  pickerValue: { fontSize: 14, fontFamily: 'Montserrat-SemiBold', color: T.fg1 },
+  pickerChevron: { fontSize: 22, fontFamily: 'Montserrat', color: T.fg3 },
 
   serviceGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   serviceChip: {
@@ -491,8 +491,8 @@ const styles = StyleSheet.create({
     borderRadius: R.sm,
   },
   serviceChipSel: { borderColor: T.brand600, backgroundColor: T.accentTint },
-  serviceName: { fontSize: 13, fontWeight: "600", color: T.fg1 },
-  serviceMeta: { fontSize: 11, color: T.fg3, marginTop: 2 },
+  serviceName: { fontSize: 13, fontFamily: 'Montserrat-SemiBold', color: T.fg1 },
+  serviceMeta: { fontSize: 11, fontFamily: 'Montserrat', color: T.fg3, marginTop: 2 },
   emptyServices: {
     padding: 14,
     backgroundColor: T.bgElevated,
@@ -500,8 +500,8 @@ const styles = StyleSheet.create({
     borderColor: T.border,
     borderRadius: R.sm,
   },
-  emptyServicesTitle: { fontSize: 13, fontWeight: "700", color: T.fg1 },
-  emptyServicesText: { marginTop: 4, fontSize: 12, color: T.fg3, lineHeight: 17 },
+  emptyServicesTitle: { fontSize: 13, fontFamily: 'Montserrat-Bold', color: T.fg1 },
+  emptyServicesText: { marginTop: 4, fontSize: 12, fontFamily: 'Montserrat', color: T.fg3, lineHeight: 17 },
 
   durRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   durChip: {
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
   },
   durChipSel: { borderColor: T.brand600, backgroundColor: T.accentTint },
   durChipDisabled: { opacity: 0.55 },
-  durText: { fontSize: 13, color: T.fg1, fontWeight: "500" },
+  durText: { fontSize: 13, fontFamily: 'Montserrat-Medium', color: T.fg1 },
   durationInfo: {
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
     borderColor: T.border,
     borderRadius: R.sm,
   },
-  durationInfoText: { fontSize: 13, color: T.fg3, fontWeight: "600" },
+  durationInfoText: { fontSize: 13, fontFamily: 'Montserrat-SemiBold', color: T.fg3 },
 
   preview: {
     marginTop: 24,
@@ -535,11 +535,11 @@ const styles = StyleSheet.create({
   },
   previewLabel: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: 'Montserrat-Bold',
     letterSpacing: 0.6,
     color: T.brand600,
     marginBottom: 4,
   },
-  previewText: { fontSize: 14, color: T.fg1, fontWeight: "600" },
-  previewSub: { marginTop: 2, fontSize: 12, color: T.fg3 },
+  previewText: { fontSize: 14, fontFamily: 'Montserrat-SemiBold', color: T.fg1 },
+  previewSub: { marginTop: 2, fontSize: 12, fontFamily: 'Montserrat', color: T.fg3 },
 });

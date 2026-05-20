@@ -37,7 +37,7 @@ export default function OwnerLayout() {
           height: 76,
           elevation: 0,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "500", marginTop: 2 },
+        tabBarLabelStyle: { fontSize: 11, fontFamily: 'Montserrat-Medium', marginTop: 2 },
       }}
     >
       <Tabs.Screen

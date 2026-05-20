@@ -15,7 +15,7 @@ import { Copy } from "lucide-react-native";
 import * as Clipboard from "expo-clipboard";
 import { supabase } from "../../lib/supabase";
 import { useUserRole } from "../../lib/user-context";
-import { T, R, Shadow, Type } from "../../lib/theme";
+import { T, R, Shadow } from "../../lib/theme";
 import { OverlineHeader, SectionLabel, Card, Button } from "../../components/ds";
 import { Sheet } from "../../components/ds/Sheet";
 
@@ -238,14 +238,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarTxt: { fontSize: 16, fontFamily: Type.family, fontWeight: "700", color: T.brand600 },
-  accountName: { fontSize: 14, fontFamily: Type.family, fontWeight: "600", color: T.fg1 },
-  accountEmail: { fontSize: 12, fontFamily: Type.family, color: T.fg3, marginTop: 2 },
+  avatarTxt: { fontSize: 16, fontFamily: 'Montserrat-Bold', color: T.brand600 },
+  accountName: { fontSize: 14, fontFamily: 'Montserrat-SemiBold', color: T.fg1 },
+  accountEmail: { fontSize: 12, fontFamily: 'Montserrat', color: T.fg3, marginTop: 2 },
 
   signOut: { marginTop: 28, marginHorizontal: 20 },
   deleteAccount: { marginTop: 4, marginHorizontal: 20 },
 
-  version: { marginTop: 18, textAlign: "center", fontSize: 11, fontFamily: Type.family, color: T.fg4 },
+  version: { marginTop: 18, textAlign: "center", fontSize: 11, fontFamily: 'Montserrat', color: T.fg4 },
 
   linkRow: {
     flexDirection: "row", alignItems: "center", gap: 10,
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     ...Shadow.sm,
   },
-  linkText: { flex: 1, fontSize: 12, fontFamily: Type.family, color: T.brand600, fontWeight: "500" },
+  linkText: { flex: 1, fontSize: 12, fontFamily: 'Montserrat-Medium', color: T.brand600 },
   iconBtn: { padding: 4 },
 
   qrOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" },
@@ -262,14 +262,14 @@ const styles = StyleSheet.create({
     width: 290, backgroundColor: T.bgElevated, borderRadius: R.md,
     padding: 24, alignItems: "center", gap: 14, ...Shadow.sm,
   },
-  qrTitle: { fontSize: 16, fontFamily: Type.family, fontWeight: "700", color: T.fg1 },
+  qrTitle: { fontSize: 16, fontFamily: 'Montserrat-Bold', color: T.fg1 },
   qrImage: { width: 200, height: 200, borderRadius: 8 },
-  qrHint: { fontSize: 11, fontFamily: Type.family, color: T.fg3, textAlign: "center" },
+  qrHint: { fontSize: 11, fontFamily: 'Montserrat', color: T.fg3, textAlign: "center" },
   qrClose: {
     paddingVertical: 10, paddingHorizontal: 24,
     backgroundColor: T.brand600, borderRadius: R.md,
   },
-  qrCloseText: { color: "#fff", fontFamily: Type.family, fontSize: 13, fontWeight: "600" },
+  qrCloseText: { color: "#fff", fontFamily: 'Montserrat-SemiBold', fontSize: 13 },
 
   sheetFooter: { flexDirection: "row", justifyContent: "flex-end", gap: 10 },
   deleteWarning: {
@@ -279,9 +279,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 6,
   },
-  deleteWarningTitle: { fontSize: 13, fontFamily: Type.family, fontWeight: "700", color: T.coral600 },
-  deleteWarningText: { fontSize: 13, fontFamily: Type.family, color: T.coral600, lineHeight: 19 },
-  deleteLabel: { fontSize: 12, fontFamily: Type.family, fontWeight: "600", color: T.fg3, marginBottom: 8 },
+  deleteWarningTitle: { fontSize: 13, fontFamily: 'Montserrat-Bold', color: T.coral600 },
+  deleteWarningText: { fontSize: 13, fontFamily: 'Montserrat', color: T.coral600, lineHeight: 19 },
+  deleteLabel: { fontSize: 12, fontFamily: 'Montserrat-SemiBold', color: T.fg3, marginBottom: 8 },
   deleteInput: {
     borderWidth: 1.5,
     borderColor: T.coral600,
@@ -289,8 +289,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    fontFamily: Type.family,
-    fontWeight: "700",
+    fontFamily: 'Montserrat-Bold',
     color: T.coral600,
     letterSpacing: 2,
   },

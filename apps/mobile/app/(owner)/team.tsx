@@ -12,7 +12,7 @@ import {
 import { Percent, Link, Clock, PauseCircle, PlayCircle, ChevronRight } from "lucide-react-native";
 import { supabase } from "../../lib/supabase";
 import { useUserRole } from "../../lib/user-context";
-import { T, R, S, Type, Shadow } from "../../lib/theme";
+import { T, R, S, Shadow } from "../../lib/theme";
 import { StaffScheduleModal } from "../../components/StaffScheduleModal";
 import {
   OverlineHeader,
@@ -181,7 +181,19 @@ export default function TeamScreen() {
         {loading ? (
           <ActivityIndicator color={T.brand600} style={{ marginTop: 20 }} />
         ) : staffList.length === 0 ? (
-          <Text style={styles.emptyTxt}>Henüz personel yok. Yeni personel ekleyin.</Text>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>Henüz personel yok</Text>
+            <Text style={styles.emptyDesc}>
+              Randevu alınabilmesi için{'\n'}en az bir usta ekleyin.
+            </Text>
+            <Button
+              variant="accent"
+              size="md"
+              onPress={() => { setNewStaffName(""); setAddStaffVisible(true); }}
+            >
+              Personel Ekle
+            </Button>
+          </View>
         ) : (
           <Card style={styles.staffCard}>
             {staffList.map((b, i) => (
@@ -337,10 +349,12 @@ const styles = StyleSheet.create({
   staffRowBorder: { borderTopWidth: 1, borderTopColor: T.divider },
   actions: { flexDirection: "row", gap: 4 },
   iconBtn: { padding: 4 },
-  emptyTxt: { fontSize: 13, fontFamily: Type.family, color: T.fg4, textAlign: "center", paddingTop: 40 },
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, paddingTop: 64, paddingHorizontal: S.s5 },
+  emptyTitle: { fontSize: 17, fontFamily: 'Montserrat-Bold', color: T.fg1 },
+  emptyDesc: { fontSize: 13, fontFamily: 'Montserrat', color: T.fg3, textAlign: 'center', lineHeight: 20 },
   sheetFooter: { flexDirection: "row", justifyContent: "flex-end", gap: 10 },
-  sheetDesc: { fontSize: 13, fontFamily: Type.family, color: T.fg3, lineHeight: 18, marginBottom: 16 },
+  sheetDesc: { fontSize: 13, fontFamily: 'Montserrat', color: T.fg3, lineHeight: 18, marginBottom: 16 },
   toggleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 },
-  toggleLabel: { fontSize: 14, fontFamily: Type.family, fontWeight: Type.weight.semibold, color: T.fg1 },
-  slugPreview: { marginTop: 6, fontFamily: Type.family, fontSize: 11, color: T.fg3, fontStyle: "italic" },
+  toggleLabel: { fontSize: 14, fontFamily: 'Montserrat-SemiBold', color: T.fg1 },
+  slugPreview: { marginTop: 6, fontFamily: 'Montserrat', fontSize: 11, color: T.fg3, fontStyle: "italic" },
 });

@@ -18,7 +18,7 @@ import { getDayBoundsUTC } from "@berber/shared/slot-utils";
 import { supabase } from "../../lib/supabase";
 import { useUserRole } from "../../lib/user-context";
 import { AddAppointmentModal } from "../../components/AddAppointmentModal";
-import { T, R, Shadow, Type, S } from "../../lib/theme";
+import { T, R, Shadow, S } from "../../lib/theme";
 import { DayPicker } from "../../components/ds/DayPicker";
 import { AppointmentCard } from "../../components/ds/AppointmentCard";
 import { BlokCard } from "../../components/ds/BlokCard";
@@ -434,14 +434,12 @@ const styles = StyleSheet.create({
   colHeader: { borderBottomWidth: 1, borderBottomColor: T.border, paddingBottom: 8 },
   colName: {
     fontSize: 15,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.bold,
+    fontFamily: 'Montserrat-Bold',
     color: T.fg1,
   },
   colCount: {
     fontSize: 11,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     letterSpacing: 0.48,
     textTransform: "uppercase",
     color: T.slate500,
@@ -449,7 +447,7 @@ const styles = StyleSheet.create({
   },
 
   emptyCol: { paddingVertical: 20, alignItems: "center" },
-  emptyTxt: { fontSize: 12, fontFamily: Type.family, color: T.fg4 },
+  emptyTxt: { fontSize: 12, fontFamily: 'Montserrat', color: T.fg4 },
 
   apptWrapper: {},
   apptWrapperDragging: {

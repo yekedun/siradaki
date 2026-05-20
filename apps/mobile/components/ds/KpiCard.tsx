@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from "react-native";
-import { T, Type, S } from "../../lib/theme";
+import { T, S } from "../../lib/theme";
 import { Card } from "./Card";
 
 interface KpiCardProps {
@@ -15,7 +15,7 @@ export function KpiCard({ label, value, unit, sub, accent = false }: KpiCardProp
   const valueColor = accent ? T.fgOnAccent : T.ink900;
   return (
     <Card accent={accent} style={styles.card}>
-      <Text style={[styles.label, { color: metaColor }]} numberOfLines={2}>
+      <Text style={[styles.label, { color: metaColor }]} numberOfLines={1}>
         {label.toUpperCase()}
       </Text>
       <View style={styles.valueRow}>
@@ -33,8 +33,7 @@ const styles = StyleSheet.create({
   card: { flex: 1 },
   label: {
     fontSize: 10,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     letterSpacing: 0.8,
   },
   valueRow: {
@@ -45,21 +44,19 @@ const styles = StyleSheet.create({
   },
   value: {
     fontSize: 28,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.bold,
+    fontFamily: 'Montserrat-Bold',
     letterSpacing: -0.56,
     lineHeight: 28,
   },
   unit: {
     fontSize: 12,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     letterSpacing: 1.44,
     marginBottom: 2,
   },
   sub: {
     fontSize: 11,
-    fontFamily: Type.family,
+    fontFamily: 'Montserrat',
     marginTop: 6,
   },
 });

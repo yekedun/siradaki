@@ -1,5 +1,5 @@
 import { View, Text, TextInput, StyleSheet } from "react-native";
-import { T, R, Type, S } from "../../lib/theme";
+import { T, R, S } from "../../lib/theme";
 
 interface TextFieldProps {
   label: string;
@@ -44,13 +44,12 @@ const styles = StyleSheet.create({
   wrapper: { gap: S.s1 + 2 },
   label: {
     fontSize: 11,
-    fontFamily: Type.family,
-    fontWeight: Type.weight.semibold,
+    fontFamily: 'Montserrat-SemiBold',
     letterSpacing: 1.76,
     color: T.slate500,
   },
   input: {
-    fontFamily: Type.family,
+    fontFamily: 'Montserrat',
     fontSize: 15,
     color: T.fg1,
     backgroundColor: T.bgElevated,
@@ -65,12 +64,12 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 12,
-    fontFamily: Type.family,
+    fontFamily: 'Montserrat',
     color: T.fg3,
   },
   errorText: {
     fontSize: 12,
-    fontFamily: Type.family,
+    fontFamily: 'Montserrat',
     color: T.coral600,
   },
 });
