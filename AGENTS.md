@@ -1,32 +1,23 @@
 # AGENTS.md
 
-## Customer App Maintenance Mode
-
-- **Product focus / app ownership:** `apps/web` is the canonical customer booking surface. `apps/mobile` is the canonical owner/staff operational app. The former customer mobile app is archived at `archive/customer` and is not an active product surface.
-- **No archived customer app features:** Do not add customer mobile features, booking workflows, scheduling logic, realtime architecture, auth architecture, migrations, RLS policies, RPCs, edge functions, or duplicated business logic for `archive/customer`.
-- **Default routing:** Customer booking work defaults to `apps/web`. Owner/staff operational work defaults to `apps/mobile`. `archive/customer` must not drive `@berber/shared`, schema, scheduling, realtime, or backend contract decisions.
-- **Allowed archive changes:** Only documentation corrections or explicit, reversible restoration work after a product/architecture decision. Do not make routine maintenance fixes there while it is outside the active workspace.
-- **Rollback:** To reactivate intentionally, move `archive/customer` back to `apps/customer`, run `pnpm install`, and validate `pnpm --filter @berber/customer type-check` plus `pnpm turbo type-check`.
-
 ## Must-follow constraints
 
 - **pnpm only** — `npm` veya `yarn` kullanma. Workspace `pnpm-workspace.yaml` ile yönetiliyor.
-- **`@berber/shared` tek kaynak.** Edge fonksiyonları `supabase/functions/import_map.json` üzerinden `@berber/shared/slot-utils`, `@berber/shared/types`, `@berber/shared/constants` aliaslarıyla `packages/shared/src/*` dosyalarını doğrudan import eder. `_shared/slot-utils.ts` ve `_shared/types.ts` ARTIK YOK — tek kopyayı `packages/shared/src/`'de güncelle. `database.types.ts` hâlâ iki kopya (Supabase generator ürettiği için manuel sync — `cp packages/db/src/database.types.ts supabase/functions/_shared/database.types.ts`).
-- **Shared paket dosyalarında relative import'lar `.ts` uzantılı olmak zorundadır** (Deno gereği). `tsconfig.base.json`'da `allowImportingTsExtensions: true` ayarlı; Next.js + Expo + tsc bu uzantıyı sorunsuz işler.
-- **`btree_gist` extension** migration'lardan önce aktif olmalı; `001_initial.sql` bunu içeriyor, kaldırma.
+- **`@berber/shared` tek kaynak.** Edge fonksiyonları `supabase/functions/import_map.json` üzerinden `@berber/shared/slot-utils`, `@berber/shared/types`, `@berber/shared/constants` aliaslarıyla `packages/shared/src/*` dosyalarını doğrudan import eder. Tek kopyayı `packages/shared/src/`'de güncelle.
+- **`database.types.ts` iki kopya** — Supabase generator ürettiği için manuel sync gerekli: `cp packages/db/src/database.types.ts supabase/functions/_shared/database.types.ts`
+- **Shared paket dosyalarında relative import'lar `.ts` uzantılı olmak zorundadır** (Deno gereği).
+- **`btree_gist` extension** migration'lardan önce aktif olmalı; `20240101000001_initial.sql` bunu içeriyor, kaldırma.
 - **`widget_tokens.token_hash`** alanına raw token YAZILMAZ — her zaman SHA256 hash (`sha256()` fonksiyonu `supabase/functions/_shared/supabase-admin.ts`'de).
-- **`appointments` tablosuna** müşteri tarafından doğrudan INSERT olmaz — her zaman `book-appointment` edge function (service role) üzerinden.
-- **`appointment_slots` mirror tablo** — `appointments`'a INSERT/UPDATE/DELETE olduğunda trigger ile senkronize edilir. Anon Realtime subscription'ları için zorunlu (VIEW kullanılamadı çünkü RLS view yerine altındaki tablodan değerlendirilir). `appointment_slots`'a manuel INSERT YAPMA — sadece `sync_appointment_slots` trigger'ı yazar.
+- **`appointments` tablosuna** doğrudan INSERT olmaz — her zaman `app-book-appointment` veya `widget-book-appointment` edge function (service role) üzerinden.
+- **`appointment_slots` mirror tablo** — `appointments`'a INSERT/UPDATE/DELETE olduğunda trigger ile senkronize edilir. Anon Realtime subscription'ları için zorunlu. `appointment_slots`'a manuel INSERT YAPMA — sadece `sync_appointment_slots` trigger'ı yazar.
 - Yeni migration eklerken `gist exclude` constraint'lerinin bozulmadığını `supabase db push` ile doğrula.
-- `apps/mobile/lib/widget-bridge.ts` içindeki `NativeWidgetModule.setWidgetToken(token, supabaseUrl)` her iki platformda da 2 parametre alır — biri eksik bırakılırsa Android tarafında URL kaybolur.
 
 ## Validation before finishing
 
 ```bash
-pnpm turbo type-check                                           # TS hataları
 supabase db reset                                               # Migration'ları sıfırdan uygula
 supabase functions serve block-walkin --env-file .env.local     # Edge fn lokal test
-cd apps/mobile && expo start                                    # Mobil derleme
+pnpm db:check                                                   # database.types senkron kontrolü
 ```
 
 ## Repo-specific conventions
@@ -39,43 +30,35 @@ cd apps/mobile && expo start                                    # Mobil derleme
   supabase gen types typescript --local > packages/db/src/database.types.ts
   cp packages/db/src/database.types.ts supabase/functions/_shared/database.types.ts
   ```
-- Mobil deeplink scheme: `berberapp://` — `app.json`'da tanımlı.
-- iOS App Group identifier: `group.com.berberapp` — `app.json`, Swift kodu, Expo plugin'de aynı string olmalı.
-- Edge function JWT verify ayarları `supabase/config.toml`'da: `block-walkin` ve `book-appointment` `verify_jwt = false` (custom auth/anon).
 
 ## Important locations
 
 | Dosya | Açıklama |
 |---|---|
-| `packages/shared/src/slot-utils.ts` | **Tek kaynak** availability algoritması (web + mobile + edge) |
+| `packages/shared/src/slot-utils.ts` | **Tek kaynak** availability algoritması — tüm edge fn'ler kullanır |
+| `packages/shared/src/types.ts` | `WorkingHours`, `Slot`, `OccupiedRange` tipleri |
+| `packages/shared/src/constants.ts` | `SLOT_GRANULARITY_MIN`, `MIN_BOOKING_NOTICE_MINUTES` vb. |
 | `supabase/functions/import_map.json` | `@berber/shared/*` → `packages/shared/src/*` Deno alias'ı |
-| `supabase/functions/block-walkin/index.ts` | Widget auth + block INSERT (core differentiator) |
-| `packages/db/migrations/001_initial.sql` | Tablolar + `appointment_slots` mirror + Realtime publication |
-| `packages/db/migrations/003_functions.sql` | `sync_appointment_slots` trigger |
-| `packages/db/migrations/20260509_staff_schedules.sql` | Personel çalışma saatleri + mola altyapısı |
-| `apps/mobile/modules/widget/ios/BarberWidget.swift` | iOS WidgetKit — AppIntent + iOS 16 deeplink fallback |
-| `apps/mobile/modules/widget/android/BlockActionReceiver.kt` | Android widget → edge fn çağrısı |
-| `apps/mobile/modules/widget/plugin/index.js` | `expo prebuild` sırasında native dosyaları yerleştiren plugin |
-| `apps/mobile/lib/widget-bridge.ts` | Token üretme + native modüle köprü |
-| `apps/mobile/components/StaffScheduleModal.tsx` | Personel çalışma saatleri yönetim arayüzü |
+| `supabase/functions/_shared/supabase-admin.ts` | Service role client + SHA256 hash helper |
+| `supabase/functions/block-walkin/index.ts` | Widget auth + block INSERT |
+| `supabase/functions/widget-get-availability/index.ts` | `computeAvailableSlots` çağrısı |
+| `packages/db/src/database.types.ts` | Auto-generated Supabase tipleri (kaynak) |
+| `supabase/functions/_shared/database.types.ts` | Yukarının kopyası — edge fn'lerin kullandığı |
+| `supabase/migrations/` | 30 migration — tüm şema burada |
 
 ## Change safety rules
 
-- `slot-utils.ts` değişikliği → tek dosya (`packages/shared/src/slot-utils.ts`) hem web/mobile hem edge fonksiyonlarını besler. `book-appointment/index.ts` server-side revalidation'ı aynı kodu çalıştırır.
-- iOS 16 deeplink fallback (`berberapp://block?duration=...`) ve iOS 17+ AppIntent her ikisi de korunmalı.
-- `appointment_slots` tablo yapısı (kolonlar) değişirse: hem trigger fonksiyonunu hem `BookingFlow.tsx` realtime handler'ını hem `database.types.ts` (iki kopya) hem de `_shared/database.types.ts`'i güncelle.
-- `blocks` tablosuna DELETE policy eklenirse `BookingFlow.tsx`'teki `event: '*'` subscription'ını test et — handler tüm event tiplerini bekliyor.
-- `barbers.working_hours` JSONB şemasını değiştirirsen `WorkingHours` tipini `packages/shared/src/types.ts`'de güncelle. Not: `staff_schedules` tablosu bu saati ezer (override).
-- `staff_schedules` değişikliği → `get-availability` edge function ve `get_occupied_ranges` RPC bu tablodan beslenir.
-- `iOS NativeWidgetModule.swift` imzasını değiştirirsen `.m` bridging dosyasını da, ayrıca Android Kotlin tarafını da hizala.
+- `slot-utils.ts` değişikliği → `packages/shared/src/slot-utils.ts` güncelle, tüm edge fn'ler etkilenir.
+- `appointment_slots` tablo yapısı değişirse: hem trigger fonksiyonunu hem `database.types.ts` (iki kopya) güncelle.
+- `barbers.working_hours` JSONB şemasını değiştirirsen `WorkingHours` tipini `packages/shared/src/types.ts`'de güncelle.
+- `staff_schedules` değişikliği → `widget-get-availability` ve `get_occupied_ranges` RPC bu tablodan beslenir.
+- Edge function JWT verify ayarları `supabase/config.toml`'da: `block-walkin` ve `widget-book-appointment` `verify_jwt = false` (anon/widget auth).
 
 ## Known gotchas
 
-- `gist exclude` constraint sadece `status = 'confirmed'` için aktif — `cancelled` randevunun saatine yeni randevu alınabilir (intentional). `sync_appointment_slots` trigger'ı da non-confirmed satırları mirror'dan kaldırır.
-- iOS widget token, App Group (`group.com.berberapp`) UserDefaults'ta; Android'de `berber_widget_prefs` SharedPreferences'ta. `widget-bridge.ts` her iki platformda da `setWidgetToken(token, url)` çağırır — native modüller URL'yi kendi storage'larına yazar.
+- `gist exclude` constraint sadece `status = 'confirmed'` için aktif — `cancelled` randevunun saatine yeni randevu alınabilir (intentional).
 - `computeAvailableSlots()` geçmişte kalan slotları `BOOKING_GRACE_PERIOD_MIN` (5 dk) grace period ile filtreler.
-- `book-appointment` edge fn, PostgreSQL `23P01` error code'u ile gist constraint ihlalini yakalar — bu kodu değiştirme.
-- Supabase Realtime subscription'larında VIEW kullanılamaz çünkü RLS altındaki tablodan değerlendirilir → `appointment_slots` ayrı tablo + trigger pattern'i bu yüzden var.
-- `Intl.DateTimeFormat` `localTimeToUTC()` içinde DST geçişlerini doğru handle eder; bu helper'ı manuel offset hesaplamasıyla değiştirme.
-- iOS WidgetKit extension EXPO_PUBLIC env var'larına erişemez → `NativeWidgetModule.swift` Supabase URL'yi `setWidgetToken` çağrısında parametre olarak alır, App Group UserDefaults'a yazar.
-- iOS WidgetKit extension target'ını eklemek tam otomatize değil — `expo prebuild` sonrası Xcode'da manuel target eklemesi gerekir (plugin sadece Android'i ve iOS bridging modülünü yapar).
+- `app-book-appointment` edge fn, PostgreSQL `23P01` error code'u ile gist constraint ihlalini yakalar — bu kodu değiştirme.
+- Supabase Realtime subscription'larında VIEW kullanılamaz — `appointment_slots` ayrı tablo + trigger pattern'i bu yüzden var.
+- `Intl.DateTimeFormat` `localTimeToUTC()` içinde DST geçişlerini doğru handle eder; manuel offset hesaplamasıyla değiştirme.
+- **Duplicate migration timestamp:** `20260519130000_add_staff_slug.sql` ve `20260519130000_shops_unique_owner_user_id.sql` aynı timestamp'e sahip. Supabase alfabetik sırayla uygular (`add_staff_slug` önce). Üretimde uygulandığı için isim değiştirilmemelidir.
