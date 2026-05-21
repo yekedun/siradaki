@@ -8,28 +8,6 @@ node_modules/
 .env.*.local
 .env.production
 
-# Next.js
-apps/web/.next/
-apps/web/out/
-
-# Expo / React Native
-apps/mobile/.expo/
-apps/mobile/dist/
-apps/mobile/android/
-apps/mobile/ios/
-apps/customer/.expo/
-apps/customer/android/
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-*.orig.*
-
-# Expo generated (add back if you want to commit native dirs)
-# apps/mobile/android/
-# apps/mobile/ios/
-
 # Build outputs
 dist/
 build/
@@ -45,6 +23,20 @@ supabase/.temp/
 # Sensitive SQL dumps — never commit
 *_backup.sql
 *.dump.sql
+
+# Expo / React Native
+.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Agent / tooling noise
+.agent/*.log
+.codebase-map.txt
+.superpowers/
 
 # OS
 .DS_Store
