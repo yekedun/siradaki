@@ -240,7 +240,11 @@ export default function OzetScreen() {
   async function loadSummary() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data: shopData } = await supabase.from('shops').select('id').eq('owner_user_id', user.id).maybeSingle();
+    const { data: shopData } = await supabase
+      .from('shops')
+      .select('id')
+      .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
+      .maybeSingle();
     if (!shopData) return;
 
     const { data: barbers } = await supabase.from('staff').select('id, name').eq('shop_id', shopData.id).eq('is_active', true);
