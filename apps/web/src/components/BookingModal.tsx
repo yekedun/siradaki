@@ -14,10 +14,14 @@ interface BookingModalProps {
   onClose: () => void;
   summary: string;
   shopId: string;
+  shopSlug: string;
   staffId: string | null;
   serviceId: string;
+  startsAt: string;
   onSuccess: () => void;
 }
+
+const FN_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/functions/v1';
 
 /* ── Overline ─────────────────────────────────────────────────────── */
 function Overline({ children, color }: { children: React.ReactNode; color?: string }) {
@@ -256,25 +260,33 @@ function ModalError({ errorType, onClose }: { errorType: ErrorType; onClose: () 
    ════════════════════════════════════════════════════════════════════ */
 export function BookingModal({
   open, onClose, summary,
-  shopId, staffId, serviceId, onSuccess,
+  shopId, shopSlug, staffId, serviceId, startsAt, onSuccess,
 }: BookingModalProps) {
   const [state,     setState]     = useState<ModalState>('form');
   const [errorType, setErrorType] = useState<ErrorType>('conflict');
 
   if (!open) return null;
+  void shopId; // kept in props for future use
 
   async function handleConfirm(name: string, phone: string, note: string) {
     setState('loading');
     try {
-      // TODO: connect Supabase — POST to book-appointment edge function
-      // const res = await fetch('/api/book', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ shopId, staffId, serviceId, customerName: name, customerPhone: phone, note }),
-      // });
-      // if (res.status === 409) { setErrorType('conflict'); setState('error'); return; }
-      // if (!res.ok) { setErrorType('generic'); setState('error'); return; }
-      void name; void phone; void note; void shopId; void staffId; void serviceId;
+      const res = await fetch(`${FN_BASE}/widget-book-appointment`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shop_slug:       shopSlug,
+          service_id:      serviceId,
+          staff_id:        staffId,
+          starts_at:       startsAt,
+          customer_name:   name.trim(),
+          customer_phone:  phone.trim() || undefined,
+          customer_notes:  note.trim()  || undefined,
+        }),
+      });
+      if (res.status === 409) { setErrorType('conflict'); setState('error'); return; }
+      if (res.status === 429) { setErrorType('generic');  setState('error'); return; }
+      if (!res.ok)            { setErrorType('generic');  setState('error'); return; }
       setState('success');
       onSuccess();
     } catch {
