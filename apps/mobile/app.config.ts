@@ -53,12 +53,16 @@ const baseConfig = ({ config }: ConfigContext): ExpoConfig => ({
 export default (ctx: ConfigContext): ExpoConfig => {
   const cfg = baseConfig(ctx);
   return withGradleProperties(cfg as any, (props) => {
-    const idx = props.modResults.findIndex(
-      (item) => item.type === 'property' && item.key === 'org.gradle.jvmargs'
-    );
-    if (idx !== -1) {
-      (props.modResults[idx] as { type: 'property'; key: string; value: string }).value =
-        '-Xmx4096m -XX:MaxMetaspaceSize=512m';
+    for (const item of props.modResults) {
+      if (item.type !== 'property') continue;
+      if (item.key === 'org.gradle.jvmargs') {
+        item.value = '-Xmx4096m -XX:MaxMetaspaceSize=512m';
+      }
+      if (item.key === 'reactNativeArchitectures') {
+        // Preview builds: arm64-v8a only (fast); production keeps all 4
+        const arch = process.env.REACT_NATIVE_ARCHITECTURES;
+        if (arch) item.value = arch;
+      }
     }
     return props;
   }) as ExpoConfig;
