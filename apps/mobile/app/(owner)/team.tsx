@@ -42,12 +42,7 @@ interface StaffMember {
 }
 
 // TODO: connect Supabase — fetch from staff table for this shop
-const INIT_STAFF: StaffMember[] = [
-  { id: '1', name: 'Mehmet Demir', status: 'Aktif', meta: '%50 komisyon · Pzt–Cmt 09–19' },
-  { id: '2', name: 'Can Aslan',    status: 'Aktif', meta: '%50 komisyon · Pzt–Cum 10–20' },
-  { id: '3', name: 'Ayşe Yılmaz',  status: 'Aktif', meta: 'Komisyon yok · Sal–Cmt 10–18' },
-  { id: '4', name: 'Burak Şahin',  status: 'Pasif', meta: 'Komisyon yok' },
-];
+const INIT_STAFF: StaffMember[] = [];
 
 const TR_DAYS = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 

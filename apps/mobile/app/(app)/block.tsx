@@ -34,7 +34,7 @@
  *   Title area (textAlign center):
  *     overline "Takvim Kapatıldı" 11px SemiBold 0.16em uppercase slate-500 marginBottom 8
  *     duration "{dur} dakika" 24px Bold letterSpacing -0.02em
- *     sub "{START} – {endTime} · {curReason.title}" 14px Regular fg-3 marginTop 6
+ *     sub "{startTime} – {endTime} · {curReason.title}" 14px Regular fg-3 marginTop 6
  *   Block preview card (same stripe pattern):
  *     text "BLOKE · {curReason.title.toUpperCase()} · {dur}DK"
  *   Info text: 13px Regular fg-3 textAlign center lineHeight 1.5
@@ -53,9 +53,12 @@ import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../lib/theme';
 
 // TODO: connect Supabase — on "Kapat" pressed, insert block into block_slots table
-// supabase.from('block_slots').insert({ staff_id, start_time: START, duration_min: dur, reason: curReason.title })
+// supabase.from('block_slots').insert({ staff_id, start_time: now, duration_min: dur, reason: curReason.title })
 
-const START = '10:42'; // fixed in design source
+function nowTime(): string {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 function addMins(time: string, mins: number): string {
   const [h, m] = time.split(':').map(Number);
@@ -119,9 +122,10 @@ export default function BlockScreen() {
   const [dur, setDur] = useState(30);
   const [reason, setReason] = useState<'anlik' | 'mola' | 'kisisel'>('mola');
   const [blocked, setBlocked] = useState(false);
+  const [startTime] = useState<string>(nowTime); // captured when screen mounts
 
   const curReason = REASONS.find(r => r.id === reason)!;
-  const endTime = addMins(START, dur);
+  const endTime = addMins(startTime, dur);
 
   /* ── Success / blocked state ────────────────────────────────── */
   if (blocked) {
@@ -152,7 +156,7 @@ export default function BlockScreen() {
               <Text style={styles.successDur}>{dur} dakika</Text>
               {/* sub: 14px Regular fg-3 marginTop 6 */}
               <Text style={styles.successSub}>
-                {START} – {endTime} · {curReason.title}
+                {startTime} – {endTime} · {curReason.title}
               </Text>
             </View>
 
@@ -165,7 +169,7 @@ export default function BlockScreen() {
 
             {/* Info text: 13px Regular fg-3 textAlign center lineHeight 1.5 */}
             <Text style={styles.successInfo}>
-              Müşteri randevu ekranında {START}–{endTime} arası kapalı görünecek.
+              Müşteri randevu ekranında {startTime}–{endTime} arası kapalı görünecek.
             </Text>
           </View>
 
@@ -201,7 +205,7 @@ export default function BlockScreen() {
         <View style={styles.px20}>
           <Card padding={16}>
             {/* overline "Şu An · 10:42" */}
-            <Text style={styles.currentTimeOverline}>Şu An · {START}</Text>
+            <Text style={styles.currentTimeOverline}>Şu An · {startTime}</Text>
             {/* sub "Blok başlangıç saati otomatik atanır." */}
             <Text style={styles.currentTimeSub}>Blok başlangıç saati otomatik atanır.</Text>
           </Card>

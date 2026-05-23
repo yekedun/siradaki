@@ -63,7 +63,8 @@ function DayPicker({
   selected: number;
   onSelect: (i: number) => void;
 }) {
-  const today = new Date(2026, 4, 7); // 7 Mayıs 2026
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - 2 + i);
@@ -262,76 +263,51 @@ function EmptyState({ onCta }: { onCta?: () => void }) {
   );
 }
 
-/* ── Mock data — exact from screens.jsx RandevularScreen ────────────
- *   09:00 30 Can Demir   "Saç kesim · 30dk"       done
- *   09:30 20 Burak Ş.    "Sakal · 20dk"            done
- *   10:30 45 Ahmet Yılmaz "Saç + Sakal · 45 dk"   active  (opens detail sheet)
- *   11:15 30 Mehmet Kaya  "Saç kesim · 30 dk"
- *   [BLOK] 13:00 45 "BLOKE · Mola"
- *   14:30 30 Kerem Arslan "Saç kesim · 30 dk"
- *   16:00 60 Ozan Y.      "Saç + Sakal + Boya · 60 dk"
- */
+// TODO: connect Supabase — fetch appointments + blocks + services for authenticated staff
 type ListItem =
   | { kind: 'section'; label: string; topMargin?: number }
   | { kind: 'appt'; time: string; duration: number; name: string; service: string; state?: ApptState; isDetail?: boolean }
   | { kind: 'blok'; time: string; duration: number; label: string };
 
-const LIST_ITEMS: ListItem[] = [
-  { kind: 'section', label: 'Tamamlandı', topMargin: 0 },
-  { kind: 'appt', time: '09:00', duration: 30, name: 'Can Demir', service: 'Saç kesim · 30dk', state: 'done' },
-  { kind: 'appt', time: '09:30', duration: 20, name: 'Burak Ş.', service: 'Sakal · 20dk', state: 'done' },
-  { kind: 'section', label: 'Şu Anda', topMargin: 12 },
-  { kind: 'appt', time: '10:30', duration: 45, name: 'Ahmet Yılmaz', service: 'Saç + Sakal · 45 dk', state: 'active', isDetail: true },
-  { kind: 'section', label: 'Gelecek', topMargin: 12 },
-  { kind: 'appt', time: '11:15', duration: 30, name: 'Mehmet Kaya', service: 'Saç kesim · 30 dk' },
-  { kind: 'blok', time: '13:00', duration: 45, label: 'BLOKE · Mola' },
-  { kind: 'appt', time: '14:30', duration: 30, name: 'Kerem Arslan', service: 'Saç kesim · 30 dk' },
-  { kind: 'appt', time: '16:00', duration: 60, name: 'Ozan Y.', service: 'Saç + Sakal + Boya · 60 dk' },
-];
-
-/* ── Mock services for AddAppointmentModal ──────────────────────── */
-// TODO: connect Supabase — fetch services from shop_services table
-const MOCK_SERVICES: ServiceOption[] = [
-  { id: 'sac',       label: 'Saç kesim',    dur: 30, price: '200₺' },
-  { id: 'sakal',     label: 'Sakal tıraşı', dur: 20, price: '120₺' },
-  { id: 'sac-sakal', label: 'Saç + Sakal',  dur: 45, price: '280₺' },
-];
-
-/* ── Mock appointment for detail sheet ─────────────────────────── */
-const MOCK_DETAIL_APPT = {
-  id: 'appt-1',
-  time: '10:30',
-  duration: 45,
-  customerName: 'Ahmet Yılmaz',
-  customerPhone: null as string | null,
-  serviceName: 'Saç + Sakal · 45 dk · 280₺',
-};
+/* ── TR month names for header meta ─────────────────────────────── */
+const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'] as const;
+const TR_DAYS_FULL = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'] as const;
+function formatMetaDate(d: Date): string {
+  return `${d.getDate()} ${TR_MONTHS[d.getMonth()]} ${d.getFullYear()}, ${TR_DAYS_FULL[d.getDay()]}`;
+}
 
 /* ── SCREEN ──────────────────────────────────────────────────────── */
 export default function RandevularScreen() {
-  const [day, setDay] = useState(2); // index 2 = today (Çar 7 Mayıs)
+  const [dayIndex, setDayIndex] = useState(2); // index 2 = today
   const [showDetail, setShowDetail] = useState(false);
-  const [showAdd, setShowAdd] = useState(false);
+  const [showAdd, setShowAdd]   = useState(false);
 
-  // TODO: connect Supabase — when day changes, re-fetch appointments for that date
-  // isEmpty = true when no appointments exist for the selected day
-  const isEmpty = false;
+  // TODO: connect Supabase — fetch appointments by staff + selected date
+  // TODO: connect Supabase — fetch services from shop_services table
+  const items: ListItem[] = [];   // empty until Supabase is connected
+  const services: ServiceOption[] = [];
+  const isEmpty = items.length === 0;
+
+  // Derive displayed date for header meta
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const selectedDate = new Date(today);
+  selectedDate.setDate(today.getDate() - 2 + dayIndex);
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* OverlineHeader — exact from screens.jsx RandevularScreen
-          eyebrow "Berber · Dükkan Paneli", title "Randevular", meta "7 Mayıs 2026, Çar" */}
+      {/* OverlineHeader */}
       <View style={styles.header}>
         <Text style={styles.eyebrow}>Berber · Dükkan Paneli</Text>
         <Text style={styles.title}>Randevular</Text>
-        <Text style={styles.meta}>7 Mayıs 2026, Çar</Text>
+        <Text style={styles.meta}>{formatMetaDate(selectedDate)}</Text>
       </View>
 
       {/* DayPicker */}
-      <DayPicker selected={day} onSelect={setDay} />
+      <DayPicker selected={dayIndex} onSelect={setDayIndex} />
 
       {isEmpty ? (
-        /* Empty state — screen-27 EmptyRandevular */
+        /* Empty state */
         <EmptyState onCta={() => setShowAdd(true)} />
       ) : (
         <ScrollView
@@ -339,7 +315,7 @@ export default function RandevularScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {LIST_ITEMS.map((item, idx) => {
+          {items.map((item, idx) => {
             if (item.kind === 'section') {
               return (
                 <SectionLabel key={idx} topMargin={item.topMargin ?? 0}>
@@ -349,12 +325,7 @@ export default function RandevularScreen() {
             }
             if (item.kind === 'blok') {
               return (
-                <BlokCard
-                  key={idx}
-                  time={item.time}
-                  duration={item.duration}
-                  label={item.label}
-                />
+                <BlokCard key={idx} time={item.time} duration={item.duration} label={item.label} />
               );
             }
             return (
@@ -372,20 +343,19 @@ export default function RandevularScreen() {
         </ScrollView>
       )}
 
-      {/* FAB — position absolute, bottom 90, right 20, z-index 10
-          Button variant="accent" size="lg", boxShadow 0 12px 24px -10px rgba(30,58,138,0.4) */}
+      {/* FAB */}
       <TouchableOpacity style={styles.fab} onPress={() => setShowAdd(true)}>
         <Text style={styles.fabText}>+ Yeni Randevu</Text>
       </TouchableOpacity>
 
-      {/* Appointment detail sheet */}
+      {/* Appointment detail sheet — no appointment selected by default */}
       <AppointmentDetailSheet
         visible={showDetail}
         onClose={() => setShowDetail(false)}
-        appointment={MOCK_DETAIL_APPT}
-        onEdit={() => { /* TODO: connect Supabase — navigate to edit */ }}
-        onCancel={() => { /* TODO: connect Supabase — cancel appointment */ }}
-        onComplete={() => { /* TODO: connect Supabase — mark appointment completed */ }}
+        appointment={null}
+        onEdit={() => { /* TODO: connect Supabase */ }}
+        onCancel={() => { /* TODO: connect Supabase */ }}
+        onComplete={() => { /* TODO: connect Supabase */ }}
       />
 
       {/* Add appointment modal */}
@@ -396,7 +366,7 @@ export default function RandevularScreen() {
           // TODO: connect Supabase — insert new appointment
           setShowAdd(false);
         }}
-        services={MOCK_SERVICES}
+        services={services}
       />
     </SafeAreaView>
   );

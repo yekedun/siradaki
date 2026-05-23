@@ -53,12 +53,8 @@ interface Service {
   active: boolean;
 }
 
-const INIT_SERVICES: Service[] = [
-  { id: 's1', name: 'Saç Kesimi',          duration: 30, price: 200, active: true  },
-  { id: 's2', name: 'Saç + Sakal',         duration: 45, price: 300, active: true  },
-  { id: 's3', name: 'Sakal Şekillendirme', duration: 20, price: 150, active: true  },
-  { id: 's4', name: 'Fön + Şekillendirme', duration: 40, price: 250, active: false },
-];
+// TODO: connect Supabase — fetch services for this shop on mount
+const INIT_SERVICES: Service[] = [];
 
 /* ─── Toggle ────────────────────────────────────────────────── */
 
@@ -365,7 +361,7 @@ export default function ServicesScreen() {
   const [services, setServices] = useState<Service[]>(INIT_SERVICES);
   const [editing,  setEditing]  = useState<Service | null>(null);
   const [adding,   setAdding]   = useState(false);
-  const nextId = useRef(INIT_SERVICES.length + 1);
+  const nextId = useRef(1);
 
   // TODO: connect Supabase — fetch services for this shop on mount
 

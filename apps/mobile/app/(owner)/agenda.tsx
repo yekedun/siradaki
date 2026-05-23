@@ -81,25 +81,8 @@ interface StaffCol {
   items: ColItem[];
 }
 
-const INIT_COLS: StaffCol[] = [
-  {
-    id: 'mehmet', name: 'Mehmet', count: 5, blok: 1,
-    items: [
-      { type: 'appt', id: 'a1', time: '09:00', dur: 30, name: 'Can Demir',    svc: 'Saç kesim · 30dk',           state: 'done'     },
-      { type: 'appt', id: 'a2', time: '10:30', dur: 45, name: 'Ahmet Yılmaz', svc: 'Saç + Sakal · 45 dk',        state: 'upcoming' },
-      { type: 'blok', id: 'a3', time: '13:00', dur: 45, label: 'BLOKE · Mola'                                                      },
-      { type: 'appt', id: 'a4', time: '14:30', dur: 30, name: 'Kerem Arslan', svc: 'Saç kesim · 30 dk',          state: 'active'   },
-      { type: 'appt', id: 'a5', time: '16:00', dur: 60, name: 'Ozan Y.',      svc: 'Saç + Sakal + Boya · 60 dk', state: 'upcoming' },
-    ],
-  },
-  {
-    id: 'can', name: 'Can', count: 3, blok: 0,
-    items: [
-      { type: 'appt', id: 'b1', time: '11:15', dur: 30, name: 'Mehmet Kaya', svc: 'Saç kesim · 30 dk',  state: 'upcoming' },
-      { type: 'appt', id: 'b2', time: '15:00', dur: 45, name: 'Burak Ş.',    svc: 'Saç + Sakal · 45 dk', state: 'upcoming' },
-    ],
-  },
-];
+// TODO: connect Supabase — fetch staff + appointments + blocks for selectedDate
+const INIT_COLS: StaffCol[] = [];
 
 /* ── Empty drop zone ─────────────────────────────────────────── */
 function EmptyDropZone() {
@@ -139,6 +122,11 @@ export default function AgendaScreen() {
       />
 
       {/* Two-column horizontal scroll — flex:1, gap:12, padding:'20px 16px 90px' */}
+      {INIT_COLS.length === 0 ? (
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyText}>Henüz personel veya randevu yok</Text>
+        </View>
+      ) : null}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -251,6 +239,20 @@ const styles = StyleSheet.create({
 
   /* Item list — gap:10 */
   itemContent: { gap: 10 },
+
+  /* Empty screen state */
+  emptyWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  emptyText: {
+    fontSize: 13,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.slate[400],
+    textAlign: 'center',
+  },
 
   /* Empty drop zone (AjandaDrag source):
      border:'2px dashed brand-600' borderRadius:10 padding:'20px 10px'

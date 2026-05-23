@@ -31,32 +31,13 @@ type Period = 'day' | '7' | '30';
 
 // TODO: connect Supabase — fetch earnings by period (day/7/30)
 const PERIOD_DATA: Record<Period, { label: string; ciro: string; komisyon: string; dukkam: string }> = {
-  day: {
-    label: 'Bugün',
-    ciro: '2.840',
-    komisyon: '1.420',
-    dukkam: '1.420',
-  },
-  '7': {
-    label: '7 gün',
-    ciro: '19.600',
-    komisyon: '9.560',
-    dukkam: '10.040',
-  },
-  '30': {
-    label: '30 gün',
-    ciro: '84.320',
-    komisyon: '41.280',
-    dukkam: '43.040',
-  },
+  day: { label: 'Bugün', ciro: '—', komisyon: '—', dukkam: '—' },
+  '7': { label: '7 gün', ciro: '—', komisyon: '—', dukkam: '—' },
+  '30': { label: '30 gün', ciro: '—', komisyon: '—', dukkam: '—' },
 };
 
 // TODO: connect Supabase — fetch staff distribution by period
-const STAFF_DIST = [
-  { name: 'Mehmet Demir', appts: 58, ciro: '34.280 TL', pay: '17.140 TL' },
-  { name: 'Can Aslan',    appts: 42, ciro: '28.120 TL', pay: '14.060 TL' },
-  { name: 'Ayşe Yılmaz',  appts: 22, ciro: '21.920 TL', pay: '0 TL'      },
-];
+const STAFF_DIST: { name: string; appts: number; ciro: string; pay: string }[] = [];
 
 /* ─── Chip ──────────────────────────────────────────────────── */
 
@@ -139,6 +120,11 @@ export default function EarningsScreen() {
 
       {/* Staff rows */}
       <View style={styles.staffSection}>
+        {STAFF_DIST.length === 0 && (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyText}>Henüz veri yok</Text>
+          </View>
+        )}
         {STAFF_DIST.map((p, i) => {
           const initials = p.name
             .split(' ')
@@ -315,6 +301,19 @@ const styles = StyleSheet.create({
   /* Staff section */
   staffSection: {
     paddingHorizontal: 20,
+  },
+  emptyCard: {
+    backgroundColor: colors.slate[0],
+    borderWidth: 1,
+    borderColor: colors.slate[200],
+    borderRadius: 14,
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 13,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.slate[400],
   },
   staffCard: {
     backgroundColor: colors.slate[0],
