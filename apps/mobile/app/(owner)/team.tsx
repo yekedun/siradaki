@@ -289,7 +289,7 @@ function StaffScheduleModal({ open, onClose, staffName }: StaffScheduleModalProp
 interface AddStaffSheetProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (name: string, email: string) => void;
+  onAdd: (name: string, email: string, commissionRate: number | null) => void;
 }
 
 function AddStaffSheet({ open, onClose, onAdd }: AddStaffSheetProps) {
@@ -302,10 +302,13 @@ function AddStaffSheet({ open, onClose, onAdd }: AddStaffSheetProps) {
       Alert.alert('Geçersiz', 'Geçerli bir ad gir.');
       return;
     }
-    onAdd(name.trim(), email.trim());
-    setName('');
-    setEmail('');
-    setCommInput('');
+    const rate = commInput.trim() ? parseFloat(commInput) : null;
+    if (rate !== null && (isNaN(rate) || rate < 0 || rate > 100)) {
+      Alert.alert('Geçersiz', 'Komisyon 0-100 arasında olmalı.');
+      return;
+    }
+    onAdd(name.trim(), email.trim(), rate);
+    setName(''); setEmail(''); setCommInput('');
   }
 
   return (
@@ -565,46 +568,41 @@ export default function TeamScreen() {
     );
   }
 
-  async function handleAddStaff(name: string, email: string) {
-    if (!shopId) return;
-    if (email.trim()) {
-      const { data: result, error: fnErr } = await supabase.functions.invoke('invite-barber', {
-        body: { email: email.trim(), display_name: name },
-      });
-      if (fnErr || !result?.staff) {
-        Alert.alert('Hata', 'Personel davet edilemedi.');
-        return;
-      }
-      setStaff((prev) => [
-        ...prev,
-        {
-          id: result.staff.id,
-          name: result.staff.name,
-          status: 'Aktif',
-          meta: 'Komisyon yok',
-        },
-      ]);
-    } else {
-      const { data, error: insertErr } = await supabase.from('staff').insert({
+  async function handleAddStaff(name: string, email: string, commissionRate: number | null) {
+    if (!shopId) {
+      Alert.alert('Hata', 'Dükkan bilgisi yüklenemedi. Lütfen tekrar deneyin.');
+      return;
+    }
+
+    const { data, error: insertErr } = await supabase
+      .from('staff')
+      .insert({
         shop_id: shopId,
-        name,
+        name: name.trim(),
+        email: email.trim() || null,
         role: 'staff',
         is_active: true,
-      }).select('id, name, is_active, commission_type, commission_rate_bps').single();
-      if (insertErr || !data) {
-        Alert.alert('Hata', 'Personel eklenemedi.');
-        return;
-      }
-      setStaff((prev) => [
-        ...prev,
-        {
-          id: (data as any).id,
-          name: (data as any).name,
-          status: 'Aktif',
-          meta: 'Komisyon yok',
-        },
-      ]);
+        commission_type: commissionRate !== null ? 'percentage' : 'none',
+        commission_rate_bps: commissionRate !== null ? Math.round(commissionRate * 100) : null,
+      })
+      .select('id, name, is_active, commission_type, commission_rate_bps')
+      .single();
+
+    if (insertErr || !data) {
+      Alert.alert('Hata', 'Personel eklenemedi. Lütfen tekrar deneyin.');
+      return;
     }
+
+    const rate = (data as any).commission_rate_bps;
+    setStaff((prev) => [
+      ...prev,
+      {
+        id: (data as any).id,
+        name: (data as any).name,
+        status: 'Aktif',
+        meta: rate ? `%${Math.round(rate / 100)} komisyon` : 'Komisyon yok',
+      },
+    ]);
     setAddOpen(false);
   }
 
