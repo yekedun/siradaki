@@ -581,7 +581,9 @@ export default function SettingsScreen() {
 
   async function handleCreateLink() {
     if (!shopId) return;
-    const token = `wgt_${Math.random().toString(36).slice(2,10)}${Math.random().toString(36).slice(2,10)}`;
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    const token = 'wgt_' + Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
     const { data } = await supabase.from('widget_tokens').insert({ shop_id: shopId, token }).select('id, token, last_used_at').single();
     if (data) {
       setWidgetLinks(prev => [...prev, {

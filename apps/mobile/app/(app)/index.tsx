@@ -40,14 +40,7 @@ import { colors } from '../../lib/theme';
 import { AppointmentDetailSheet } from '../../components/AppointmentDetailSheet';
 import { AddAppointmentModal, ServiceOption } from '../../components/AddAppointmentModal';
 import { supabase } from '../../lib/supabase';
-
-function formatTime(d: Date): string {
-  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-}
-function translateReason(r: string): string {
-  const map: Record<string,string> = { walkin: 'Anlık Müşteri', break: 'Mola', personal: 'Kişisel' };
-  return map[r] ?? r;
-}
+import { formatTime, translateReason, getAppointmentState, buildDayRange } from '../../lib/utils';
 
 /* ── TR day labels ──────────────────────────────────────────────── */
 const TR_DAYS_SHORT = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'] as const;
@@ -271,7 +264,7 @@ function EmptyState({ onCta }: { onCta?: () => void }) {
 // TODO: connect Supabase — fetch appointments + blocks + services for authenticated staff
 type ListItem =
   | { kind: 'section'; label: string; topMargin?: number }
-  | { kind: 'appt'; time: string; duration: number; name: string; service: string; state?: ApptState; isDetail?: boolean }
+  | { kind: 'appt'; id: string; time: string; duration: number; name: string; service: string; state?: ApptState; isDetail?: boolean }
   | { kind: 'blok'; time: string; duration: number; label: string };
 
 /* ── TR month names for header meta ─────────────────────────────── */
@@ -285,6 +278,7 @@ function formatMetaDate(d: Date): string {
 export default function RandevularScreen() {
   const [dayIndex, setDayIndex] = useState(2); // index 2 = today
   const [showDetail, setShowDetail] = useState(false);
+  const [selectedAppt, setSelectedAppt] = useState<import('../../components/AppointmentDetailSheet').AppointmentDetail | null>(null);
   const [showAdd, setShowAdd]   = useState(false);
   const [barberId, setBarberId] = useState<string | null>(null);
   const [items, setItems] = useState<ListItem[]>([]);
@@ -341,9 +335,9 @@ export default function RandevularScreen() {
       const timeStr = formatTime(start);
       const state: ApptState = a.status === 'completed' ? 'done'
         : (start <= now && now < end) ? 'active' : 'upcoming';
-      const item: ListItem = { kind: 'appt', time: timeStr, duration: a.duration_min ?? 30, name: a.customer_name, service: a.service_name, state };
+      const item: ListItem = { kind: 'appt', id: a.id, time: timeStr, duration: a.duration_min ?? 30, name: a.customer_name, service: a.service_name, state };
       if (state === 'done') done.push(item);
-      else if (state === 'active') active.push(item);
+      else if (state === 'active') active.push({ ...item, isDetail: true });
       else upcoming.push({ ...item, _startMs: start.getTime() } as any);
     }
 
@@ -416,7 +410,10 @@ export default function RandevularScreen() {
                 name={item.name}
                 service={item.service}
                 state={item.state}
-                onPress={item.isDetail ? () => setShowDetail(true) : undefined}
+                onPress={item.isDetail ? () => {
+                  setSelectedAppt({ id: item.id, time: item.time, duration: item.duration, customerName: item.name, customerPhone: null, serviceName: item.service });
+                  setShowDetail(true);
+                } : undefined}
               />
             );
           })}
@@ -428,11 +425,11 @@ export default function RandevularScreen() {
         <Text style={styles.fabText}>+ Yeni Randevu</Text>
       </TouchableOpacity>
 
-      {/* Appointment detail sheet — no appointment selected by default */}
+      {/* Appointment detail sheet */}
       <AppointmentDetailSheet
         visible={showDetail}
-        onClose={() => setShowDetail(false)}
-        appointment={null}
+        onClose={() => { setShowDetail(false); setSelectedAppt(null); }}
+        appointment={selectedAppt}
         onEdit={() => { /* TODO: connect Supabase */ }}
         onCancel={() => { /* TODO: connect Supabase */ }}
         onComplete={() => { /* TODO: connect Supabase */ }}

@@ -26,12 +26,9 @@ import { supabase } from '../../lib/supabase';
 
 /* ─── Types ─────────────────────────────────────────────────── */
 
-type Period = 'day' | '7' | '30';
+import { formatCents } from '../../lib/utils';
 
-function formatCents(cents: number): string {
-  if (cents === 0) return '0';
-  return (cents / 100).toLocaleString('tr-TR', { maximumFractionDigits: 0 });
-}
+type Period = 'day' | '7' | '30';
 
 /* ─── Chip ──────────────────────────────────────────────────── */
 

@@ -566,6 +566,7 @@ export default function TeamScreen() {
     const { data } = await supabase.from('staff').insert({
       shop_id: shopId,
       name,
+      email: email || null,
       role: 'staff',
       status: 'active',
     }).select('id, name, status, commission_type, commission_rate_bps').single();

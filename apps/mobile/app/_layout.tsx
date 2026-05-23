@@ -1,7 +1,7 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
 import { supabase, determineUserRole } from '../lib/supabase';
 
@@ -17,11 +17,15 @@ export default function RootLayout() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const router = useRouter();
   const segments = useSegments();
+  // Guard against infinite routing loop — segments is a new array ref every render
+  const routedRef = useRef(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      setSession(session);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, newSession) => {
+      // Reset routing guard on auth state change (login / logout)
+      routedRef.current = false;
+      setSession(newSession);
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -29,22 +33,28 @@ export default function RootLayout() {
   useEffect(() => {
     if (!loaded || session === undefined) return;
     SplashScreen.hideAsync();
-    const inAuth = segments[0] === '(auth)';
+
     if (!session) {
+      const inAuth = segments[0] === '(auth)';
       if (!inAuth) router.replace('/(auth)/login');
       return;
     }
-    // If already in the correct group, don't re-navigate
+
+    // Already in the correct group — no need to route again
     const inOwner = segments[0] === '(owner)';
-    const inApp = segments[0] === '(app)';
+    const inApp   = segments[0] === '(app)';
     if (inOwner || inApp) return;
-    // Determine role and route
+
+    // Only run role determination once per session
+    if (routedRef.current) return;
+    routedRef.current = true;
+
     determineUserRole(session.user.id).then(role => {
       if (role === 'owner') router.replace('/(owner)');
       else if (role === 'staff') router.replace('/(app)');
       else router.replace('/(auth)/login');
     });
-  }, [loaded, session, segments]);
+  }, [loaded, session]); // segments intentionally excluded — use routedRef guard instead
 
   if (!loaded || session === undefined) return null;
   return <Stack screenOptions={{ headerShown: false }} />;

@@ -51,16 +51,8 @@ import { AppointmentCard } from '../../components/ds/AppointmentCard';
 import { BlokCard } from '../../components/ds/BlokCard';
 import { Button } from '../../components/ds/Button';
 import { supabase } from '../../lib/supabase';
+import { formatTime, translateReason, AppointmentState as AppState } from '../../lib/utils';
 
-function formatTime(d: Date): string {
-  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-}
-function translateReason(r: string): string {
-  const map: Record<string,string> = { walkin: 'Anlık Müşteri', break: 'Mola', personal: 'Kişisel' };
-  return map[r] ?? r;
-}
-
-type AppState = 'done' | 'active' | 'upcoming';
 
 interface AppItem {
   type: 'appt';
@@ -109,21 +101,35 @@ function getToday(): Date {
 export default function AgendaScreen() {
   const [selectedDate, setSelectedDate] = useState<Date>(getToday);
   const [cols, setCols] = useState<StaffCol[]>(INIT_COLS);
+  const [shopId, setShopId] = useState<string | null>(null);
+  const [barberList, setBarberList] = useState<{ id: string; name: string }[]>([]);
+
+  // Fetch shop + barbers once on mount
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: shopData } = await supabase.from('shops').select('id').eq('owner_user_id', user.id).maybeSingle();
+      if (!shopData) return;
+      setShopId(shopData.id);
+      const { data: barbers } = await supabase.from('barbers').select('id, name').eq('shop_id', shopData.id);
+      setBarberList((barbers ?? []) as { id: string; name: string }[]);
+    })();
+  }, []);
 
   useEffect(() => {
-    loadAgenda();
-  }, [selectedDate]);
+    if (barberList.length) loadAgenda();
+  }, [selectedDate, barberList]);
 
   async function loadAgenda() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data: shopData } = await supabase.from('shops').select('id').eq('owner_user_id', user.id).maybeSingle();
-    if (!shopData) return;
+    const barbers = barberList;
+    if (!barbers.length) { setCols([]); return; }
 
     const dayStart = new Date(selectedDate); dayStart.setHours(0,0,0,0);
     const dayEnd = new Date(selectedDate); dayEnd.setDate(dayEnd.getDate()+1); dayEnd.setHours(0,0,0,0);
 
-    const { data: barbers } = await supabase.from('barbers').select('id, name').eq('shop_id', shopData.id);
+    // barbers already loaded — skip the redundant shop/barber fetch
+    const _ = shopId; // referenced to avoid unused-var warning
     if (!barbers?.length) { setCols([]); return; }
 
     const [{ data: appts }, { data: blocks }] = await Promise.all([

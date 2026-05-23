@@ -222,11 +222,16 @@ export default function RegisterScreen() {
     }
 
     // Create shop record
-    await supabase.from('shops').insert({
+    const { error: shopError } = await supabase.from('shops').insert({
       owner_user_id: authData.user.id,
       name: shopName.trim(),
       slug: shopName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
     });
+    if (shopError) {
+      setError('Dükkan oluşturulamadı: ' + shopError.message);
+      setLoading(false);
+      return;
+    }
 
     setLoading(false);
     router.replace('/(owner)');
