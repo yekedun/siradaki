@@ -60,6 +60,11 @@ export interface ServiceOption {
   price: string;
 }
 
+export interface StaffOption {
+  id: string;
+  name: string;
+}
+
 const DEFAULT_SERVICES: ServiceOption[] = [
   { id: 'sac',       label: 'Saç kesim',    dur: 30, price: '200₺' },
   { id: 'sakal',     label: 'Sakal tıraşı', dur: 20, price: '120₺' },
@@ -135,11 +140,14 @@ export interface AddAppointmentModalProps {
     customerName: string;
     customerPhone: string;
     serviceId: string;
+    staffId: string | null;
     date: string;
     time: string;
   }) => void;
   /** Services to display in the selector. Defaults to the design mock data. */
   services?: ServiceOption[];
+  staffList?: StaffOption[];
+  initialStaffId?: string | null;
 }
 
 /* ── MODAL ──────────────────────────────────────────────────────── */
@@ -148,15 +156,19 @@ export function AddAppointmentModal({
   onClose,
   onSave,
   services = DEFAULT_SERVICES,
+  staffList,
+  initialStaffId,
 }: AddAppointmentModalProps) {
-  const [name,   setName]   = useState('');
-  const [phone,  setPhone]  = useState('');
-  const [svc,    setSvc]    = useState('sac-sakal');   // default selection from source
-  const [dayIdx, setDayIdx] = useState(2);              // index 2 = today
-  const [slot,   setSlot]   = useState('');
+  const [name,           setName]           = useState('');
+  const [phone,          setPhone]          = useState('');
+  const [svc,            setSvc]            = useState('sac-sakal');   // default selection from source
+  const [dayIdx,         setDayIdx]         = useState(2);              // index 2 = today
+  const [slot,           setSlot]           = useState('');
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(initialStaffId ?? null);
 
   const curSvc  = services.find(s => s.id === svc);
-  const canSave = name.trim().length >= 2 && !!slot;
+  const canSave = name.trim().length >= 2 && !!slot &&
+    (!(staffList && staffList.length > 0) || !!selectedStaffId);
 
   /* Build date label for ÖZET card */
   const TODAY_B = new Date();
@@ -176,6 +188,7 @@ export function AddAppointmentModal({
       customerName: name.trim(),
       customerPhone: phone,
       serviceId: svc,
+      staffId: selectedStaffId,
       date: selDate.toISOString().slice(0, 10),
       time: slot,
     });
@@ -232,6 +245,30 @@ export function AddAppointmentModal({
               keyboardType="phone-pad"
             />
           </View>
+
+          {/* ── Berber picker (shown when staffList is provided) ── */}
+          {staffList && staffList.length > 0 && (
+            <>
+              <Text style={styles.sectionLabel}>Berber</Text>
+              <View style={styles.serviceList}>
+                {staffList.map(s => {
+                  const sel = selectedStaffId === s.id;
+                  return (
+                    <TouchableOpacity
+                      key={s.id}
+                      onPress={() => setSelectedStaffId(s.id)}
+                      activeOpacity={0.8}
+                      style={[styles.serviceRow, sel ? styles.serviceRowActive : styles.serviceRowInactive]}
+                    >
+                      <Text style={[styles.serviceLabel, sel && styles.serviceLabelActive]}>
+                        {s.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </>
+          )}
 
           {/* ── Hizmet section label ────────────────────────────── */}
           <Text style={styles.sectionLabel}>Hizmet</Text>
