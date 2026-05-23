@@ -520,7 +520,11 @@ export default function TeamScreen() {
   async function loadStaff() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data: shopData } = await supabase.from('shops').select('id').eq('owner_user_id', user.id).maybeSingle();
+    const { data: shopData } = await supabase
+      .from('shops')
+      .select('id')
+      .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
+      .maybeSingle();
     if (!shopData) return;
     setShopId(shopData.id);
     const { data } = await supabase.from('staff').select('id, name, is_active, commission_type, commission_rate_bps').eq('shop_id', shopData.id);
