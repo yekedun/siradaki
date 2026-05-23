@@ -53,7 +53,7 @@ import { BlokCard } from '../../components/ds/BlokCard';
 import { Button } from '../../components/ds/Button';
 import { supabase } from '../../lib/supabase';
 import { formatTime, translateReason, AppointmentState as AppState } from '../../lib/utils';
-import { AddAppointmentModal, ServiceOption } from '../../components/AddAppointmentModal';
+import { AddAppointmentModal, ServiceOption, StaffOption } from '../../components/AddAppointmentModal';
 
 
 interface AppItem {
@@ -287,23 +287,25 @@ export default function AgendaScreen() {
         visible={showAdd}
         onClose={() => setShowAdd(false)}
         services={services}
+        staffList={barberList}
         onSave={async (data) => {
           if (!shopSlug) return;
           try {
-            await supabase.functions.invoke('app-book-appointment', {
+            const { error } = await supabase.functions.invoke('app-book-appointment', {
               body: {
                 shop_slug: shopSlug,
                 service_id: data.serviceId,
-                staff_id: null,
+                staff_id: data.staffId,
                 starts_at: `${data.date}T${data.time}:00`,
                 customer_name: data.customerName,
                 customer_phone: data.customerPhone || null,
               },
             });
+            if (error) throw error;
             setShowAdd(false);
             loadAgenda();
-          } catch (e) {
-            Alert.alert('Hata', 'Randevu eklenemedi.');
+          } catch {
+            Alert.alert('Hata', 'Randevu eklenemedi. Seçilen saat dolu olabilir.');
           }
         }}
       />
