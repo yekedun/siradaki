@@ -58,6 +58,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { colors } from '../../lib/theme';
 
 /* ─── Constants ─────────────────────────────────────────────── */
@@ -503,6 +504,7 @@ interface WidgetLink {
 }
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const [commEnabled,    setCommEnabled]    = useState(true);
   const [profileOpen,    setProfileOpen]    = useState(false);
   const [hoursOpen,      setHoursOpen]      = useState(false);
@@ -520,7 +522,8 @@ export default function SettingsScreen() {
           text: 'Çıkış yap',
           style: 'destructive',
           onPress: () => {
-            // TODO: connect Supabase — supabase.auth.signOut(), navigate to login
+            // TODO: connect Supabase — supabase.auth.signOut()
+            router.replace('/(auth)/login');
           },
         },
       ],

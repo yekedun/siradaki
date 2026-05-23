@@ -1,6 +1,7 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
+import { withGradleProperties } from '@expo/config-plugins';
 
-export default ({ config }: ConfigContext): ExpoConfig => ({
+const baseConfig = ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Sıradaki',
   slug: 'siradaki',
@@ -42,4 +43,27 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   experiments: {
     typedRoutes: true,
   },
+  extra: {
+    eas: {
+      projectId: 'd1da3258-795a-4a62-b8ad-96c48e79a635',
+    },
+  },
 });
+
+export default (ctx: ConfigContext): ExpoConfig => {
+  const cfg = baseConfig(ctx);
+  return withGradleProperties(cfg as any, (props) => {
+    for (const item of props.modResults) {
+      if (item.type !== 'property') continue;
+      if (item.key === 'org.gradle.jvmargs') {
+        item.value = '-Xmx4096m -XX:MaxMetaspaceSize=512m';
+      }
+      if (item.key === 'reactNativeArchitectures') {
+        // Preview builds: arm64-v8a only (fast); production keeps all 4
+        const arch = process.env.REACT_NATIVE_ARCHITECTURES;
+        if (arch) item.value = arch;
+      }
+    }
+    return props;
+  }) as ExpoConfig;
+};

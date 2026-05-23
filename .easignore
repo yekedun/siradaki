@@ -1,0 +1,12 @@
+# Generated native directories — EAS regenerates these via expo prebuild
+apps/mobile/android/
+apps/mobile/ios/
+apps/mobile/.expo/
+apps/mobile/build-archive/
+apps/mobile/build-archive/**
+
+# Heavy dirs excluded by EAS by default — listed here as safety net
+node_modules/
+**/node_modules/
+.pnpm-store/
+**/.turbo/
