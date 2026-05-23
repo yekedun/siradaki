@@ -339,6 +339,8 @@ function AddStaffSheet({ open, onClose, onAdd }: AddStaffSheetProps) {
                 onChangeText={setName}
                 placeholder="Ad Soyad"
                 placeholderTextColor={colors.slate[300]}
+                autoCorrect={false}
+                spellCheck={false}
                 style={styles.textInput}
               />
             </View>
