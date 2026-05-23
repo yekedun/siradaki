@@ -24,16 +24,19 @@
  *      3 summary rows, "Panele Git" button, "Rezervasyon linkini paylaş →" ghost
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { router } from 'expo-router';
 import { colors } from '../../lib/theme';
+import { supabase } from '../../lib/supabase';
 
 /* ─── Constants ──────────────────────────────────────────────── */
 
@@ -499,6 +502,8 @@ function StepDone({ shopName, cityName, svcName, svcDur, svcPrice, onGo, onShare
 
 export default function OnboardingScreen() {
   const [step, setStep] = useState(0);
+  const [shopId, setShopId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // Step 1 state
   const [shopName,  setShopName]  = useState('');
@@ -512,17 +517,82 @@ export default function OnboardingScreen() {
   // Step 3 state
   const [staffName, setStaffName] = useState('');
 
+  // Load existing shop on mount (created during register)
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: shop } = await supabase
+        .from('shops')
+        .select('id, name, address')
+        .eq('owner_user_id', user.id)
+        .maybeSingle();
+      if (shop) {
+        setShopId(shop.id);
+        if (shop.name)    setShopName(shop.name);
+        if (shop.address) setCity(shop.address);
+      }
+    })();
+  }, []);
+
   function handleLogin() {
-    // TODO: connect Supabase — navigate to login screen
+    router.replace('/(auth)/login');
   }
+
   function handleGo() {
-    // TODO: connect Supabase — mark onboarding complete, navigate to owner dashboard
+    router.replace('/(owner)');
   }
-  function handleShare() {
-    // TODO: connect Supabase — share reservation link via native share sheet
+
+  async function handleShare() {
+    const slug = shopName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    try { await Share.share({ message: `siradaki.app/${slug}` }); } catch {}
   }
-  function handleNext3() {
-    // TODO: connect Supabase — save staff entry for new shop
+
+  // Step 1 → 2: update shop name + city
+  async function handleNext1() {
+    if (shopId) {
+      await supabase.from('shops').update({
+        name:    shopName.trim(),
+        address: city.trim() || null,
+      }).eq('id', shopId);
+    }
+    setStep(2);
+  }
+
+  // Step 2 → 3: insert first service (optional — skip if empty)
+  async function handleNext2() {
+    if (shopId && svcName.trim().length >= 2 && svcPrice !== '') {
+      setLoading(true);
+      await supabase.from('services').insert({
+        shop_id:      shopId,
+        name:         svcName.trim(),
+        duration_min: svcDur,
+        price_cents:  Math.round(Number(svcPrice) * 100),
+        active:       true,
+      });
+      setLoading(false);
+    }
+    setStep(3);
+  }
+
+  // Step 3 → 4: insert first staff member (optional — skip if empty)
+  async function handleNext3() {
+    if (shopId && staffName.trim().length >= 2) {
+      setLoading(true);
+      const slug = staffName.trim()
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .slice(0, 40);
+      await supabase.from('staff').insert({
+        shop_id:   shopId,
+        name:      staffName.trim(),
+        is_active: true,
+        role:      'barber',
+        slug,
+      });
+      setLoading(false);
+    }
     setStep(4);
   }
 
@@ -532,7 +602,7 @@ export default function OnboardingScreen() {
   if (step === 1) {
     return (
       <Step1
-        onNext={() => setStep(2)}
+        onNext={handleNext1}
         shopName={shopName}
         setShopName={setShopName}
         city={city}
@@ -543,7 +613,7 @@ export default function OnboardingScreen() {
   if (step === 2) {
     return (
       <Step2
-        onNext={() => setStep(3)}
+        onNext={handleNext2}
         onSkip={() => setStep(3)}
         svcName={svcName}
         setSvcName={setSvcName}

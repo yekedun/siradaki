@@ -234,7 +234,7 @@ export default function RegisterScreen() {
     }
 
     setLoading(false);
-    router.replace('/(owner)');
+    router.replace('/(owner)/onboarding');
   }
 
   return (
