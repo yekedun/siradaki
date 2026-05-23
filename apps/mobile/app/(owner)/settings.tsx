@@ -45,7 +45,7 @@
  * Custom Toggle: 44×26, brand-600=on / slate-200=off, white thumb 22×22, Animated
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -60,18 +60,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '../../lib/theme';
+import { supabase } from '../../lib/supabase';
 
 /* ─── Constants ─────────────────────────────────────────────── */
-
-// TODO: connect Supabase — fetch shop profile
-const SHOP_DATA = {
-  name: 'Keskin Berber',
-  address: 'Beşiktaş Meydanı No 14, İstanbul',
-  bio: '1987\'den bu yana Beşiktaş\'ta. Geleneksel berber sanatını modern tekniklerle buluşturuyoruz.',
-  phone: '0212 345 67 89',
-  slug: 'keskin-berber',
-  email: 'berber@keskin.com',
-};
 
 const INIT_SCHEDULE = [
   { id: 'pzt', label: 'Pzt', open: true,  start: '09:00', end: '19:00', brk: '' },
@@ -126,15 +117,32 @@ function Toggle({ on, onChange }: ToggleProps) {
 interface ProfileEditorSheetProps {
   open: boolean;
   onClose: () => void;
+  shopId: string | null;
+  initialName: string;
+  initialAddress: string;
+  initialBio: string;
+  initialPhone: string;
+  slug: string;
 }
 
-function ProfileEditorSheet({ open, onClose }: ProfileEditorSheetProps) {
-  const [name,    setName]    = useState(SHOP_DATA.name);
-  const [address, setAddress] = useState(SHOP_DATA.address);
-  const [bio,     setBio]     = useState(SHOP_DATA.bio);
-  const [phone,   setPhone]   = useState(SHOP_DATA.phone);
+function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress, initialBio, initialPhone, slug }: ProfileEditorSheetProps) {
+  const [name,    setName]    = useState(initialName);
+  const [address, setAddress] = useState(initialAddress);
+  const [bio,     setBio]     = useState(initialBio);
+  const [phone,   setPhone]   = useState(initialPhone);
   const [visible, setVisible] = useState(true);
   const [saved,   setSaved]   = useState(false);
+
+  // Sync state when initial values change (after shop data loads)
+  useEffect(() => {
+    if (open) {
+      setName(initialName);
+      setAddress(initialAddress);
+      setBio(initialBio);
+      setPhone(initialPhone);
+      setSaved(false);
+    }
+  }, [open]);
 
   const canSave = name.trim().length >= 2;
 
@@ -145,9 +153,9 @@ function ProfileEditorSheet({ open, onClose }: ProfileEditorSheetProps) {
     .slice(0, 2)
     .toUpperCase();
 
-  function handleSave() {
-    if (!canSave) return;
-    // TODO: connect Supabase — update shop profile (name, address, bio, phone, visible)
+  async function handleSave() {
+    if (!canSave || !shopId) return;
+    await supabase.from('shops').update({ name: name.trim(), address, bio, phone }).eq('id', shopId);
     setSaved(true);
   }
 
@@ -290,7 +298,7 @@ function ProfileEditorSheet({ open, onClose }: ProfileEditorSheetProps) {
               {/* Slug info */}
               <View style={styles.slugBox}>
                 <Text style={styles.slugLabel}>Rezervasyon Linki</Text>
-                <Text style={styles.slugValue}>siradaki.app/{SHOP_DATA.slug}</Text>
+                <Text style={styles.slugValue}>siradaki.app/{slug}</Text>
               </View>
 
               {/* Kaydet */}
@@ -323,9 +331,10 @@ interface ScheduleDay {
 interface HoursEditorSheetProps {
   open: boolean;
   onClose: () => void;
+  shopName?: string;
 }
 
-function HoursEditorSheet({ open, onClose }: HoursEditorSheetProps) {
+function HoursEditorSheet({ open, onClose, shopName = '' }: HoursEditorSheetProps) {
   const [schedule, setSchedule] = useState<ScheduleDay[]>(INIT_SCHEDULE);
   const [sel, setSel] = useState(0);
   const day = schedule[sel];
@@ -356,7 +365,7 @@ function HoursEditorSheet({ open, onClose }: HoursEditorSheetProps) {
               <Text style={styles.hoursEyebrow}>Dükkan Saatleri</Text>
               <Text style={styles.hoursTitle}>Çalışma Saatleri</Text>
               <Text style={styles.hoursSubtitle}>
-                Keskin Berber · Müşteri randevu ekranında görünür
+                {shopName || '—'} · Müşteri randevu ekranında görünür
               </Text>
             </View>
 
@@ -503,14 +512,54 @@ interface WidgetLink {
   lastUsed: string;
 }
 
+interface ShopData {
+  name: string;
+  address: string;
+  bio: string;
+  phone: string;
+  slug: string;
+  email: string;
+  commission_enabled: boolean;
+}
+
 export default function SettingsScreen() {
   const router = useRouter();
-  const [commEnabled,    setCommEnabled]    = useState(true);
+  const [commEnabled,    setCommEnabled]    = useState(false);
   const [profileOpen,    setProfileOpen]    = useState(false);
   const [hoursOpen,      setHoursOpen]      = useState(false);
-  const [widgetLinks,    setWidgetLinks]    = useState<WidgetLink[]>([
-    { id: 'w1', shortId: 'a4f9…2b1c', lastUsed: '3 May 2026' },
-  ]);
+  const [widgetLinks,    setWidgetLinks]    = useState<WidgetLink[]>([]);
+  const [shop,           setShop]           = useState<ShopData | null>(null);
+  const [shopId,         setShopId]         = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase.from('shops').select('id, name, address, bio, phone, slug, commission_enabled').eq('owner_user_id', user.id).maybeSingle()
+        .then(({ data }) => {
+          if (!data) return;
+          setShopId(data.id);
+          setShop({
+            name: data.name ?? '',
+            address: data.address ?? '',
+            bio: data.bio ?? '',
+            phone: data.phone ?? '',
+            slug: data.slug ?? '',
+            email: user.email ?? '',
+            commission_enabled: data.commission_enabled ?? false,
+          });
+          setCommEnabled(data.commission_enabled ?? false);
+          // Fetch widget tokens
+          supabase.from('widget_tokens').select('id, token, last_used_at').eq('shop_id', data.id)
+            .then(({ data: tokens }) => {
+              setWidgetLinks((tokens ?? []).map((t: any) => ({
+                id: t.id,
+                shortId: `${t.token.slice(0,4)}…${t.token.slice(-4)}`,
+                lastUsed: t.last_used_at ? new Date(t.last_used_at).toLocaleDateString('tr-TR') : 'Hiç',
+              })));
+            });
+        });
+    });
+  }, []);
 
   function handleSignOut() {
     Alert.alert(
@@ -521,8 +570,8 @@ export default function SettingsScreen() {
         {
           text: 'Çıkış yap',
           style: 'destructive',
-          onPress: () => {
-            // TODO: connect Supabase — supabase.auth.signOut()
+          onPress: async () => {
+            await supabase.auth.signOut();
             router.replace('/(auth)/login');
           },
         },
@@ -530,13 +579,17 @@ export default function SettingsScreen() {
     );
   }
 
-  function handleCreateLink() {
-    // TODO: connect Supabase — create widget link, return new link id
-    const newId = Date.now().toString();
-    setWidgetLinks((prev) => [
-      ...prev,
-      { id: newId, shortId: 'new…link', lastUsed: '22 May 2026' },
-    ]);
+  async function handleCreateLink() {
+    if (!shopId) return;
+    const token = `wgt_${Math.random().toString(36).slice(2,10)}${Math.random().toString(36).slice(2,10)}`;
+    const { data } = await supabase.from('widget_tokens').insert({ shop_id: shopId, token }).select('id, token, last_used_at').single();
+    if (data) {
+      setWidgetLinks(prev => [...prev, {
+        id: (data as any).id,
+        shortId: `${(data as any).token.slice(0,4)}…${(data as any).token.slice(-4)}`,
+        lastUsed: 'Yeni',
+      }]);
+    }
   }
 
   function handleDeleteLink(id: string) {
@@ -548,8 +601,8 @@ export default function SettingsScreen() {
         {
           text: 'Sil',
           style: 'destructive',
-          onPress: () => {
-            // TODO: connect Supabase — delete widget link
+          onPress: async () => {
+            await supabase.from('widget_tokens').delete().eq('id', id);
             setWidgetLinks((prev) => prev.filter((l) => l.id !== id));
           },
         },
@@ -575,8 +628,8 @@ export default function SettingsScreen() {
         {/* Account info card */}
         <View style={styles.accountCard}>
           <Text style={styles.accountOverline}>Dükkan Sahibi</Text>
-          <Text style={styles.accountName}>Keskin Berber</Text>
-          <Text style={styles.accountEmail}>{SHOP_DATA.email}</Text>
+          <Text style={styles.accountName}>{shop?.name ?? '—'}</Text>
+          <Text style={styles.accountEmail}>{shop?.email ?? '—'}</Text>
         </View>
 
         {/* Profile clickable card */}
@@ -586,11 +639,13 @@ export default function SettingsScreen() {
           activeOpacity={0.8}
         >
           <View style={styles.profileAvatar}>
-            <Text style={styles.profileAvatarText}>KB</Text>
+            <Text style={styles.profileAvatarText}>
+              {(shop?.name ?? '').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || '—'}
+            </Text>
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.profileCardName}>Keskin Berber</Text>
-            <Text style={styles.profileCardMeta}>Beşiktaş, İstanbul · keskin-berber</Text>
+            <Text style={styles.profileCardName}>{shop?.name ?? '—'}</Text>
+            <Text style={styles.profileCardMeta}>{shop?.address?.split(',')[0] ?? '—'} · {shop?.slug ?? ''}</Text>
           </View>
           <View style={styles.profileEditBadge}>
             <Text style={styles.profileEditText}>Düzenle</Text>
@@ -612,9 +667,9 @@ export default function SettingsScreen() {
                 {commEnabled ? 'Kazanç raporu açık.' : 'Randevu akışı değişmez.'}
               </Text>
             </View>
-            <Toggle on={commEnabled} onChange={(v) => {
-              // TODO: connect Supabase — update commission_enabled
+            <Toggle on={commEnabled} onChange={async (v) => {
               setCommEnabled(v);
+              if (shopId) await supabase.from('shops').update({ commission_enabled: v }).eq('id', shopId);
             }} />
           </View>
 
@@ -681,12 +736,19 @@ export default function SettingsScreen() {
       <ProfileEditorSheet
         open={profileOpen}
         onClose={() => setProfileOpen(false)}
+        shopId={shopId}
+        initialName={shop?.name ?? ''}
+        initialAddress={shop?.address ?? ''}
+        initialBio={shop?.bio ?? ''}
+        initialPhone={shop?.phone ?? ''}
+        slug={shop?.slug ?? ''}
       />
 
       {/* Hours editor sheet */}
       <HoursEditorSheet
         open={hoursOpen}
         onClose={() => setHoursOpen(false)}
+        shopName={shop?.name}
       />
     </View>
   );

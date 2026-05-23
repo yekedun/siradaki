@@ -26,7 +26,7 @@
  *   body "20 Mayıs için randevu bulunmuyor. Yeni randevu ekleyebilirsiniz."
  *   cta "Yeni Randevu" ctaVariant="accent"
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -39,10 +39,15 @@ import Svg, { Rect, Path, Circle } from 'react-native-svg';
 import { colors } from '../../lib/theme';
 import { AppointmentDetailSheet } from '../../components/AppointmentDetailSheet';
 import { AddAppointmentModal, ServiceOption } from '../../components/AddAppointmentModal';
+import { supabase } from '../../lib/supabase';
 
-// TODO: connect Supabase — fetch appointments for authenticated staff by selected date
-// supabase.from('appointments').select('*').eq('staff_id', staffId).eq('date', selectedDate)
-// Subscribe to realtime changes on 'appointments' table
+function formatTime(d: Date): string {
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function translateReason(r: string): string {
+  const map: Record<string,string> = { walkin: 'Anlık Müşteri', break: 'Mola', personal: 'Kişisel' };
+  return map[r] ?? r;
+}
 
 /* ── TR day labels ──────────────────────────────────────────────── */
 const TR_DAYS_SHORT = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'] as const;
@@ -281,12 +286,87 @@ export default function RandevularScreen() {
   const [dayIndex, setDayIndex] = useState(2); // index 2 = today
   const [showDetail, setShowDetail] = useState(false);
   const [showAdd, setShowAdd]   = useState(false);
+  const [barberId, setBarberId] = useState<string | null>(null);
+  const [items, setItems] = useState<ListItem[]>([]);
+  const [services, setServices] = useState<ServiceOption[]>([]);
 
-  // TODO: connect Supabase — fetch appointments by staff + selected date
-  // TODO: connect Supabase — fetch services from shop_services table
-  const items: ListItem[] = [];   // empty until Supabase is connected
-  const services: ServiceOption[] = [];
   const isEmpty = items.length === 0;
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase.from('barbers').select('id, shop_id').eq('user_id', user.id).maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            setBarberId((data as any).id);
+            supabase.from('services').select('id, name, duration_min, price_cents').eq('shop_id', (data as any).shop_id).eq('active', true)
+              .then(({ data: svcs }) => {
+                if (svcs) setServices((svcs as any[]).map(s => ({ id: s.id, label: s.name, dur: s.duration_min, price: `${Math.round(s.price_cents/100)}₺` })));
+              });
+          }
+        });
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!barberId) return;
+    fetchAppointments();
+  }, [barberId, dayIndex]);
+
+  async function fetchAppointments() {
+    if (!barberId) return;
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    const targetDate = new Date(today); targetDate.setDate(today.getDate() - 2 + dayIndex);
+    const dayStart = new Date(targetDate); dayStart.setHours(0,0,0,0);
+    const dayEnd = new Date(targetDate); dayEnd.setDate(targetDate.getDate()+1); dayEnd.setHours(0,0,0,0);
+
+    const [{ data: appts }, { data: blocks }] = await Promise.all([
+      supabase.from('appointments').select('id, customer_name, service_name, starts_at, duration_min, status')
+        .eq('barber_id', barberId).neq('status', 'cancelled')
+        .gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString()).order('starts_at'),
+      supabase.from('blocks').select('id, starts_at, ends_at, reason')
+        .eq('barber_id', barberId)
+        .gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString()),
+    ]);
+
+    const now = new Date();
+    const done: ListItem[] = [];
+    const active: ListItem[] = [];
+    const upcoming: (ListItem & {_startMs: number})[] = [];
+
+    for (const a of ((appts ?? []) as any[])) {
+      const start = new Date(a.starts_at);
+      const end = new Date(start.getTime() + (a.duration_min ?? 30) * 60000);
+      const timeStr = formatTime(start);
+      const state: ApptState = a.status === 'completed' ? 'done'
+        : (start <= now && now < end) ? 'active' : 'upcoming';
+      const item: ListItem = { kind: 'appt', time: timeStr, duration: a.duration_min ?? 30, name: a.customer_name, service: a.service_name, state };
+      if (state === 'done') done.push(item);
+      else if (state === 'active') active.push(item);
+      else upcoming.push({ ...item, _startMs: start.getTime() } as any);
+    }
+
+    for (const b of ((blocks ?? []) as any[])) {
+      const start = new Date(b.starts_at);
+      const end = new Date(b.ends_at);
+      const dur = Math.round((end.getTime() - start.getTime()) / 60000);
+      const label = translateReason(b.reason);
+      upcoming.push({ kind: 'blok', time: formatTime(start), duration: dur, label: `BLOKE · ${label}`, _startMs: start.getTime() } as any);
+    }
+
+    upcoming.sort((a, b) => (a as any)._startMs - (b as any)._startMs);
+
+    const result: ListItem[] = [];
+    if (done.length) { result.push({ kind: 'section', label: 'Tamamlandı', topMargin: 0 }); result.push(...done); }
+    if (active.length) { result.push({ kind: 'section', label: 'Şu Anda', topMargin: 12 }); result.push(...active); }
+    if (upcoming.length) {
+      result.push({ kind: 'section', label: 'Gelecek', topMargin: 12 });
+      result.push(...upcoming.map(({ _startMs, ...i }: any) => i));
+    }
+
+    setItems(result);
+  }
 
   // Derive displayed date for header meta
   const today = new Date();

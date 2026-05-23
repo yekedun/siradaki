@@ -17,7 +17,7 @@
  *  - Custom Toggle: 44×26, brand-600=on / slate-200=off, white thumb 22×22, Animated
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -31,6 +31,7 @@ import {
   View,
 } from 'react-native';
 import { colors } from '../../lib/theme';
+import { supabase } from '../../lib/supabase';
 
 /* ─── Data ──────────────────────────────────────────────────── */
 
@@ -508,8 +509,32 @@ export default function TeamScreen() {
   const [scheduleOpen,   setScheduleOpen]   = useState(false);
   const [commOpen,       setCommOpen]       = useState(false);
   const [selectedId,     setSelectedId]     = useState<string | null>(null);
+  const [shopId,         setShopId]         = useState<string | null>(null);
 
   const selected = staff.find((s) => s.id === selectedId);
+
+  useEffect(() => {
+    loadStaff();
+  }, []);
+
+  async function loadStaff() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: shopData } = await supabase.from('shops').select('id').eq('owner_user_id', user.id).maybeSingle();
+    if (!shopData) return;
+    setShopId(shopData.id);
+    const { data } = await supabase.from('staff').select('id, name, status, commission_type, commission_rate_bps').eq('shop_id', shopData.id);
+    if (data) {
+      setStaff(data.map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        status: s.status === 'active' ? 'Aktif' : 'Pasif',
+        meta: s.commission_type && s.commission_rate_bps
+          ? `%${Math.round(s.commission_rate_bps / 100)} komisyon`
+          : 'Komisyon yok',
+      })));
+    }
+  }
 
   function handleToggleStatus(s: StaffMember) {
     const verb = s.status === 'Aktif' ? 'pasif yap' : 'aktif yap';
@@ -520,8 +545,9 @@ export default function TeamScreen() {
         { text: 'Vazgeç', style: 'cancel' },
         {
           text: s.status === 'Aktif' ? 'Pasif yap' : 'Aktif yap',
-          onPress: () => {
-            // TODO: connect Supabase — update staff status
+          onPress: async () => {
+            const newStatus = s.status === 'Aktif' ? 'inactive' : 'active';
+            await supabase.from('staff').update({ status: newStatus }).eq('id', s.id);
             setStaff((prev) =>
               prev.map((p) =>
                 p.id === s.id
@@ -535,17 +561,35 @@ export default function TeamScreen() {
     );
   }
 
-  function handleAddStaff(name: string, _email: string) {
-    // TODO: connect Supabase — insert into staff table with email
-    const id = Date.now().toString();
-    setStaff((prev) => [
-      ...prev,
-      { id, name, status: 'Aktif', meta: 'Komisyon yok' },
-    ]);
+  async function handleAddStaff(name: string, email: string) {
+    if (!shopId) return;
+    const { data } = await supabase.from('staff').insert({
+      shop_id: shopId,
+      name,
+      role: 'staff',
+      status: 'active',
+    }).select('id, name, status, commission_type, commission_rate_bps').single();
+    if (data) {
+      setStaff((prev) => [
+        ...prev,
+        {
+          id: (data as any).id,
+          name: (data as any).name,
+          status: 'Aktif',
+          meta: 'Komisyon yok',
+        },
+      ]);
+    }
     setAddOpen(false);
   }
 
-  function handleSaveCommission(rate: number) {
+  async function handleSaveCommission(rate: number) {
+    if (selectedId) {
+      await supabase.from('staff').update({
+        commission_type: 'percentage',
+        commission_rate_bps: Math.round(rate * 100),
+      }).eq('id', selectedId);
+    }
     setStaff((prev) =>
       prev.map((p) =>
         p.id === selectedId

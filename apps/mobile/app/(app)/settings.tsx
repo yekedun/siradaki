@@ -19,7 +19,7 @@
  *   message: "Hesaptan çıkmak istediğinizden emin misiniz?"
  *   buttons: [{ text: 'Vazgeç', style: 'cancel' }, { text: 'Çıkış Yap', style: 'destructive' }]
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -31,16 +31,21 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors } from '../../lib/theme';
-
-// TODO: connect Supabase — fetch current authenticated staff member
-// supabase.auth.getUser() + supabase.from('staff_members').select('name, email').single()
-const MOCK_STAFF = {
-  name: 'Mehmet Demir',
-  email: 'mehmet@dukkan.com',
-};
+import { supabase } from '../../lib/supabase';
 
 export default function HesabimScreen() {
   const router = useRouter();
+  const [profile, setProfile] = useState<{ name: string; email: string } | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase.from('barbers').select('name').eq('user_id', user.id).maybeSingle()
+        .then(({ data }) => {
+          setProfile({ name: data?.name ?? user.email?.split('@')[0] ?? '—', email: user.email ?? '—' });
+        });
+    });
+  }, []);
 
   function handleSignOut() {
     Alert.alert(
@@ -51,8 +56,8 @@ export default function HesabimScreen() {
         {
           text: 'Çıkış Yap',
           style: 'destructive',
-          onPress: () => {
-            // TODO: connect Supabase — supabase.auth.signOut()
+          onPress: async () => {
+            await supabase.auth.signOut();
             router.replace('/(auth)/login');
           },
         },
@@ -83,9 +88,9 @@ export default function HesabimScreen() {
             {/* overline "Personel": 11px SemiBold 0.14em uppercase slate-500 */}
             <Text style={styles.cardOverline}>Personel</Text>
             {/* name: 17px Bold marginTop 6 ink-900 */}
-            <Text style={styles.cardName}>{MOCK_STAFF.name}</Text>
+            <Text style={styles.cardName}>{profile?.name ?? '—'}</Text>
             {/* email: 13px Regular fg-3 marginTop 2 */}
-            <Text style={styles.cardEmail}>{MOCK_STAFF.email}</Text>
+            <Text style={styles.cardEmail}>{profile?.email ?? '—'}</Text>
           </View>
         </View>
 

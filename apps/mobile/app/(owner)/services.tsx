@@ -27,7 +27,7 @@
  *                Sakal Şekillendirme 20/150 active, Fön+Şekillendirme 40/250 inactive
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Modal,
@@ -40,6 +40,7 @@ import {
   View,
 } from 'react-native';
 import { colors } from '../../lib/theme';
+import { supabase } from '../../lib/supabase';
 
 /* ─── Data ──────────────────────────────────────────────────── */
 
@@ -361,33 +362,65 @@ export default function ServicesScreen() {
   const [services, setServices] = useState<Service[]>(INIT_SERVICES);
   const [editing,  setEditing]  = useState<Service | null>(null);
   const [adding,   setAdding]   = useState(false);
+  const [shopId,   setShopId]   = useState<string | null>(null);
   const nextId = useRef(1);
 
-  // TODO: connect Supabase — fetch services for this shop on mount
+  useEffect(() => { loadServices(); }, []);
 
-  function saveEdit(data: Omit<Service, 'id'>) {
+  async function loadServices() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: shopData } = await supabase.from('shops').select('id').eq('owner_user_id', user.id).maybeSingle();
+    if (!shopData) { setShopId(null); return; }
+    setShopId(shopData.id);
+    const { data } = await supabase.from('services').select('id, name, duration_min, price_cents, active').eq('shop_id', shopData.id).order('name');
+    if (data) setServices(data.map((s: any) => ({ id: s.id, name: s.name, duration: s.duration_min, price: Math.round(s.price_cents / 100), active: s.active })));
+  }
+
+  async function saveEdit(data: Omit<Service, 'id'>) {
     if (!editing) return;
-    // TODO: connect Supabase — update service row by id
+    await supabase.from('services').update({
+      name: data.name,
+      duration_min: data.duration,
+      price_cents: data.price * 100,
+      active: data.active,
+    }).eq('id', editing.id);
     setServices((s) => s.map((sv) => sv.id === editing.id ? { ...sv, ...data } : sv));
     setEditing(null);
   }
 
-  function deleteEdit() {
+  async function deleteEdit() {
     if (!editing) return;
-    // TODO: connect Supabase — delete service row by id
+    await supabase.from('services').delete().eq('id', editing.id);
     setServices((s) => s.filter((sv) => sv.id !== editing.id));
     setEditing(null);
   }
 
-  function saveAdd(data: Omit<Service, 'id'>) {
-    const id = 's' + (++nextId.current);
-    // TODO: connect Supabase — insert new service row
-    setServices((s) => [...s, { id, ...data }]);
+  async function saveAdd(data: Omit<Service, 'id'>) {
+    if (!shopId) return;
+    const { data: inserted } = await supabase.from('services').insert({
+      shop_id: shopId,
+      name: data.name,
+      duration_min: data.duration,
+      price_cents: data.price * 100,
+      active: data.active,
+    }).select('id, name, duration_min, price_cents, active').single();
+    if (inserted) {
+      setServices((s) => [...s, {
+        id: (inserted as any).id,
+        name: (inserted as any).name,
+        duration: (inserted as any).duration_min,
+        price: Math.round((inserted as any).price_cents / 100),
+        active: (inserted as any).active,
+      }]);
+    }
     setAdding(false);
   }
 
-  function toggleActive(id: string) {
-    // TODO: connect Supabase — update active field for service
+  async function toggleActive(id: string) {
+    const sv = services.find(s => s.id === id);
+    if (!sv) return;
+    await supabase.from('services').update({ active: !sv.active }).eq('id', id);
     setServices((s) => s.map((sv) => sv.id === id ? { ...sv, active: !sv.active } : sv));
   }
 

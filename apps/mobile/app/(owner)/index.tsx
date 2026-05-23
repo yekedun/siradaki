@@ -42,7 +42,7 @@
  *
  * ScrollView + RefreshControl
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -54,13 +54,7 @@ import { colors } from '../../lib/theme';
 import { OverlineHeader } from '../../components/ds/OverlineHeader';
 import { SectionLabel } from '../../components/ds/SectionLabel';
 import { Chip } from '../../components/ds/Chip';
-
-// TODO: connect Supabase — replace with get_owner_summary RPC
-
-/** Chip list — populated from Supabase once connected */
-const STAFF: { id: string; name: string }[] = [
-  { id: 'all', name: 'Tüm Ekip' },
-];
+import { supabase } from '../../lib/supabase';
 
 /* ── Sparkline (bar-chart approximation in RN) ──────────────── */
 function Sparkline({ data, dark }: { data: number[]; dark: boolean }) {
@@ -234,10 +228,52 @@ const kpi = StyleSheet.create({
 export default function OzetScreen() {
   const [filter,     setFilter]     = useState('all');
   const [refreshing, setRefreshing] = useState(false);
+  const [kpiTotal,     setKpiTotal]     = useState('—');
+  const [kpiCompleted, setKpiCompleted] = useState('—');
+  const [kpiRevenue,   setKpiRevenue]   = useState('—');
+  const [staffList, setStaffList] = useState<{id:string;name:string}[]>([{id:'all',name:'Tüm Ekip'}]);
+
+  useEffect(() => {
+    loadSummary();
+  }, [filter]);
+
+  async function loadSummary() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: shopData } = await supabase.from('shops').select('id').eq('owner_user_id', user.id).maybeSingle();
+    if (!shopData) return;
+
+    const { data: barbers } = await supabase.from('barbers').select('id, name').eq('shop_id', shopData.id);
+    if (!barbers) return;
+
+    setStaffList([{ id: 'all', name: 'Tüm Ekip' }, ...(barbers as any[]).map((b: any) => ({ id: b.id, name: b.name }))]);
+
+    const dayStart = new Date(); dayStart.setHours(0,0,0,0);
+    const dayEnd = new Date(); dayEnd.setDate(dayEnd.getDate()+1); dayEnd.setHours(0,0,0,0);
+
+    const filteredIds = filter === 'all' ? (barbers as any[]).map((b: any) => b.id) : [filter];
+    if (!filteredIds.length) { setKpiTotal('0'); setKpiCompleted('0'); setKpiRevenue('—'); return; }
+
+    const { data: appts } = await supabase.from('appointments')
+      .select('id, status, completed_price_cents')
+      .in('barber_id', filteredIds)
+      .gte('starts_at', dayStart.toISOString())
+      .lt('starts_at', dayEnd.toISOString())
+      .neq('status', 'cancelled');
+
+    if (appts) {
+      const total = appts.length;
+      const completed = (appts as any[]).filter((a: any) => a.status === 'completed').length;
+      const revenue = (appts as any[]).filter((a: any) => a.status === 'completed').reduce((s: number, a: any) => s + (a.completed_price_cents ?? 0), 0);
+      setKpiTotal(String(total));
+      setKpiCompleted(String(completed));
+      setKpiRevenue(revenue === 0 ? '—' : (revenue / 100).toLocaleString('tr-TR', { maximumFractionDigits: 0 }));
+    }
+  }
 
   async function onRefresh() {
     setRefreshing(true);
-    // TODO: connect Supabase — refetch today's summary
+    await loadSummary();
     setRefreshing(false);
   }
 
@@ -251,7 +287,7 @@ export default function OzetScreen() {
       <OverlineHeader
         eyebrow="Dükkan Özet"
         title="Bugün"
-        meta="20 Mayıs 2026, Çar"
+        meta={new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'short' })}
       />
 
       {/* ChipRow — gap:8, padding:'4px 20px 4px', overflowX:auto */}
@@ -261,7 +297,7 @@ export default function OzetScreen() {
         style={styles.chipScroll}
         contentContainerStyle={styles.chipContent}
       >
-        {STAFF.map(s => (
+        {staffList.map(s => (
           <Chip key={s.id} selected={filter === s.id} onPress={() => setFilter(s.id)}>
             {s.name}
           </Chip>
@@ -272,15 +308,15 @@ export default function OzetScreen() {
       <View style={styles.kpiRow}>
         <KpiPolished
           label="Toplam"
-          value="—"
+          value={kpiTotal}
         />
         <KpiPolished
           label="Tamamlanan"
-          value="—"
+          value={kpiCompleted}
         />
         <KpiPolished
           label="Tahmini"
-          value="—"
+          value={kpiRevenue}
           unit="₺"
           accent
         />

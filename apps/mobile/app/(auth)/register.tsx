@@ -49,6 +49,7 @@ import {
 import { router } from 'expo-router';
 import { colors } from '../../lib/theme';
 import { Button } from '../../components/ds/Button';
+import { supabase } from '../../lib/supabase';
 
 /* ── PasswordStrength ─────────────────────────────────────────── */
 function PasswordStrength({ value }: { value: string }) {
@@ -183,6 +184,8 @@ export default function RegisterScreen() {
   const [pass,     setPass]     = useState('');
   const [passConf, setPassConf] = useState('');
   const [touched,  setTouched]  = useState(false);
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState<string | null>(null);
 
   /* Validation — shown once user attempts submit */
   const passError  = touched && pass.length > 0 && pass.length < 8
@@ -201,10 +204,31 @@ export default function RegisterScreen() {
     pass.length >= 8 &&
     pass === passConf;
 
-  function handleSubmit() {
+  async function handleSubmit() {
     setTouched(true);
-    if (!canRegister) return;
-    // TODO: connect Supabase — supabase.auth.signUp({ email, password: pass, options: { data: { shop_name: shopName } } })
+    if (!canRegister || loading) return;
+    setLoading(true);
+    setError(null);
+
+    const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      email: email.trim(),
+      password: pass,
+      options: { data: { shop_name: shopName.trim() } },
+    });
+    if (signUpError || !authData.user) {
+      setError(signUpError?.message ?? 'Kayıt başarısız.');
+      setLoading(false);
+      return;
+    }
+
+    // Create shop record
+    await supabase.from('shops').insert({
+      owner_user_id: authData.user.id,
+      name: shopName.trim(),
+      slug: shopName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+    });
+
+    setLoading(false);
     router.replace('/(owner)');
   }
 
@@ -297,14 +321,17 @@ export default function RegisterScreen() {
 
         {/* CTA — paddingTop:20 gap:12 alignItems:'center' */}
         <View style={styles.cta}>
+          {error ? (
+            <Text style={styles.errorText}>{error}</Text>
+          ) : null}
           <Button
             variant="primary"
             size="lg"
             full
-            disabled={!canRegister}
+            disabled={!canRegister || loading}
             onPress={handleSubmit}
           >
-            Hesap Oluştur
+            {loading ? 'Hesap oluşturuluyor…' : 'Hesap Oluştur'}
           </Button>
           <View style={styles.footerRow}>
             <Text style={styles.footerText}>Hesabın var mı? </Text>
@@ -421,5 +448,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Montserrat-SemiBold',
     color: colors.brand[600],
+  },
+  errorText: {
+    fontSize: 13,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.coral[600],
+    textAlign: 'center',
   },
 });

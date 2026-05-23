@@ -34,16 +34,31 @@ import { router } from 'expo-router';
 import { colors } from '../../lib/theme';
 import { Button } from '../../components/ds/Button';
 import { TextField } from '../../components/ds/TextField';
+import { supabase, determineUserRole } from '../../lib/supabase';
 
 export default function LoginScreen() {
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState<string | null>(null);
 
   const canSubmit = email.trim().length > 0 && password.length > 0;
 
-  function handleLogin() {
-    // TODO: connect Supabase — supabase.auth.signInWithPassword({ email, password })
-    router.replace('/(owner)');
+  async function handleLogin() {
+    if (!canSubmit || loading) return;
+    setLoading(true);
+    setError(null);
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    if (authError) { setError(authError.message); setLoading(false); return; }
+    if (!data.user) { setLoading(false); return; }
+    const role = await determineUserRole(data.user.id);
+    setLoading(false);
+    if (role === 'owner') router.replace('/(owner)');
+    else if (role === 'staff') router.replace('/(app)');
+    else setError('Hesabınıza erişim bulunamadı.');
   }
 
   return (
@@ -99,14 +114,17 @@ export default function LoginScreen() {
 
         {/* CTA — gap:14 alignItems:'center' */}
         <View style={styles.cta}>
+          {error ? (
+            <Text style={styles.errorText}>{error}</Text>
+          ) : null}
           <Button
             variant="primary"
             size="lg"
             full
-            disabled={!canSubmit}
+            disabled={!canSubmit || loading}
             onPress={handleLogin}
           >
-            Giriş Yap
+            {loading ? 'Giriş yapılıyor…' : 'Giriş Yap'}
           </Button>
           <View style={styles.footerRow}>
             <Text style={styles.footerText}>Hesabın yok mu? </Text>
@@ -218,5 +236,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Montserrat-SemiBold',
     color: colors.brand[600],
+  },
+  errorText: {
+    fontSize: 13,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.coral[600],
+    textAlign: 'center',
   },
 });

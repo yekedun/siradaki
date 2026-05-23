@@ -40,7 +40,7 @@
  *   Info text: 13px Regular fg-3 textAlign center lineHeight 1.5
  *   Button variant="secondary" size="lg" full "Yeni Blok Ekle"
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -51,9 +51,7 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../lib/theme';
-
-// TODO: connect Supabase — on "Kapat" pressed, insert block into block_slots table
-// supabase.from('block_slots').insert({ staff_id, start_time: now, duration_min: dur, reason: curReason.title })
+import { supabase } from '../../lib/supabase';
 
 function nowTime(): string {
   const d = new Date();
@@ -123,6 +121,15 @@ export default function BlockScreen() {
   const [reason, setReason] = useState<'anlik' | 'mola' | 'kisisel'>('mola');
   const [blocked, setBlocked] = useState(false);
   const [startTime] = useState<string>(nowTime); // captured when screen mounts
+  const [barberId, setBarberId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase.from('barbers').select('id').eq('user_id', user.id).maybeSingle()
+        .then(({ data }) => { if (data) setBarberId((data as any).id); });
+    });
+  }, []);
 
   const curReason = REASONS.find(r => r.id === reason)!;
   const endTime = addMins(startTime, dur);
@@ -284,7 +291,23 @@ export default function BlockScreen() {
 
         {/* Button variant="primary" size="lg" full "Kapat" */}
         <View style={styles.btnWrap}>
-          <TouchableOpacity style={styles.primaryBtn} onPress={() => setBlocked(true)}>
+          <TouchableOpacity style={styles.primaryBtn} onPress={async () => {
+            if (barberId) {
+              const [h, m] = startTime.split(':').map(Number);
+              const now = new Date();
+              now.setHours(h, m, 0, 0);
+              const end = new Date(now.getTime() + dur * 60000);
+              const reasonMap: Record<string, string> = { anlik: 'walkin', mola: 'break', kisisel: 'personal' };
+              await supabase.from('blocks').insert({
+                barber_id: barberId,
+                starts_at: now.toISOString(),
+                ends_at: end.toISOString(),
+                reason: reasonMap[reason] ?? 'break',
+                created_via: 'app',
+              });
+            }
+            setBlocked(true);
+          }}>
             <Text style={styles.primaryBtnText}>Kapat</Text>
           </TouchableOpacity>
         </View>

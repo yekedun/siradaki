@@ -13,7 +13,7 @@
  *      Ayşe Yılmaz   · 22 tamamlanan randevu · Ciro 21.920 TL · Pay 0 TL
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -22,22 +22,16 @@ import {
   View,
 } from 'react-native';
 import { colors } from '../../lib/theme';
+import { supabase } from '../../lib/supabase';
 
 /* ─── Types ─────────────────────────────────────────────────── */
 
 type Period = 'day' | '7' | '30';
 
-/* ─── Dummy data ────────────────────────────────────────────── */
-
-// TODO: connect Supabase — fetch earnings by period (day/7/30)
-const PERIOD_DATA: Record<Period, { label: string; ciro: string; komisyon: string; dukkam: string }> = {
-  day: { label: 'Bugün', ciro: '—', komisyon: '—', dukkam: '—' },
-  '7': { label: '7 gün', ciro: '—', komisyon: '—', dukkam: '—' },
-  '30': { label: '30 gün', ciro: '—', komisyon: '—', dukkam: '—' },
-};
-
-// TODO: connect Supabase — fetch staff distribution by period
-const STAFF_DIST: { name: string; appts: number; ciro: string; pay: string }[] = [];
+function formatCents(cents: number): string {
+  if (cents === 0) return '0';
+  return (cents / 100).toLocaleString('tr-TR', { maximumFractionDigits: 0 });
+}
 
 /* ─── Chip ──────────────────────────────────────────────────── */
 
@@ -65,7 +59,83 @@ function Chip({ selected, onPress, children }: ChipProps) {
 
 export default function EarningsScreen() {
   const [period, setPeriod] = useState<Period>('30');
-  const data = PERIOD_DATA[period];
+  const [barberIds, setBarberIds] = useState<string[]>([]);
+  const [periodCiro,     setPeriodCiro]     = useState('—');
+  const [periodKomisyon, setPeriodKomisyon] = useState('—');
+  const [periodDukkan,   setPeriodDukkan]   = useState('—');
+  const [staffDist, setStaffDist] = useState<{ name: string; appts: number; ciro: string; pay: string }[]>([]);
+
+  const data = {
+    label: period === 'day' ? 'Bugün' : period === '7' ? '7 gün' : '30 gün',
+    ciro: periodCiro,
+    komisyon: periodKomisyon,
+    dukkam: periodDukkan,
+  };
+
+  useEffect(() => {
+    loadShopData();
+  }, []);
+
+  async function loadShopData() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: shopData } = await supabase.from('shops').select('id').eq('owner_user_id', user.id).maybeSingle();
+    if (!shopData) return;
+    const { data: barbers } = await supabase.from('barbers').select('id, name').eq('shop_id', shopData.id);
+    if (barbers) setBarberIds(barbers.map((b: any) => b.id));
+  }
+
+  useEffect(() => {
+    if (!barberIds.length) return;
+    fetchEarnings();
+  }, [period, barberIds]);
+
+  async function fetchEarnings() {
+    const now = new Date();
+    let since: Date;
+    if (period === 'day') { since = new Date(now); since.setHours(0,0,0,0); }
+    else if (period === '7') { since = new Date(now); since.setDate(now.getDate()-7); }
+    else { since = new Date(now); since.setDate(now.getDate()-30); }
+
+    const { data } = await supabase
+      .from('appointments')
+      .select('barber_id, completed_price_cents, completed_commission_cents, completed_shop_share_cents, status')
+      .in('barber_id', barberIds)
+      .eq('status', 'completed')
+      .gte('starts_at', since.toISOString());
+
+    if (data) {
+      const totalCiro = data.reduce((s: number, a: any) => s + (a.completed_price_cents ?? 0), 0);
+      const totalKomisyon = data.reduce((s: number, a: any) => s + (a.completed_commission_cents ?? 0), 0);
+      const totalDukkan = data.reduce((s: number, a: any) => s + (a.completed_shop_share_cents ?? 0), 0);
+      setPeriodCiro(data.length === 0 ? '—' : formatCents(totalCiro));
+      setPeriodKomisyon(data.length === 0 ? '—' : formatCents(totalKomisyon));
+      setPeriodDukkan(data.length === 0 ? '—' : formatCents(totalDukkan));
+
+      // Group by barber
+      const byBarber: Record<string, { appts: number; ciro: number; pay: number }> = {};
+      for (const a of data) {
+        if (!byBarber[a.barber_id]) byBarber[a.barber_id] = { appts: 0, ciro: 0, pay: 0 };
+        byBarber[a.barber_id].appts += 1;
+        byBarber[a.barber_id].ciro += a.completed_price_cents ?? 0;
+        byBarber[a.barber_id].pay += a.completed_commission_cents ?? 0;
+      }
+      // Fetch barber names to label distribution
+      if (Object.keys(byBarber).length > 0) {
+        const { data: barbers } = await supabase.from('barbers').select('id, name').in('id', Object.keys(byBarber));
+        if (barbers) {
+          setStaffDist(barbers.map((b: any) => ({
+            name: b.name,
+            appts: byBarber[b.id]?.appts ?? 0,
+            ciro: formatCents(byBarber[b.id]?.ciro ?? 0) + ' TL',
+            pay: formatCents(byBarber[b.id]?.pay ?? 0) + ' TL',
+          })));
+        }
+      } else {
+        setStaffDist([]);
+      }
+    }
+  }
 
   return (
     <ScrollView
@@ -120,12 +190,12 @@ export default function EarningsScreen() {
 
       {/* Staff rows */}
       <View style={styles.staffSection}>
-        {STAFF_DIST.length === 0 && (
+        {staffDist.length === 0 && (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>Henüz veri yok</Text>
           </View>
         )}
-        {STAFF_DIST.map((p, i) => {
+        {staffDist.map((p, i) => {
           const initials = p.name
             .split(' ')
             .map((w) => w[0])
@@ -136,7 +206,7 @@ export default function EarningsScreen() {
           return (
             <View
               key={p.name}
-              style={[styles.staffCard, i < STAFF_DIST.length - 1 && { marginBottom: 8 }]}
+              style={[styles.staffCard, i < staffDist.length - 1 && { marginBottom: 8 }]}
             >
               {/* Avatar */}
               <View style={styles.staffAvatar}>

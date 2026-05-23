@@ -37,7 +37,7 @@
  *   (screens.jsx uses size="lg" right:20 shadow:'0 12px 24px -10px rgba(30,58,138,0.4)')
  *   → use size="lg" right:20 per screens.jsx (the primary reference)
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -50,8 +50,15 @@ import { DayPicker } from '../../components/ds/DayPicker';
 import { AppointmentCard } from '../../components/ds/AppointmentCard';
 import { BlokCard } from '../../components/ds/BlokCard';
 import { Button } from '../../components/ds/Button';
+import { supabase } from '../../lib/supabase';
 
-// TODO: connect Supabase — fetch appointments + blocks for selectedDate
+function formatTime(d: Date): string {
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function translateReason(r: string): string {
+  const map: Record<string,string> = { walkin: 'Anlık Müşteri', break: 'Mola', personal: 'Kişisel' };
+  return map[r] ?? r;
+}
 
 type AppState = 'done' | 'active' | 'upcoming';
 
@@ -81,7 +88,6 @@ interface StaffCol {
   items: ColItem[];
 }
 
-// TODO: connect Supabase — fetch staff + appointments + blocks for selectedDate
 const INIT_COLS: StaffCol[] = [];
 
 /* ── Empty drop zone ─────────────────────────────────────────── */
@@ -102,9 +108,69 @@ function getToday(): Date {
 
 export default function AgendaScreen() {
   const [selectedDate, setSelectedDate] = useState<Date>(getToday);
+  const [cols, setCols] = useState<StaffCol[]>(INIT_COLS);
+
+  useEffect(() => {
+    loadAgenda();
+  }, [selectedDate]);
+
+  async function loadAgenda() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: shopData } = await supabase.from('shops').select('id').eq('owner_user_id', user.id).maybeSingle();
+    if (!shopData) return;
+
+    const dayStart = new Date(selectedDate); dayStart.setHours(0,0,0,0);
+    const dayEnd = new Date(selectedDate); dayEnd.setDate(dayEnd.getDate()+1); dayEnd.setHours(0,0,0,0);
+
+    const { data: barbers } = await supabase.from('barbers').select('id, name').eq('shop_id', shopData.id);
+    if (!barbers?.length) { setCols([]); return; }
+
+    const [{ data: appts }, { data: blocks }] = await Promise.all([
+      supabase.from('appointments').select('id, barber_id, customer_name, service_name, starts_at, duration_min, status')
+        .in('barber_id', barbers.map((b: any) => b.id))
+        .gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString())
+        .neq('status', 'cancelled'),
+      supabase.from('blocks').select('id, barber_id, starts_at, ends_at, reason')
+        .in('barber_id', barbers.map((b: any) => b.id))
+        .gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString()),
+    ]);
+
+    const now = new Date();
+    const newCols: StaffCol[] = (barbers as any[]).map(barber => {
+      const barberAppts = (appts ?? []).filter((a: any) => a.barber_id === barber.id);
+      const barberBlocks = (blocks ?? []).filter((b: any) => b.barber_id === barber.id);
+
+      const items: ColItem[] = [
+        ...barberAppts.map((a: any) => {
+          const start = new Date(a.starts_at);
+          const end = new Date(start.getTime() + (a.duration_min ?? 30) * 60000);
+          const state: AppState = a.status === 'completed' ? 'done'
+            : (start <= now && now < end) ? 'active' : 'upcoming';
+          return { type: 'appt' as const, id: a.id, time: formatTime(start), dur: a.duration_min ?? 30, name: a.customer_name, svc: a.service_name, state };
+        }),
+        ...barberBlocks.map((b: any) => {
+          const start = new Date(b.starts_at);
+          const end = new Date(b.ends_at);
+          const dur = Math.round((end.getTime() - start.getTime()) / 60000);
+          return { type: 'blok' as const, id: b.id, time: formatTime(start), dur, label: `BLOKE · ${translateReason(b.reason)}` };
+        }),
+      ].sort((a, b) => a.time.localeCompare(b.time));
+
+      return {
+        id: barber.id,
+        name: barber.name,
+        count: barberAppts.length,
+        blok: barberBlocks.length,
+        items,
+      };
+    });
+
+    setCols(newCols);
+  }
 
   function handleAddAppointment() {
-    // TODO: connect Supabase — open AddAppointmentSheet with selectedDate pre-filled
+    // TODO: open AddAppointmentSheet with selectedDate pre-filled
   }
 
   return (
@@ -117,12 +183,11 @@ export default function AgendaScreen() {
         selected={selectedDate}
         onSelect={d => {
           setSelectedDate(d);
-          // TODO: connect Supabase — refetch appointments + blocks for new date
         }}
       />
 
       {/* Two-column horizontal scroll — flex:1, gap:12, padding:'20px 16px 90px' */}
-      {INIT_COLS.length === 0 ? (
+      {cols.length === 0 ? (
         <View style={styles.emptyWrap}>
           <Text style={styles.emptyText}>Henüz personel veya randevu yok</Text>
         </View>
@@ -133,7 +198,7 @@ export default function AgendaScreen() {
         style={styles.colScroll}
         contentContainerStyle={styles.colContent}
       >
-        {INIT_COLS.map(col => (
+        {cols.map(col => (
           <View key={col.id} style={styles.col}>
             {/* Column header — padding:'0 4px 4px' */}
             <View style={styles.colHeader}>
