@@ -230,6 +230,8 @@ export function AddAppointmentModal({
               onChangeText={setName}
               placeholder="Örn. Ahmet Yılmaz"
               placeholderTextColor={colors.slate[300]}
+              autoCorrect={false}
+              spellCheck={false}
             />
           </View>
 
