@@ -690,6 +690,24 @@ export default function SettingsScreen() {
               <View style={styles.chevronLine2} />
             </View>
           </TouchableOpacity>
+
+          {/* Hizmetler */}
+          <TouchableOpacity
+            onPress={() => router.push('/(owner)/services')}
+            style={[styles.opRow, styles.opRowBorderTop]}
+            activeOpacity={0.75}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.opRowTitle}>Hizmetler</Text>
+              <Text style={styles.opRowMeta}>
+                Sunulan hizmetleri ve fiyatları yönet
+              </Text>
+            </View>
+            <View style={styles.chevronWrap}>
+              <View style={styles.chevronLine1} />
+              <View style={styles.chevronLine2} />
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Section: Widget Bağlantıları */}

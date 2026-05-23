@@ -39,6 +39,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 
@@ -359,6 +360,7 @@ function ServiceRow({ service: sv, onPress, onToggle }: ServiceRowProps) {
 /* ─── Main Screen ───────────────────────────────────────────── */
 
 export default function ServicesScreen() {
+  const router = useRouter();
   const [services, setServices] = useState<Service[]>(INIT_SERVICES);
   const [editing,  setEditing]  = useState<Service | null>(null);
   const [adding,   setAdding]   = useState(false);
@@ -427,8 +429,12 @@ export default function ServicesScreen() {
   return (
     <View style={styles.screen}>
 
-      {/* OverlineHeader */}
+      {/* Header */}
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={10} activeOpacity={0.7}>
+          <View style={styles.backChevron1} />
+          <View style={styles.backChevron2} />
+        </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.eyebrow}>Dükkan Ayarları</Text>
           <Text style={styles.pageTitle}>Hizmetler</Text>
@@ -533,6 +539,30 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 16,
     gap: 12,
+  },
+  backBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+    flexShrink: 0,
+  },
+  backChevron1: {
+    position: 'absolute',
+    width: 9,
+    height: 1.8,
+    backgroundColor: colors.ink[900],
+    borderRadius: 1,
+    transform: [{ rotate: '45deg' }, { translateY: -3 }],
+  },
+  backChevron2: {
+    position: 'absolute',
+    width: 9,
+    height: 1.8,
+    backgroundColor: colors.ink[900],
+    borderRadius: 1,
+    transform: [{ rotate: '-45deg' }, { translateY: 3 }],
   },
   eyebrow: {
     fontSize: 11,
