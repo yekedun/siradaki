@@ -43,6 +43,7 @@ import {
   Text,
   ScrollView,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { colors } from '../../lib/theme';
 import { OverlineHeader } from '../../components/ds/OverlineHeader';
@@ -52,6 +53,7 @@ import { BlokCard } from '../../components/ds/BlokCard';
 import { Button } from '../../components/ds/Button';
 import { supabase } from '../../lib/supabase';
 import { formatTime, translateReason, AppointmentState as AppState } from '../../lib/utils';
+import { AddAppointmentModal, ServiceOption } from '../../components/AddAppointmentModal';
 
 
 interface AppItem {
@@ -102,18 +104,32 @@ export default function AgendaScreen() {
   const [selectedDate, setSelectedDate] = useState<Date>(getToday);
   const [cols, setCols] = useState<StaffCol[]>(INIT_COLS);
   const [shopId, setShopId] = useState<string | null>(null);
+  const [shopSlug, setShopSlug] = useState<string | null>(null);
   const [barberList, setBarberList] = useState<{ id: string; name: string }[]>([]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [services, setServices] = useState<ServiceOption[]>([]);
 
   // Fetch shop + barbers once on mount
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: shopData } = await supabase.from('shops').select('id').eq('owner_user_id', user.id).maybeSingle();
+      const { data: shopData } = await supabase.from('shops').select('id, slug').eq('owner_user_id', user.id).maybeSingle();
       if (!shopData) return;
       setShopId(shopData.id);
+      setShopSlug(shopData.slug);
       const { data: barbers } = await supabase.from('staff').select('id, name').eq('shop_id', shopData.id).eq('is_active', true);
       setBarberList((barbers ?? []) as { id: string; name: string }[]);
+      const { data: svcs } = await supabase.from('services')
+        .select('id, name, duration_min, price_cents')
+        .eq('shop_id', shopData.id)
+        .eq('is_active', true);
+      setServices((svcs ?? []).map((s: any) => ({
+        id: s.id,
+        label: s.name,
+        dur: s.duration_min,
+        price: `${Math.round(s.price_cents / 100)}₺`,
+      })));
     })();
   }, []);
 
@@ -176,7 +192,7 @@ export default function AgendaScreen() {
   }
 
   function handleAddAppointment() {
-    // TODO: open AddAppointmentSheet with selectedDate pre-filled
+    setShowAdd(true);
   }
 
   return (
@@ -262,6 +278,31 @@ export default function AgendaScreen() {
           + Randevu Ekle
         </Button>
       </View>
+
+      <AddAppointmentModal
+        visible={showAdd}
+        onClose={() => setShowAdd(false)}
+        services={services}
+        onSave={async (data) => {
+          if (!shopSlug) return;
+          try {
+            await supabase.functions.invoke('app-book-appointment', {
+              body: {
+                shop_slug: shopSlug,
+                service_id: data.serviceId,
+                staff_id: null,
+                starts_at: `${data.date}T${data.time}:00`,
+                customer_name: data.customerName,
+                customer_phone: data.customerPhone || null,
+              },
+            });
+            setShowAdd(false);
+            loadAgenda();
+          } catch (e) {
+            Alert.alert('Hata', 'Randevu eklenemedi.');
+          }
+        }}
+      />
     </View>
   );
 }

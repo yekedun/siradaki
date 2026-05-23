@@ -34,6 +34,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import Svg, { Rect, Path, Circle } from 'react-native-svg';
 import { colors } from '../../lib/theme';
@@ -242,7 +243,7 @@ function CalendarEmptyIcon() {
  * body (13px Regular fg-3 lineHeight 1.55): "20 Mayıs için randevu bulunmuyor. Yeni randevu ekleyebilirsiniz."
  * cta: Button variant=accent size=md "Yeni Randevu"
  */
-function EmptyState({ onCta }: { onCta?: () => void }) {
+function EmptyState({ onCta, dateLabel }: { onCta?: () => void; dateLabel?: string }) {
   return (
     <View style={styles.emptyWrap}>
       <View style={styles.emptyIconBox}>
@@ -250,7 +251,7 @@ function EmptyState({ onCta }: { onCta?: () => void }) {
       </View>
       <Text style={styles.emptyTitle}>Bugün randevu yok</Text>
       <Text style={styles.emptyBody}>
-        {'20 Mayıs için randevu bulunmuyor. Yeni randevu ekleyebilirsiniz.'}
+        {dateLabel ?? 'Bugün'} için randevu bulunmuyor. Yeni randevu ekleyebilirsiniz.
       </Text>
       {onCta && (
         <TouchableOpacity style={styles.emptyCtaBtn} onPress={onCta}>
@@ -281,6 +282,7 @@ export default function RandevularScreen() {
   const [selectedAppt, setSelectedAppt] = useState<import('../../components/AppointmentDetailSheet').AppointmentDetail | null>(null);
   const [showAdd, setShowAdd]   = useState(false);
   const [staffId, setStaffId] = useState<string | null>(null);
+  const [staffShopSlug, setStaffShopSlug] = useState<string | null>(null);
   const [items, setItems] = useState<ListItem[]>([]);
   const [services, setServices] = useState<ServiceOption[]>([]);
 
@@ -293,6 +295,10 @@ export default function RandevularScreen() {
         .then(({ data }) => {
           if (data) {
             setStaffId((data as any).id);
+            supabase.from('shops').select('slug').eq('id', (data as any).shop_id).maybeSingle()
+              .then(({ data: shopData }) => {
+                if (shopData) setStaffShopSlug((shopData as any).slug);
+              });
             supabase.from('services').select('id, name, duration_min, price_cents').eq('shop_id', (data as any).shop_id).eq('active', true)
               .then(({ data: svcs }) => {
                 if (svcs) setServices((svcs as any[]).map(s => ({ id: s.id, label: s.name, dur: s.duration_min, price: `${Math.round(s.price_cents/100)}₺` })));
@@ -382,7 +388,10 @@ export default function RandevularScreen() {
 
       {isEmpty ? (
         /* Empty state */
-        <EmptyState onCta={() => setShowAdd(true)} />
+        <EmptyState
+          onCta={() => setShowAdd(true)}
+          dateLabel={`${selectedDate.getDate()} ${TR_MONTHS[selectedDate.getMonth()]}`}
+        />
       ) : (
         <ScrollView
           style={styles.scroll}
@@ -439,9 +448,28 @@ export default function RandevularScreen() {
       <AddAppointmentModal
         visible={showAdd}
         onClose={() => setShowAdd(false)}
-        onSave={() => {
-          // TODO: connect Supabase — insert new appointment
-          setShowAdd(false);
+        onSave={async (data) => {
+          if (!staffShopSlug || !staffId) {
+            Alert.alert('Hata', 'Oturum bilgisi eksik.');
+            return;
+          }
+          try {
+            const { error } = await supabase.functions.invoke('app-book-appointment', {
+              body: {
+                shop_slug: staffShopSlug,
+                service_id: data.serviceId,
+                staff_id: staffId,
+                starts_at: `${data.date}T${data.time}:00`,
+                customer_name: data.customerName,
+                customer_phone: data.customerPhone || null,
+              },
+            });
+            if (error) throw error;
+            setShowAdd(false);
+            fetchAppointments();
+          } catch {
+            Alert.alert('Hata', 'Randevu eklenemedi. Slot dolu olabilir.');
+          }
         }}
         services={services}
       />

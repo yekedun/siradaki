@@ -91,7 +91,7 @@ function InlineDayPicker({
   selected: number;
   onSelect: (idx: number) => void;
 }) {
-  const today = new Date(2026, 4, 7); // 7 Mayıs 2026
+  const today = new Date();
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - 2 + i);
@@ -159,7 +159,7 @@ export function AddAppointmentModal({
   const canSave = name.trim().length >= 2 && !!slot;
 
   /* Build date label for ÖZET card */
-  const TODAY_B = new Date(2026, 4, 7);
+  const TODAY_B = new Date();
   const days    = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(TODAY_B);
     d.setDate(TODAY_B.getDate() - 2 + i);

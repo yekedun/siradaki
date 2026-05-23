@@ -523,12 +523,12 @@ export default function TeamScreen() {
     const { data: shopData } = await supabase.from('shops').select('id').eq('owner_user_id', user.id).maybeSingle();
     if (!shopData) return;
     setShopId(shopData.id);
-    const { data } = await supabase.from('staff').select('id, name, status, commission_type, commission_rate_bps').eq('shop_id', shopData.id);
+    const { data } = await supabase.from('staff').select('id, name, is_active, commission_type, commission_rate_bps').eq('shop_id', shopData.id);
     if (data) {
       setStaff(data.map((s: any) => ({
         id: s.id,
         name: s.name,
-        status: s.status === 'active' ? 'Aktif' : 'Pasif',
+        status: s.is_active ? 'Aktif' : 'Pasif',
         meta: s.commission_type && s.commission_rate_bps
           ? `%${Math.round(s.commission_rate_bps / 100)} komisyon`
           : 'Komisyon yok',
@@ -546,8 +546,8 @@ export default function TeamScreen() {
         {
           text: s.status === 'Aktif' ? 'Pasif yap' : 'Aktif yap',
           onPress: async () => {
-            const newStatus = s.status === 'Aktif' ? 'inactive' : 'active';
-            await supabase.from('staff').update({ status: newStatus }).eq('id', s.id);
+            const newIsActive = s.status === 'Aktif' ? false : true;
+            await supabase.from('staff').update({ is_active: newIsActive }).eq('id', s.id);
             setStaff((prev) =>
               prev.map((p) =>
                 p.id === s.id
@@ -563,14 +563,34 @@ export default function TeamScreen() {
 
   async function handleAddStaff(name: string, email: string) {
     if (!shopId) return;
-    const { data } = await supabase.from('staff').insert({
-      shop_id: shopId,
-      name,
-      email: email || null,
-      role: 'staff',
-      status: 'active',
-    }).select('id, name, status, commission_type, commission_rate_bps').single();
-    if (data) {
+    if (email.trim()) {
+      const { data: result, error: fnErr } = await supabase.functions.invoke('invite-barber', {
+        body: { email: email.trim(), display_name: name },
+      });
+      if (fnErr || !result?.staff) {
+        Alert.alert('Hata', 'Personel davet edilemedi.');
+        return;
+      }
+      setStaff((prev) => [
+        ...prev,
+        {
+          id: result.staff.id,
+          name: result.staff.name,
+          status: 'Aktif',
+          meta: 'Komisyon yok',
+        },
+      ]);
+    } else {
+      const { data, error: insertErr } = await supabase.from('staff').insert({
+        shop_id: shopId,
+        name,
+        role: 'staff',
+        is_active: true,
+      }).select('id, name, is_active, commission_type, commission_rate_bps').single();
+      if (insertErr || !data) {
+        Alert.alert('Hata', 'Personel eklenemedi.');
+        return;
+      }
       setStaff((prev) => [
         ...prev,
         {

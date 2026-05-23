@@ -132,6 +132,7 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
   const [phone,   setPhone]   = useState(initialPhone);
   const [visible, setVisible] = useState(true);
   const [saved,   setSaved]   = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Sync state when initial values change (after shop data loads)
   useEffect(() => {
@@ -154,9 +155,21 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
     .toUpperCase();
 
   async function handleSave() {
-    if (!canSave || !shopId) return;
-    await supabase.from('shops').update({ name: name.trim(), address, bio, phone }).eq('id', shopId);
-    setSaved(true);
+    if (!canSave) return;
+    if (!shopId) {
+      Alert.alert('Lütfen bekleyin', 'Dükkan bilgileri yükleniyor.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('shops').update({ name: name.trim(), address, bio, phone }).eq('id', shopId);
+      if (error) throw error;
+      setSaved(true);
+    } catch {
+      Alert.alert('Hata', 'Bilgiler kaydedilemedi. Lütfen tekrar deneyin.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleClose() {
@@ -232,6 +245,7 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
                   onChangeText={setName}
                   placeholder="örn. Keskin Berber"
                   placeholderTextColor={colors.slate[300]}
+                  autoCorrect={false}
                   style={styles.textInput}
                 />
                 <Text style={styles.fieldHint}>
@@ -247,6 +261,7 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
                   onChangeText={setAddress}
                   placeholder="Mahalle, Sokak No, İl"
                   placeholderTextColor={colors.slate[300]}
+                  autoCorrect={false}
                   style={styles.textInput}
                 />
               </View>
@@ -277,6 +292,7 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
                   placeholderTextColor={colors.slate[300]}
                   multiline
                   numberOfLines={3}
+                  autoCorrect={false}
                   style={[styles.textInput, styles.textArea]}
                 />
                 <Text style={styles.fieldHint}>{bio.length}/200 karakter</Text>
@@ -332,12 +348,19 @@ interface HoursEditorSheetProps {
   open: boolean;
   onClose: () => void;
   shopName?: string;
+  shopId?: string | null;
+  onSaved?: (schedule: ScheduleDay[]) => void;
+  initialSchedule?: ScheduleDay[];
 }
 
-function HoursEditorSheet({ open, onClose, shopName = '' }: HoursEditorSheetProps) {
-  const [schedule, setSchedule] = useState<ScheduleDay[]>(INIT_SCHEDULE);
+function HoursEditorSheet({ open, onClose, shopName = '', shopId, onSaved, initialSchedule }: HoursEditorSheetProps) {
+  const [schedule, setSchedule] = useState<ScheduleDay[]>(initialSchedule ?? INIT_SCHEDULE);
   const [sel, setSel] = useState(0);
   const day = schedule[sel];
+
+  useEffect(() => {
+    if (initialSchedule) setSchedule(initialSchedule);
+  }, [initialSchedule]);
 
   function update(field: keyof ScheduleDay, val: string | boolean) {
     setSchedule((s) => s.map((d, i) => i === sel ? { ...d, [field]: val } : d));
@@ -488,8 +511,13 @@ function HoursEditorSheet({ open, onClose, shopName = '' }: HoursEditorSheetProp
 
             {/* Save */}
             <TouchableOpacity
-              onPress={() => {
-                // TODO: connect Supabase — save all days schedule for this shop
+              onPress={async () => {
+                if (shopId) {
+                  const wh: Record<string, { open: boolean; start: string; end: string; brk: string }> = {};
+                  schedule.forEach(d => { wh[d.id] = { open: d.open, start: d.start, end: d.end, brk: d.brk }; });
+                  await supabase.from('shops').update({ working_hours: wh }).eq('id', shopId);
+                }
+                onSaved?.(schedule);
                 onClose();
               }}
               style={styles.primaryBtn}
@@ -502,6 +530,17 @@ function HoursEditorSheet({ open, onClose, shopName = '' }: HoursEditorSheetProp
       </Pressable>
     </Modal>
   );
+}
+
+/* ─── Hours subtitle helpers ────────────────────────────────── */
+
+const TR_DAYS_LABELS: Record<string, string> = { pzt: 'Pzt', sal: 'Sal', car: 'Çar', per: 'Per', cum: 'Cum', cmt: 'Cmt', paz: 'Paz' };
+
+function buildHoursSubtitle(schedule: { id: string; open: boolean; start: string; end: string }[]): string {
+  const open = schedule.filter(d => d.open);
+  if (!open.length) return 'Kapalı';
+  const parts = open.map(d => `${TR_DAYS_LABELS[d.id] ?? d.id} ${d.start}–${d.end}`);
+  return parts.join(' · ');
 }
 
 /* ─── Main Screen ───────────────────────────────────────────── */
@@ -524,17 +563,19 @@ interface ShopData {
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const [commEnabled,    setCommEnabled]    = useState(false);
-  const [profileOpen,    setProfileOpen]    = useState(false);
-  const [hoursOpen,      setHoursOpen]      = useState(false);
-  const [widgetLinks,    setWidgetLinks]    = useState<WidgetLink[]>([]);
-  const [shop,           setShop]           = useState<ShopData | null>(null);
-  const [shopId,         setShopId]         = useState<string | null>(null);
+  const [commEnabled,        setCommEnabled]        = useState(false);
+  const [profileOpen,        setProfileOpen]        = useState(false);
+  const [hoursOpen,          setHoursOpen]          = useState(false);
+  const [widgetLinks,        setWidgetLinks]        = useState<WidgetLink[]>([]);
+  const [shop,               setShop]               = useState<ShopData | null>(null);
+  const [shopId,             setShopId]             = useState<string | null>(null);
+  const [hoursSubtitle,      setHoursSubtitle]      = useState('Pzt–Cum 09:00–19:00 · Cmt 10:00–17:00 · Paz kapalı');
+  const [hoursInitialSchedule, setHoursInitialSchedule] = useState<ScheduleDay[] | undefined>(undefined);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
-      supabase.from('shops').select('id, name, address, bio, phone, slug, commission_enabled').eq('owner_user_id', user.id).maybeSingle()
+      supabase.from('shops').select('id, name, address, bio, phone, slug, commission_enabled, working_hours').eq('owner_user_id', user.id).maybeSingle()
         .then(({ data }) => {
           if (!data) return;
           setShopId(data.id);
@@ -548,12 +589,18 @@ export default function SettingsScreen() {
             commission_enabled: data.commission_enabled ?? false,
           });
           setCommEnabled(data.commission_enabled ?? false);
+          if (data.working_hours) {
+            const wh = data.working_hours as Record<string, { open: boolean; start: string; end: string; brk: string }>;
+            const loaded: ScheduleDay[] = INIT_SCHEDULE.map(d => wh[d.id] ? { ...d, ...wh[d.id] } : d);
+            setHoursInitialSchedule(loaded);
+            setHoursSubtitle(buildHoursSubtitle(loaded));
+          }
           // Fetch widget tokens
-          supabase.from('widget_tokens').select('id, token, last_used_at').eq('shop_id', data.id)
+          supabase.from('widget_tokens').select('id, token_hash, label, last_used_at').eq('shop_id', data.id)
             .then(({ data: tokens }) => {
               setWidgetLinks((tokens ?? []).map((t: any) => ({
                 id: t.id,
-                shortId: `${t.token.slice(0,4)}…${t.token.slice(-4)}`,
+                shortId: `${t.token_hash.slice(0, 8)}…`,
                 lastUsed: t.last_used_at ? new Date(t.last_used_at).toLocaleDateString('tr-TR') : 'Hiç',
               })));
             });
@@ -581,17 +628,18 @@ export default function SettingsScreen() {
 
   async function handleCreateLink() {
     if (!shopId) return;
-    const bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    const token = 'wgt_' + Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-    const { data } = await supabase.from('widget_tokens').insert({ shop_id: shopId, token }).select('id, token, last_used_at').single();
-    if (data) {
-      setWidgetLinks(prev => [...prev, {
-        id: (data as any).id,
-        shortId: `${(data as any).token.slice(0,4)}…${(data as any).token.slice(-4)}`,
-        lastUsed: 'Yeni',
-      }]);
+    const { data, error } = await supabase.functions.invoke('create-widget-token', {
+      body: { label: 'Telefon Widget' },
+    });
+    if (error || !data) {
+      Alert.alert('Hata', 'Bağlantı oluşturulamadı.');
+      return;
     }
+    setWidgetLinks(prev => [...prev, {
+      id: data.id,
+      shortId: `${(data.raw_token as string).slice(0, 8)}…`,
+      lastUsed: 'Yeni',
+    }]);
   }
 
   function handleDeleteLink(id: string) {
@@ -683,9 +731,7 @@ export default function SettingsScreen() {
           >
             <View style={{ flex: 1 }}>
               <Text style={styles.opRowTitle}>Dükkan Saatleri</Text>
-              <Text style={styles.opRowMeta}>
-                Pzt–Cum 09:00–19:00 · Cmt 10:00–17:00 · Paz kapalı
-              </Text>
+              <Text style={styles.opRowMeta}>{hoursSubtitle}</Text>
             </View>
             <View style={styles.chevronWrap}>
               <View style={styles.chevronLine1} />
@@ -718,7 +764,7 @@ export default function SettingsScreen() {
           {widgetLinks.map((l) => (
             <View key={l.id} style={styles.widgetLinkCard}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.widgetLinkId}>wgt_{l.shortId}</Text>
+                <Text style={styles.widgetLinkId}>{l.shortId}</Text>
                 <Text style={styles.widgetLinkMeta}>Son {l.lastUsed}</Text>
               </View>
               <TouchableOpacity
@@ -769,6 +815,9 @@ export default function SettingsScreen() {
         open={hoursOpen}
         onClose={() => setHoursOpen(false)}
         shopName={shop?.name}
+        shopId={shopId}
+        initialSchedule={hoursInitialSchedule}
+        onSaved={(s) => setHoursSubtitle(buildHoursSubtitle(s))}
       />
     </View>
   );
