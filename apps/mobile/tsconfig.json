@@ -9,7 +9,9 @@
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "paths": {
-      "@berber/shared": ["../../packages/shared/src/index.ts"]
+      "@berber/shared": [
+        "../../packages/shared/src/index.ts"
+      ]
     }
   },
   "include": [
@@ -18,6 +20,8 @@
     "app/**/*.tsx",
     "components/**/*.ts",
     "components/**/*.tsx",
-    "lib/**/*.ts"
+    "lib/**/*.ts",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
   ]
 }
