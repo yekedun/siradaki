@@ -29,6 +29,7 @@ import {
   Alert,
   SafeAreaView,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { colors } from '../../lib/theme';
 
 // TODO: connect Supabase — fetch current authenticated staff member
@@ -39,6 +40,8 @@ const MOCK_STAFF = {
 };
 
 export default function HesabimScreen() {
+  const router = useRouter();
+
   function handleSignOut() {
     Alert.alert(
       'Çıkış Yap',
@@ -50,6 +53,7 @@ export default function HesabimScreen() {
           style: 'destructive',
           onPress: () => {
             // TODO: connect Supabase — supabase.auth.signOut()
+            router.replace('/(auth)/login');
           },
         },
       ]
