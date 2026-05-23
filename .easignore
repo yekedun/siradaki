@@ -1,0 +1,9 @@
+# Generated native directories — EAS regenerates these via expo prebuild
+apps/mobile/android/
+apps/mobile/ios/
+apps/mobile/.expo/
+apps/mobile/build-archive/
+
+# Dev artifacts
+node_modules/
+.turbo/
