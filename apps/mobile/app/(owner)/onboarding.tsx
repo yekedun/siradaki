@@ -37,6 +37,7 @@ import {
 import { router } from 'expo-router';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
+import { buildOnboardingServiceInsert } from '../../lib/onboarding-utils';
 
 /* ─── Constants ──────────────────────────────────────────────── */
 
@@ -563,13 +564,9 @@ export default function OnboardingScreen() {
   async function handleNext2() {
     if (shopId && svcName.trim().length >= 2 && svcPrice !== '') {
       setLoading(true);
-      await supabase.from('services').insert({
-        shop_id:      shopId,
-        name:         svcName.trim(),
-        duration_min: svcDur,
-        price_cents:  Math.round(Number(svcPrice) * 100),
-        active:       true,
-      });
+      await supabase.from('services').insert(
+        buildOnboardingServiceInsert(shopId, svcName, svcDur, svcPrice),
+      );
       setLoading(false);
     }
     setStep(3);

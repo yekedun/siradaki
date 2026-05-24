@@ -1,0 +1,25 @@
+import { buildOnboardingServiceInsert } from '../lib/onboarding-utils';
+
+describe('buildOnboardingServiceInsert', () => {
+  it('uses is_active (not active) matching the services table schema', () => {
+    const payload = buildOnboardingServiceInsert('shop-1', 'Saç Kesimi', 30, '200');
+    expect(payload).toMatchObject({ is_active: true });
+    expect(payload).not.toHaveProperty('active');
+  });
+
+  it('converts price string to price_cents', () => {
+    const payload = buildOnboardingServiceInsert('shop-1', 'Sakal', 20, '150');
+    expect(payload.price_cents).toBe(15000);
+  });
+
+  it('trims whitespace from name', () => {
+    const payload = buildOnboardingServiceInsert('shop-1', '  Saç  ', 45, '300');
+    expect(payload.name).toBe('Saç');
+  });
+
+  it('passes shop_id and duration_min through', () => {
+    const payload = buildOnboardingServiceInsert('shop-uuid', 'Test', 60, '100');
+    expect(payload.shop_id).toBe('shop-uuid');
+    expect(payload.duration_min).toBe(60);
+  });
+});
