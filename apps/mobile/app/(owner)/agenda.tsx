@@ -321,14 +321,17 @@ export default function AgendaScreen() {
               if (!status) status = ctx.status ?? 0;
             }
             console.warn('[agenda] app-book-appointment error status=', status, 'body=', ctxBody, 'message=', fnErr.message);
-            const ctxMsg = typeof ctxBody === 'string' ? ctxBody : (ctxBody?.error ?? JSON.stringify(ctxBody ?? {}));
+            // Backend "error" alanı her zaman gerçek Türkçe mesajı içerir — onu önceliklendiriyoruz
+            const serverMsg = (ctxBody && typeof ctxBody === 'object' && typeof ctxBody.error === 'string')
+              ? ctxBody.error
+              : (typeof ctxBody === 'string' ? ctxBody : '');
             let msg: string;
-            if (status === 409) msg = 'Bu saat dolu. Başka bir saat seçin.';
-            else if (status === 404) msg = 'Dükkan veya hizmet bulunamadı. Sayfayı yenileyin.';
-            else if (status === 429) msg = 'Çok fazla deneme. Birkaç dakika bekleyin.';
+            if (status === 409) msg = serverMsg || 'Bu saat dolu. Başka bir saat seçin.';
+            else if (status === 404) msg = serverMsg || 'Dükkan veya hizmet bulunamadı. Sayfayı yenileyin.';
+            else if (status === 429) msg = serverMsg || 'Çok fazla deneme. Birkaç dakika bekleyin.';
             else if (status === 401) msg = 'Oturum gerekli. Tekrar giriş yapın.';
-            else if (status === 400) msg = `Geçersiz bilgi: ${fnErr.message || ctxMsg || 'detay yok'}`;
-            else msg = `Randevu eklenemedi (HTTP ${status || '?'}): ${fnErr.message || ctxMsg || 'bilinmeyen hata'}`;
+            else if (status === 400) msg = serverMsg || 'Geçersiz bilgi.';
+            else msg = `Randevu eklenemedi (HTTP ${status || '?'}): ${serverMsg || fnErr.message || 'bilinmeyen hata'}`;
             Alert.alert('Hata', msg);
             return;
           }
