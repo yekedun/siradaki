@@ -557,26 +557,43 @@ export default function TeamScreen() {
   }, []);
 
   async function loadStaff() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data: shopData } = await supabase
+    const { data: { user }, error: authErr } = await supabase.auth.getUser();
+    if (authErr) console.warn('[team] auth error:', authErr);
+    if (!user) { console.warn('[team] no user — not logged in'); return; }
+    const { data: shopData, error: shopErr } = await supabase
       .from('shops')
       .select('id')
       .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
       .maybeSingle();
-    if (!shopData) return;
+    if (shopErr) { console.warn('[team] shops error:', shopErr); Alert.alert('Hata', `Dükkan yüklenemedi: ${shopErr.message}`); return; }
+    if (!shopData) { console.warn('[team] no shop for user', user.id); return; }
     setShopId(shopData.id);
-    const { data } = await supabase.from('staff').select('id, name, is_active, commission_type, commission_rate_bps').eq('shop_id', shopData.id);
-    if (data) {
-      setStaff(data.map((s: any) => ({
+    // Commission columns are not directly SELECTable (see migration 20260518120000);
+    // owners must read them via the get_staff_commission_configs RPC.
+    const [{ data, error: staffErr }, { data: commData, error: commErr }] = await Promise.all([
+      supabase
+        .from('staff')
+        .select('id, name, is_active')
+        .eq('shop_id', shopData.id)
+        .order('created_at'),
+      supabase.rpc('get_staff_commission_configs', { p_shop_id: shopData.id }),
+    ]);
+    if (staffErr) { console.warn('[team] staff error:', staffErr); Alert.alert('Hata', `Personel listesi yüklenemedi: ${staffErr.message}`); return; }
+    if (commErr) console.warn('[team] commission RPC error:', commErr);
+    const commByStaff = new Map<string, { type: string | null; bps: number | null }>();
+    (commData ?? []).forEach((c: any) => commByStaff.set(c.staff_id, { type: c.commission_type, bps: c.commission_rate_bps }));
+    console.log('[team] loaded', (data ?? []).length, 'staff for shop', shopData.id);
+    setStaff((data ?? []).map((s: any) => {
+      const c = commByStaff.get(s.id);
+      return {
         id: s.id,
         name: s.name,
         status: s.is_active ? 'Aktif' : 'Pasif',
-        meta: s.commission_type && s.commission_rate_bps
-          ? `%${Math.round(s.commission_rate_bps / 100)} komisyon`
+        meta: c?.type === 'percentage' && c.bps
+          ? `%${Math.round(c.bps / 100)} komisyon`
           : 'Komisyon yok',
-      })));
-    }
+      };
+    }));
   }
 
   function handleToggleStatus(s: StaffMember) {
@@ -611,10 +628,6 @@ export default function TeamScreen() {
     }
 
     const emailValue = email.trim();
-    const commissionPayload = {
-      commission_type: commissionRate !== null ? 'percentage' : 'none',
-      commission_rate_bps: commissionRate !== null ? Math.round(commissionRate * 100) : null,
-    };
 
     let data: any = null;
     let insertErr: any = null;
@@ -628,7 +641,7 @@ export default function TeamScreen() {
       if (!insertErr && data?.id) {
         const { error: updateErr } = await supabase
           .from('staff')
-          .update({ email: emailValue, ...commissionPayload } as any)
+          .update({ email: emailValue } as any)
           .eq('id', data.id);
         insertErr = updateErr;
       }
@@ -640,17 +653,32 @@ export default function TeamScreen() {
           name: name.trim(),
           role: 'staff',
           is_active: true,
-          ...commissionPayload,
         } as any)
-        .select('id, name, is_active, commission_type, commission_rate_bps')
+        .select('id, name, is_active')
         .single();
       data = result.data;
       insertErr = result.error;
     }
 
     if (insertErr || !data) {
-      Alert.alert('Hata', 'Personel eklenemedi. Lütfen tekrar deneyin.');
+      console.warn('[team] add-staff failed:', insertErr);
+      const msg = (insertErr as any)?.message ?? 'bilinmeyen hata';
+      Alert.alert('Hata', `Personel eklenemedi: ${msg}`);
       return;
+    }
+    console.log('[team] added staff', (data as any).id);
+
+    // Commission is owner-scoped; must go through the SECURITY DEFINER RPC.
+    if (commissionRate !== null) {
+      const { error: commErr } = await supabase.rpc('update_staff_commission_config', {
+        p_staff_id: (data as any).id,
+        p_commission_type: 'percentage',
+        p_commission_rate_bps: Math.round(commissionRate * 100),
+      });
+      if (commErr) {
+        console.warn('[team] commission update failed:', commErr);
+        Alert.alert('Uyarı', `Personel eklendi ama komisyon kaydedilemedi: ${commErr.message}`);
+      }
     }
 
     const rate = (data as any).commission_rate_bps;
@@ -668,10 +696,16 @@ export default function TeamScreen() {
 
   async function handleSaveCommission(rate: number) {
     if (selectedId) {
-      await supabase.from('staff').update({
-        commission_type: 'percentage',
-        commission_rate_bps: Math.round(rate * 100),
-      }).eq('id', selectedId);
+      const { error: commErr } = await supabase.rpc('update_staff_commission_config', {
+        p_staff_id: selectedId,
+        p_commission_type: 'percentage',
+        p_commission_rate_bps: Math.round(rate * 100),
+      });
+      if (commErr) {
+        console.warn('[team] commission update failed:', commErr);
+        Alert.alert('Hata', `Komisyon kaydedilemedi: ${commErr.message}`);
+        return;
+      }
     }
     setStaff((prev) =>
       prev.map((p) =>
