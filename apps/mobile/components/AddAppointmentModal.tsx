@@ -53,6 +53,11 @@ import {
   isAppointmentModalSaveEnabled,
   resolveAppointmentServiceId,
 } from '../lib/appointment-modal-state';
+import {
+  AppointmentWorkingHours,
+  formatLocalAppointmentDate,
+  generateAppointmentTimesForDate,
+} from '../lib/appointment-time';
 
 // TODO: connect Supabase — fetch services for this shop: supabase.from('shop_services').select('*').eq('shop_id', shopId)
 // TODO: connect Supabase — on Kaydet, insert appointment: supabase.from('appointments').insert({ ... })
@@ -77,11 +82,6 @@ const DEFAULT_SERVICES: ServiceOption[] = [
 ];
 
 /* ── Time slots — exact from source ADD_TIMES ───────────────────── */
-const ADD_TIMES = [
-  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-  '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
-  '15:00', '15:30', '16:00', '16:30', '17:00', '17:30',
-] as const;
 
 /* ── Turkish month abbreviations ────────────────────────────────── */
 const TR_MON_S2 = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'] as const;
@@ -153,6 +153,7 @@ export interface AddAppointmentModalProps {
   services?: ServiceOption[];
   staffList?: StaffOption[];
   initialStaffId?: string | null;
+  workingHours?: AppointmentWorkingHours | null;
 }
 
 /* ── MODAL ──────────────────────────────────────────────────────── */
@@ -163,6 +164,7 @@ export function AddAppointmentModal({
   services = DEFAULT_SERVICES,
   staffList,
   initialStaffId,
+  workingHours,
 }: AddAppointmentModalProps) {
   const [name,           setName]           = useState('');
   const [phone,          setPhone]          = useState('');
@@ -199,6 +201,7 @@ export function AddAppointmentModal({
   const selDate   = days[dayIdx];
   const dateLabel = `${selDate.getDate()} ${TR_MON_S2[selDate.getMonth()]}`;
   const endTime   = slot && curSvc ? addMins(slot, curSvc.dur) : null;
+  const timeSlots = generateAppointmentTimesForDate(selDate, workingHours, curSvc?.dur ?? 30);
 
   function handleSave() {
     if (!canSave) return;
@@ -209,7 +212,7 @@ export function AddAppointmentModal({
       customerPhone: phone,
       serviceId: svc,
       staffId: selectedStaffId,
-      date: selDate.toISOString().slice(0, 10),
+      date: formatLocalAppointmentDate(selDate),
       time: slot,
     });
   }
@@ -290,6 +293,11 @@ export function AddAppointmentModal({
               </View>
             </>
           )}
+          {staffList && staffList.length === 0 && (
+            <Text style={styles.emptyHint}>
+              Aktif personel bulunamadı. Önce Ekip ekranından en az bir personel ekleyin.
+            </Text>
+          )}
 
           {/* ── Hizmet section label ────────────────────────────── */}
           <Text style={styles.sectionLabel}>Hizmet</Text>
@@ -300,7 +308,11 @@ export function AddAppointmentModal({
               borderRadius 12, padding '12px 14px', flex row, justifyContent space-between
               Left: 14px SemiBold; Right: 12px opacity sel=0.8 unsel=0.55 */}
           <View style={styles.serviceList}>
-            {services.map(o => {
+            {services.length === 0 ? (
+              <Text style={styles.emptyHint}>
+                Aktif hizmet bulunamadı. Önce Hizmetler ekranından en az bir aktif hizmet ekleyin.
+              </Text>
+            ) : services.map(o => {
               const sel = svc === o.id;
               return (
                 <TouchableOpacity
@@ -344,7 +356,7 @@ export function AddAppointmentModal({
               Each: height 38, borderRadius 8, sel=ink-900 bg, unsel=slate-0
               13px SemiBold tabular-nums */}
           <View style={styles.timeGrid}>
-            {ADD_TIMES.map(t => {
+            {timeSlots.map(t => {
               const sel = slot === t;
               return (
                 <TouchableOpacity
@@ -523,6 +535,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.slate[500],
     marginTop: 6,
+  },
+  emptyHint: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 13,
+    color: colors.slate[500],
+    backgroundColor: colors.slate[100],
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    lineHeight: 18,
   },
 
   /* ── Inline DayPicker ────────────────────────────────────────────

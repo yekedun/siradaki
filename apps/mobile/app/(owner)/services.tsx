@@ -29,6 +29,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Modal,
   Pressable,
@@ -373,33 +374,56 @@ export default function ServicesScreen() {
   async function loadServices() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data: shopData } = await supabase.from('shops').select('id').or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`).maybeSingle();
+    const { data: shopData, error: shopErr } = await supabase.from('shops').select('id').or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`).maybeSingle();
+    if (shopErr) {
+      Alert.alert('Hata', `Dükkan yüklenemedi: ${shopErr.message}`);
+      return;
+    }
     if (!shopData) { setShopId(null); return; }
     setShopId(shopData.id);
-    const { data } = await supabase.from('services').select('id, name, duration_min, price_cents, is_active').eq('shop_id', shopData.id).order('name');
+    const { data, error: servicesErr } = await supabase.from('services').select('id, name, duration_min, price_cents, is_active').eq('shop_id', shopData.id).order('name');
+    if (servicesErr) {
+      Alert.alert('Hata', `Hizmetler yüklenemedi: ${servicesErr.message}`);
+      return;
+    }
     if (data) setServices(data.map((s: any) => serviceRowToView(s)));
   }
 
   async function saveEdit(data: Omit<Service, 'id'>) {
     if (!editing) return;
-    await supabase.from('services').update(serviceFormToDb(data)).eq('id', editing.id);
+    const { error } = await supabase.from('services').update(serviceFormToDb(data)).eq('id', editing.id);
+    if (error) {
+      Alert.alert('Hata', `Hizmet kaydedilemedi: ${error.message}`);
+      return;
+    }
     setServices((s) => s.map((sv) => sv.id === editing.id ? { ...sv, ...data } : sv));
     setEditing(null);
   }
 
   async function deleteEdit() {
     if (!editing) return;
-    await supabase.from('services').delete().eq('id', editing.id);
+    const { error } = await supabase.from('services').delete().eq('id', editing.id);
+    if (error) {
+      Alert.alert('Hata', `Hizmet silinemedi: ${error.message}`);
+      return;
+    }
     setServices((s) => s.filter((sv) => sv.id !== editing.id));
     setEditing(null);
   }
 
   async function saveAdd(data: Omit<Service, 'id'>) {
-    if (!shopId) return;
-    const { data: inserted } = await supabase.from('services').insert({
+    if (!shopId) {
+      Alert.alert('Hata', 'Dükkan bilgisi yüklenemedi. Lütfen tekrar deneyin.');
+      return;
+    }
+    const { data: inserted, error } = await supabase.from('services').insert({
       shop_id: shopId,
       ...serviceFormToDb(data),
     }).select('id, name, duration_min, price_cents, is_active').single();
+    if (error || !inserted) {
+      Alert.alert('Hata', `Hizmet eklenemedi: ${error?.message ?? 'bilinmeyen hata'}`);
+      return;
+    }
     if (inserted) {
       setServices((s) => [...s, serviceRowToView(inserted as any)]);
     }
@@ -409,7 +433,11 @@ export default function ServicesScreen() {
   async function toggleActive(id: string) {
     const sv = services.find(s => s.id === id);
     if (!sv) return;
-    await supabase.from('services').update({ is_active: !sv.active }).eq('id', id);
+    const { error } = await supabase.from('services').update({ is_active: !sv.active }).eq('id', id);
+    if (error) {
+      Alert.alert('Hata', `Hizmet durumu değiştirilemedi: ${error.message}`);
+      return;
+    }
     setServices((s) => s.map((sv) => sv.id === id ? { ...sv, active: !sv.active } : sv));
   }
 

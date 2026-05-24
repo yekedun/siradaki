@@ -18,6 +18,7 @@ function mapRpcErrorStatus(code?: string): number {
   if (code === "P0002") return 404;
   if (code === "P0004") return 429;
   if (code === "22023") return 400;
+  if (code === "42501") return 403;
   return 500;
 }
 
@@ -75,7 +76,7 @@ serve(async (req) => {
     const status = mapRpcErrorStatus(rpcError.code);
     if (status === 500) console.error("create_appointment_atomic failed:", rpcError);
     return error(rpcError.message ?? "Randevu olusturulamadi", status, {
-      code: status === 409 ? "BOOKING_CONFLICT" : status === 429 ? "RATE_LIMITED" : "BOOKING_ERROR",
+      code: status === 409 ? "BOOKING_CONFLICT" : status === 429 ? "RATE_LIMITED" : status === 403 ? "FORBIDDEN" : "BOOKING_ERROR",
       should_refetch_availability: status === 409,
       ...(status === 429 ? { retry_after: 600 } : {}),
     });

@@ -52,6 +52,9 @@ import { AppointmentCard } from '../../components/ds/AppointmentCard';
 import { BlokCard } from '../../components/ds/BlokCard';
 import { Button } from '../../components/ds/Button';
 import { supabase } from '../../lib/supabase';
+import { buildLocalAppointmentTimestamp } from '../../lib/appointment-time';
+import type { AppointmentWorkingHours } from '../../lib/appointment-time';
+import { appointmentRowToAgendaItem } from '../../lib/appointment-mappers';
 import { formatTime, translateReason, AppointmentState as AppState } from '../../lib/utils';
 import { AddAppointmentModal, ServiceOption, StaffOption } from '../../components/AddAppointmentModal';
 
@@ -105,6 +108,7 @@ export default function AgendaScreen() {
   const [cols, setCols] = useState<StaffCol[]>(INIT_COLS);
   const [shopId, setShopId] = useState<string | null>(null);
   const [shopSlug, setShopSlug] = useState<string | null>(null);
+  const [shopWorkingHours, setShopWorkingHours] = useState<AppointmentWorkingHours | null>(null);
   const [barberList, setBarberList] = useState<{ id: string; name: string }[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [services, setServices] = useState<ServiceOption[]>([]);
@@ -114,13 +118,14 @@ export default function AgendaScreen() {
     if (!user) return;
     const { data: shopData, error: shopErr } = await supabase
       .from('shops')
-      .select('id, slug')
+      .select('id, slug, working_hours')
       .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
       .maybeSingle();
     if (shopErr) { console.warn('[agenda] shops query error:', shopErr); return; }
     if (!shopData) return;
     setShopId(shopData.id);
     setShopSlug(shopData.slug);
+    setShopWorkingHours((shopData as any).working_hours ?? null);
     const { data: barbers, error: staffErr } = await supabase.from('staff').select('id, name').eq('shop_id', shopData.id).eq('is_active', true);
     if (staffErr) console.warn('[agenda] staff query error:', staffErr);
     setBarberList((barbers ?? []) as { id: string; name: string }[]);
@@ -160,8 +165,8 @@ export default function AgendaScreen() {
     const _ = shopId; // referenced to avoid unused-var warning
     if (!barbers?.length) { setCols([]); return; }
 
-    const [{ data: appts }, { data: blocks }] = await Promise.all([
-      supabase.from('appointments').select('id, staff_id, customer_name, service_name, starts_at, duration_min, status')
+    const [{ data: appts, error: apptsErr }, { data: blocks, error: blocksErr }] = await Promise.all([
+      supabase.from('appointments').select('id, staff_id, customer_name, starts_at, ends_at, status, services(name, duration_min)')
         .in('staff_id', barbers.map((b: any) => b.id))
         .gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString())
         .neq('status', 'cancelled'),
@@ -169,6 +174,8 @@ export default function AgendaScreen() {
         .in('staff_id', barbers.map((b: any) => b.id))
         .gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString()),
     ]);
+    if (apptsErr) console.warn('[agenda] appointments query error:', apptsErr);
+    if (blocksErr) console.warn('[agenda] blocks query error:', blocksErr);
 
     const now = new Date();
     const newCols: StaffCol[] = (barbers as any[]).map(barber => {
@@ -176,13 +183,7 @@ export default function AgendaScreen() {
       const barberBlocks = (blocks ?? []).filter((b: any) => b.staff_id === barber.id);
 
       const items: ColItem[] = [
-        ...barberAppts.map((a: any) => {
-          const start = new Date(a.starts_at);
-          const end = new Date(start.getTime() + (a.duration_min ?? 30) * 60000);
-          const state: AppState = a.status === 'completed' ? 'done'
-            : (start <= now && now < end) ? 'active' : 'upcoming';
-          return { type: 'appt' as const, id: a.id, time: formatTime(start), dur: a.duration_min ?? 30, name: a.customer_name, svc: a.service_name, state };
-        }),
+        ...barberAppts.map((a: any) => appointmentRowToAgendaItem(a, now)),
         ...barberBlocks.map((b: any) => {
           const start = new Date(b.starts_at);
           const end = new Date(b.ends_at);
@@ -296,6 +297,7 @@ export default function AgendaScreen() {
         onClose={() => setShowAdd(false)}
         services={services}
         staffList={barberList}
+        workingHours={shopWorkingHours}
         onSave={async (data) => {
           if (!shopSlug) {
             Alert.alert('Hata', 'Dükkan bilgisi yüklenmedi. Sayfayı yenileyin.');
@@ -306,7 +308,7 @@ export default function AgendaScreen() {
               shop_slug: shopSlug,
               service_id: data.serviceId,
               staff_id: data.staffId,
-              starts_at: `${data.date}T${data.time}:00`,
+              starts_at: buildLocalAppointmentTimestamp(data.date, data.time),
               customer_name: data.customerName,
               customer_phone: data.customerPhone || null,
             },
