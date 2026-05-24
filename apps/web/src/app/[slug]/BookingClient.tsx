@@ -80,6 +80,20 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
 
   useEffect(() => { fetchSlots(); }, [fetchSlots]);
 
+  /* 30s polling — anon key appointments SELECT'e erişemediği için
+     postgres_changes yerine polling kullanıyoruz */
+  useEffect(() => {
+    const tick = () => {
+      if (document.visibilityState === 'visible') fetchSlots();
+    };
+    const id = setInterval(tick, 30_000);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [fetchSlots]);
+
   /* Map rawSlots → SlotGrid format */
   const slotItems = rawSlots.map(s => ({ time: toTimeLabel(s.starts_at), available: s.available }));
   const isAllFull = !isClosed && !slotsLoad && rawSlots.length > 0 && rawSlots.every(s => !s.available);
