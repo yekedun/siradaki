@@ -158,9 +158,6 @@ export default function AgendaScreen() {
     const dayStart = new Date(selectedDate); dayStart.setHours(0,0,0,0);
     const dayEnd = new Date(selectedDate); dayEnd.setDate(dayEnd.getDate()+1); dayEnd.setHours(0,0,0,0);
 
-    // barbers already loaded — skip the redundant shop/barber fetch
-    const _ = shopId; // referenced to avoid unused-var warning
-
     const [{ data: appts, error: apptsErr }, { data: blocks, error: blocksErr }] = await Promise.all([
       supabase.from('appointments').select('id, staff_id, customer_name, starts_at, ends_at, status, services(name, duration_min)')
         .in('staff_id', barbers.map((b: any) => b.id))
@@ -198,7 +195,7 @@ export default function AgendaScreen() {
     });
 
     setCols(newCols);
-  }, [barberList, selectedDate, shopId]);
+  }, [barberList, selectedDate]);
 
   useEffect(() => {
     if (barberList.length) loadAgenda();
@@ -210,7 +207,7 @@ export default function AgendaScreen() {
     const staffIds = barberList.map(b => b.id).join(',');
     const debounced = createDebounce(loadAgenda, 200);
     const dateStr = selectedDate.toISOString().split('T')[0];
-    const idHash = staffIds.slice(0, 8);
+    const idHash = barberList.map(b => b.id).sort().join('').replace(/-/g, '').slice(0, 12);
 
     const apptCh = supabase
       .channel(`agenda-appt-${dateStr}-${idHash}`)
