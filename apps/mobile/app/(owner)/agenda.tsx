@@ -162,7 +162,7 @@ export default function AgendaScreen() {
     const debounced = createDebounce(() => loadAgenda(), 200);
 
     const apptCh = supabase
-      .channel(`agenda-appt-${selectedDate.toISOString()}`)
+      .channel(`agenda-appt-${selectedDate.toISOString().split('T')[0]}`)
       .on(
         'postgres_changes' as const,
         { event: '*', schema: 'public', table: 'appointments', filter: `staff_id=in.(${staffIds})` },
@@ -171,7 +171,7 @@ export default function AgendaScreen() {
       .subscribe();
 
     const blockCh = supabase
-      .channel(`agenda-block-${selectedDate.toISOString()}`)
+      .channel(`agenda-block-${selectedDate.toISOString().split('T')[0]}`)
       .on(
         'postgres_changes' as const,
         { event: '*', schema: 'public', table: 'blocks', filter: `staff_id=in.(${staffIds})` },
