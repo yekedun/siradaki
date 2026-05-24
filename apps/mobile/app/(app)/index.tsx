@@ -299,7 +299,7 @@ export default function RandevularScreen() {
               .then(({ data: shopData }) => {
                 if (shopData) setStaffShopSlug((shopData as any).slug);
               });
-            supabase.from('services').select('id, name, duration_min, price_cents').eq('shop_id', (data as any).shop_id).eq('active', true)
+            supabase.from('services').select('id, name, duration_min, price_cents').eq('shop_id', (data as any).shop_id).eq('is_active', true)
               .then(({ data: svcs }) => {
                 if (svcs) setServices((svcs as any[]).map(s => ({ id: s.id, label: s.name, dur: s.duration_min, price: `${Math.round(s.price_cents/100)}₺` })));
               });
