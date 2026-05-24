@@ -1,4 +1,8 @@
-import { buildOnboardingServiceInsert, buildBarberLink } from '../lib/onboarding-utils';
+import {
+  DEFAULT_WORKING_HOURS,
+  buildOnboardingServiceInsert,
+  buildBarberLink,
+} from '../lib/onboarding-utils';
 
 describe('buildOnboardingServiceInsert', () => {
   it('uses is_active (not active) matching the services table schema', () => {
@@ -36,5 +40,13 @@ describe('buildBarberLink', () => {
 
   it('returns null when shop slug is missing', () => {
     expect(buildBarberLink(null, 'ahmet')).toBeNull();
+  });
+});
+
+describe('DEFAULT_WORKING_HOURS', () => {
+  it('keeps weekdays and Saturday bookable for newly created shops', () => {
+    expect(DEFAULT_WORKING_HOURS.mon).toEqual({ open: '09:00', close: '19:00', enabled: true });
+    expect(DEFAULT_WORKING_HOURS.sat).toEqual({ open: '10:00', close: '17:00', enabled: true });
+    expect(DEFAULT_WORKING_HOURS.sun.enabled).toBe(false);
   });
 });

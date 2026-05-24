@@ -1,6 +1,8 @@
 import {
   DEFAULT_STAFF_SCHEDULE,
+  shopHoursScheduleFromWorkingHours,
   shopHoursScheduleToRows,
+  shopHoursScheduleToWorkingHours,
   rowsToStaffSchedule,
   staffScheduleToRows,
   type StaffScheduleRow,
@@ -112,5 +114,34 @@ describe('staff schedule helpers', () => {
         break_end: null,
       },
     ]);
+  });
+
+  it('writes backend WorkingHours keys and fields from the owner UI schedule', () => {
+    const wh = shopHoursScheduleToWorkingHours([
+      { id: 'pzt', label: 'Pzt', open: true, start: '09:00', end: '19:00', brk: '' },
+      { id: 'sal', label: 'Sal', open: true, start: '10:00', end: '18:00', brk: '' },
+      { id: 'car', label: 'Car', open: true, start: '09:00', end: '19:00', brk: '' },
+      { id: 'per', label: 'Per', open: true, start: '09:00', end: '19:00', brk: '' },
+      { id: 'cum', label: 'Cum', open: true, start: '09:00', end: '19:00', brk: '' },
+      { id: 'cmt', label: 'Cmt', open: true, start: '10:00', end: '17:00', brk: '' },
+      { id: 'paz', label: 'Paz', open: false, start: '', end: '', brk: '' },
+    ]);
+
+    expect(wh.mon).toEqual({ open: '09:00', close: '19:00', enabled: true });
+    expect(wh.tue).toEqual({ open: '10:00', close: '18:00', enabled: true });
+    expect(wh.sun).toEqual({ open: '09:00', close: '19:00', enabled: false });
+    expect(wh).not.toHaveProperty('pzt');
+  });
+
+  it('reads backend WorkingHours into the owner UI schedule', () => {
+    const schedule = shopHoursScheduleFromWorkingHours({
+      mon: { open: '08:30', close: '18:30', enabled: true },
+      sat: { open: '11:00', close: '16:00', enabled: true },
+      sun: { open: '09:00', close: '19:00', enabled: false },
+    });
+
+    expect(schedule.find((day) => day.id === 'pzt')).toMatchObject({ open: true, start: '08:30', end: '18:30' });
+    expect(schedule.find((day) => day.id === 'cmt')).toMatchObject({ open: true, start: '11:00', end: '16:00' });
+    expect(schedule.find((day) => day.id === 'paz')).toMatchObject({ open: false, start: '09:00', end: '19:00' });
   });
 });

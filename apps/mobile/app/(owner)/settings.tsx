@@ -61,7 +61,11 @@ import {
 import { useRouter } from 'expo-router';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
-import { shopHoursScheduleToRows } from '../../lib/staff-schedule';
+import {
+  shopHoursScheduleFromWorkingHours,
+  shopHoursScheduleToRows,
+  shopHoursScheduleToWorkingHours,
+} from '../../lib/staff-schedule';
 
 /* ─── Constants ─────────────────────────────────────────────── */
 
@@ -164,8 +168,10 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
     }
     setLoading(true);
     try {
-      const { error } = await supabase.from('shops').update({ name: name.trim(), address, bio, phone }).eq('id', shopId);
+      const { error } = await supabase.from('shops').update({ name: name.trim(), address, bio }).eq('id', shopId);
       if (error) throw error;
+      const { error: phoneError } = await supabase.from('shops').update({ phone } as any).eq('id', shopId);
+      if (phoneError) console.warn('[settings] phone update skipped:', phoneError);
       onSaved?.({ name: name.trim(), address, bio, phone });
       setSaved(true);
     } catch {
@@ -520,8 +526,7 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
             <TouchableOpacity
               onPress={async () => {
                 if (shopId) {
-                  const wh: Record<string, { open: boolean; start: string; end: string; brk: string }> = {};
-                  schedule.forEach(d => { wh[d.id] = { open: d.open, start: d.start, end: d.end, brk: d.brk }; });
+                  const wh = shopHoursScheduleToWorkingHours(schedule);
                   const { error } = await supabase.from('shops').update({ working_hours: wh }).eq('id', shopId);
                   if (error) {
                     Alert.alert('Hata', 'Dükkan saatleri kaydedilemedi.');
@@ -599,19 +604,23 @@ export default function SettingsScreen() {
       if (!user) { console.warn('[settings] no user — not logged in'); return; }
       supabase
         .from('shops')
-        .select('id, name, address, bio, phone, slug, commission_enabled, working_hours')
+        .select('id, name, address, bio, slug, commission_enabled, working_hours')
         .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
         .maybeSingle()
         .then(({ data, error }) => {
           if (error) { console.warn('[settings] shops query error:', error); Alert.alert('Hata', `Dükkan yüklenemedi: ${error.message}`); return; }
-          if (!data) { console.warn('[settings] no shop row for user', user.id); return; }
+          if (!data) {
+            console.warn('[settings] no shop row for user', user.id);
+            Alert.alert('Hata', 'Bu kullanıcı için dükkan kaydı bulunamadı. Çıkış yapıp yeniden giriş yapın veya onboarding akışını tamamlayın.');
+            return;
+          }
           console.log('[settings] loaded shop', data.id, data.slug);
           setShopId(data.id);
           setShop({
             name: data.name ?? '',
             address: data.address ?? '',
             bio: data.bio ?? '',
-            phone: data.phone ?? '',
+            phone: '',
             slug: data.slug ?? '',
             email: user.email ?? '',
             commission_enabled: data.commission_enabled ?? false,
@@ -625,8 +634,7 @@ export default function SettingsScreen() {
             .maybeSingle()
             .then(({ data: staffData }) => setOwnerStaffId((staffData as any)?.id ?? null));
           if (data.working_hours) {
-            const wh = data.working_hours as Record<string, { open: boolean; start: string; end: string; brk: string }>;
-            const loaded: ScheduleDay[] = INIT_SCHEDULE.map(d => wh[d.id] ? { ...d, ...wh[d.id] } : d);
+            const loaded: ScheduleDay[] = shopHoursScheduleFromWorkingHours(data.working_hours as any);
             setHoursInitialSchedule(loaded);
             setHoursSubtitle(buildHoursSubtitle(loaded));
           }

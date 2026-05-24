@@ -1,3 +1,5 @@
+import { DEFAULT_WORKING_HOURS } from './onboarding-utils';
+
 export interface UiStaffScheduleDay {
   day: string;
   open: boolean;
@@ -81,6 +83,67 @@ const SHOP_DAY_TO_DOW: Record<string, number> = {
   cum: 5,
   cmt: 6,
 };
+
+const SHOP_UI_TO_WORKING_HOURS_KEY: Record<string, keyof typeof DEFAULT_WORKING_HOURS> = {
+  pzt: 'mon',
+  sal: 'tue',
+  car: 'wed',
+  per: 'thu',
+  cum: 'fri',
+  cmt: 'sat',
+  paz: 'sun',
+};
+
+export type ShopWorkingHours = typeof DEFAULT_WORKING_HOURS;
+type WorkingHoursKey = keyof ShopWorkingHours;
+const SHOP_HOURS_UI_DAYS: Array<{ id: string; label: string; key: WorkingHoursKey }> = [
+  { id: 'pzt', label: 'Pzt', key: 'mon' },
+  { id: 'sal', label: 'Sal', key: 'tue' },
+  { id: 'car', label: 'Car', key: 'wed' },
+  { id: 'per', label: 'Per', key: 'thu' },
+  { id: 'cum', label: 'Cum', key: 'fri' },
+  { id: 'cmt', label: 'Cmt', key: 'sat' },
+  { id: 'paz', label: 'Paz', key: 'sun' },
+];
+
+export function shopHoursScheduleToWorkingHours(
+  schedule: UiShopHoursDay[],
+): ShopWorkingHours {
+  const next: Record<string, { open: string; close: string; enabled: boolean }> = {};
+
+  schedule.forEach((day) => {
+    const key = SHOP_UI_TO_WORKING_HOURS_KEY[day.id];
+    if (!key) return;
+    const fallback = DEFAULT_WORKING_HOURS[key];
+    next[key] = {
+      open: day.start || fallback.open,
+      close: day.end || fallback.close,
+      enabled: day.open,
+    };
+  });
+
+  return {
+    ...DEFAULT_WORKING_HOURS,
+    ...next,
+  };
+}
+
+export function shopHoursScheduleFromWorkingHours(
+  workingHours: Partial<Record<WorkingHoursKey, { open?: string; close?: string; enabled?: boolean }>> | null | undefined,
+): UiShopHoursDay[] {
+  return SHOP_HOURS_UI_DAYS.map(({ id, label, key }) => {
+    const fallback = DEFAULT_WORKING_HOURS[key];
+    const value = workingHours?.[key] ?? fallback;
+    return {
+      id,
+      label,
+      open: value.enabled ?? fallback.enabled,
+      start: value.open ?? fallback.open,
+      end: value.close ?? fallback.close,
+      brk: '',
+    };
+  });
+}
 
 export function shopHoursScheduleToRows(
   staffId: string,

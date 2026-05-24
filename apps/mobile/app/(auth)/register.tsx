@@ -50,6 +50,7 @@ import { router } from 'expo-router';
 import { colors } from '../../lib/theme';
 import { Button } from '../../components/ds/Button';
 import { supabase } from '../../lib/supabase';
+import { DEFAULT_WORKING_HOURS } from '../../lib/onboarding-utils';
 
 /* ── PasswordStrength ─────────────────────────────────────────── */
 function PasswordStrength({ value }: { value: string }) {
@@ -226,6 +227,7 @@ export default function RegisterScreen() {
       owner_user_id: authData.user.id,
       name: shopName.trim(),
       slug: shopName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+      working_hours: DEFAULT_WORKING_HOURS,
     });
     if (shopError) {
       setError('Dükkan oluşturulamadı: ' + shopError.message);
