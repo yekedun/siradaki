@@ -312,10 +312,16 @@ export default function AgendaScreen() {
             },
           });
           if (fnErr) {
-            console.warn('[agenda] app-book-appointment error:', fnErr);
-            const status = (fnErr as any)?.context?.status ?? 0;
-            const ctxBody = (fnErr as any)?.context?.body;
-            const ctxMsg = typeof ctxBody === 'string' ? ctxBody : '';
+            const ctx = (fnErr as any)?.context;
+            let status = ctx?.status ?? 0;
+            let ctxBody: any = ctx?.body;
+            // FunctionsHttpError.context is the Response; body needs to be read
+            if (ctx && typeof ctx.json === 'function') {
+              try { ctxBody = await ctx.clone().json(); } catch { try { ctxBody = await ctx.clone().text(); } catch {} }
+              if (!status) status = ctx.status ?? 0;
+            }
+            console.warn('[agenda] app-book-appointment error status=', status, 'body=', ctxBody, 'message=', fnErr.message);
+            const ctxMsg = typeof ctxBody === 'string' ? ctxBody : (ctxBody?.error ?? JSON.stringify(ctxBody ?? {}));
             let msg: string;
             if (status === 409) msg = 'Bu saat dolu. Başka bir saat seçin.';
             else if (status === 404) msg = 'Dükkan veya hizmet bulunamadı. Sayfayı yenileyin.';
