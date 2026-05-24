@@ -38,6 +38,7 @@
  *   → use size="lg" right:20 per screens.jsx (the primary reference)
  */
 import React, { useEffect, useState } from 'react';
+import { createDebounce } from '../../lib/debounce';
 import {
   View,
   Text,
@@ -153,6 +154,36 @@ export default function AgendaScreen() {
   useEffect(() => {
     if (barberList.length) loadAgenda();
   }, [selectedDate, barberList]);
+
+  useEffect(() => {
+    if (!barberList.length) return;
+
+    const staffIds = barberList.map(b => b.id).join(',');
+    const debounced = createDebounce(() => loadAgenda(), 200);
+
+    const apptCh = supabase
+      .channel(`agenda-appt-${selectedDate.toISOString()}`)
+      .on(
+        'postgres_changes' as const,
+        { event: '*', schema: 'public', table: 'appointments', filter: `staff_id=in.(${staffIds})` },
+        () => debounced(),
+      )
+      .subscribe();
+
+    const blockCh = supabase
+      .channel(`agenda-block-${selectedDate.toISOString()}`)
+      .on(
+        'postgres_changes' as const,
+        { event: '*', schema: 'public', table: 'blocks', filter: `staff_id=in.(${staffIds})` },
+        () => debounced(),
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(apptCh);
+      supabase.removeChannel(blockCh);
+    };
+  }, [barberList, selectedDate]);
 
   async function loadAgenda() {
     const barbers = barberList;
