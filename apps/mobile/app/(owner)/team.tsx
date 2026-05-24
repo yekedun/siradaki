@@ -32,6 +32,11 @@ import {
 } from 'react-native';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
+import {
+  rowsToStaffSchedule,
+  staffScheduleToRows,
+  type UiStaffScheduleDay,
+} from '../../lib/staff-schedule';
 
 /* ─── Data ──────────────────────────────────────────────────── */
 
@@ -96,28 +101,60 @@ function Toggle({ on, onChange }: ToggleProps) {
 
 /* ─── StaffScheduleModal ────────────────────────────────────── */
 
-interface ScheduleDay {
-  day: string;
-  open: boolean;
-  start: string;
-  end: string;
-  breakStart: string;
-  breakEnd: string;
-}
-
 interface StaffScheduleModalProps {
   open: boolean;
   onClose: () => void;
+  staffId: string | null;
   staffName: string;
+  onSaved?: () => void;
 }
 
-function StaffScheduleModal({ open, onClose, staffName }: StaffScheduleModalProps) {
-  const [schedule, setSchedule] = useState<ScheduleDay[]>(DEFAULT_SCHEDULE);
+function StaffScheduleModal({ open, onClose, staffId, staffName, onSaved }: StaffScheduleModalProps) {
+  const [schedule, setSchedule] = useState<UiStaffScheduleDay[]>(DEFAULT_SCHEDULE);
   const [selDay,   setSelDay]   = useState(1);
+  const [saving, setSaving] = useState(false);
   const day = schedule[selDay];
 
-  function updateDay(field: keyof ScheduleDay, val: string | boolean) {
+  useEffect(() => {
+    if (!open) return;
+    setSelDay(1);
+    if (!staffId) {
+      setSchedule(DEFAULT_SCHEDULE);
+      return;
+    }
+    supabase
+      .from('staff_schedules')
+      .select('day_of_week, is_working, work_start, work_end, break_start, break_end')
+      .eq('staff_id', staffId)
+      .then(({ data, error }) => {
+        if (error) {
+          Alert.alert('Hata', 'Çalışma saatleri yüklenemedi.');
+          return;
+        }
+        setSchedule(rowsToStaffSchedule((data ?? []) as any));
+      });
+  }, [open, staffId]);
+
+  function updateDay(field: keyof UiStaffScheduleDay, val: string | boolean) {
     setSchedule((s) => s.map((d, i) => i === selDay ? { ...d, [field]: val } : d));
+  }
+
+  async function handleSave() {
+    if (!staffId) {
+      Alert.alert('Hata', 'Personel bilgisi bulunamadı.');
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase
+      .from('staff_schedules')
+      .upsert(staffScheduleToRows(staffId, schedule) as any, { onConflict: 'staff_id,day_of_week' });
+    setSaving(false);
+    if (error) {
+      Alert.alert('Hata', 'Çalışma saatleri kaydedilemedi.');
+      return;
+    }
+    onSaved?.();
+    onClose();
   }
 
   return (
@@ -268,10 +305,7 @@ function StaffScheduleModal({ open, onClose, staffName }: StaffScheduleModalProp
 
             {/* Save */}
             <TouchableOpacity
-              onPress={() => {
-                // TODO: connect Supabase — update staff schedule for all days
-                onClose();
-              }}
+              onPress={handleSave}
               style={styles.primaryBtn}
               activeOpacity={0.8}
             >
@@ -576,19 +610,43 @@ export default function TeamScreen() {
       return;
     }
 
-    const { data, error: insertErr } = await supabase
-      .from('staff')
-      .insert({
-        shop_id: shopId,
-        name: name.trim(),
-        email: email.trim() || null,
-        role: 'staff',
-        is_active: true,
-        commission_type: commissionRate !== null ? 'percentage' : 'none',
-        commission_rate_bps: commissionRate !== null ? Math.round(commissionRate * 100) : null,
-      })
-      .select('id, name, is_active, commission_type, commission_rate_bps')
-      .single();
+    const emailValue = email.trim();
+    const commissionPayload = {
+      commission_type: commissionRate !== null ? 'percentage' : 'none',
+      commission_rate_bps: commissionRate !== null ? Math.round(commissionRate * 100) : null,
+    };
+
+    let data: any = null;
+    let insertErr: any = null;
+
+    if (emailValue) {
+      const { data: inviteData, error: inviteErr } = await supabase.functions.invoke('invite-barber', {
+        body: { email: emailValue, display_name: name.trim() },
+      });
+      insertErr = inviteErr;
+      data = inviteData?.staff ?? null;
+      if (!insertErr && data?.id) {
+        const { error: updateErr } = await supabase
+          .from('staff')
+          .update({ email: emailValue, ...commissionPayload } as any)
+          .eq('id', data.id);
+        insertErr = updateErr;
+      }
+    } else {
+      const result = await supabase
+        .from('staff')
+        .insert({
+          shop_id: shopId,
+          name: name.trim(),
+          role: 'staff',
+          is_active: true,
+          ...commissionPayload,
+        } as any)
+        .select('id, name, is_active, commission_type, commission_rate_bps')
+        .single();
+      data = result.data;
+      insertErr = result.error;
+    }
 
     if (insertErr || !data) {
       Alert.alert('Hata', 'Personel eklenemedi. Lütfen tekrar deneyin.');
@@ -687,7 +745,9 @@ export default function TeamScreen() {
       <StaffScheduleModal
         open={scheduleOpen}
         onClose={() => setScheduleOpen(false)}
+        staffId={selected?.id ?? null}
         staffName={selected?.name ?? ''}
+        onSaved={loadStaff}
       />
     </View>
   );

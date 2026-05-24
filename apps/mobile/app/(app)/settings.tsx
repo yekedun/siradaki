@@ -65,6 +65,29 @@ export default function HesabimScreen() {
     );
   }
 
+  function handleDeleteAccount() {
+    Alert.alert(
+      'Hesabı Sil',
+      'Hesabınızı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await supabase.functions.invoke('delete-account');
+            if (error) {
+              Alert.alert('Hata', 'Hesap silinemedi. Lütfen tekrar deneyin.');
+              return;
+            }
+            await supabase.auth.signOut();
+            router.replace('/(auth)/login');
+          },
+        },
+      ],
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
@@ -101,6 +124,9 @@ export default function HesabimScreen() {
         <View style={styles.signOutWrap}>
           <TouchableOpacity style={styles.dangerBtn} onPress={handleSignOut}>
             <Text style={styles.dangerBtnText}>Çıkış Yap</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.dangerBtn, { marginTop: 12 }]} onPress={handleDeleteAccount}>
+            <Text style={styles.dangerBtnText}>Hesabımı Sil</Text>
           </TouchableOpacity>
         </View>
 

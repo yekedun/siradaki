@@ -36,7 +36,7 @@
  *         main "{curSvc.label} · {dateLabel} · {slot}" (14px SemiBold marginTop 6 ink-900)
  *         sub  "Bitiş: {endTime} ({curSvc.dur} dk)"   (12px Regular fg-3 marginTop 4)
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -166,6 +166,10 @@ export function AddAppointmentModal({
   const [slot,           setSlot]           = useState('');
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(initialStaffId ?? null);
 
+  useEffect(() => {
+    if (visible) setSelectedStaffId(initialStaffId ?? null);
+  }, [visible, initialStaffId]);
+
   const curSvc  = services.find(s => s.id === svc);
   const canSave = name.trim().length >= 2 && !!slot &&
     (!(staffList && staffList.length > 0) || !!selectedStaffId);
@@ -192,7 +196,6 @@ export function AddAppointmentModal({
       date: selDate.toISOString().slice(0, 10),
       time: slot,
     });
-    onClose();
   }
 
   return (

@@ -61,6 +61,7 @@ import {
 import { useRouter } from 'expo-router';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
+import { shopHoursScheduleToRows } from '../../lib/staff-schedule';
 
 /* ─── Constants ─────────────────────────────────────────────── */
 
@@ -123,9 +124,10 @@ interface ProfileEditorSheetProps {
   initialBio: string;
   initialPhone: string;
   slug: string;
+  onSaved?: (data: { name: string; address: string; bio: string; phone: string }) => void;
 }
 
-function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress, initialBio, initialPhone, slug }: ProfileEditorSheetProps) {
+function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress, initialBio, initialPhone, slug, onSaved }: ProfileEditorSheetProps) {
   const [name,    setName]    = useState(initialName);
   const [address, setAddress] = useState(initialAddress);
   const [bio,     setBio]     = useState(initialBio);
@@ -143,7 +145,7 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
       setPhone(initialPhone);
       setSaved(false);
     }
-  }, [open]);
+  }, [open, initialName, initialAddress, initialBio, initialPhone]);
 
   const canSave = name.trim().length >= 2;
 
@@ -164,6 +166,7 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
     try {
       const { error } = await supabase.from('shops').update({ name: name.trim(), address, bio, phone }).eq('id', shopId);
       if (error) throw error;
+      onSaved?.({ name: name.trim(), address, bio, phone });
       setSaved(true);
     } catch {
       Alert.alert('Hata', 'Bilgiler kaydedilemedi. Lütfen tekrar deneyin.');
@@ -352,11 +355,12 @@ interface HoursEditorSheetProps {
   onClose: () => void;
   shopName?: string;
   shopId?: string | null;
+  staffId?: string | null;
   onSaved?: (schedule: ScheduleDay[]) => void;
   initialSchedule?: ScheduleDay[];
 }
 
-function HoursEditorSheet({ open, onClose, shopName = '', shopId, onSaved, initialSchedule }: HoursEditorSheetProps) {
+function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSaved, initialSchedule }: HoursEditorSheetProps) {
   const [schedule, setSchedule] = useState<ScheduleDay[]>(initialSchedule ?? INIT_SCHEDULE);
   const [sel, setSel] = useState(0);
   const day = schedule[sel];
@@ -518,7 +522,20 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, onSaved, initi
                 if (shopId) {
                   const wh: Record<string, { open: boolean; start: string; end: string; brk: string }> = {};
                   schedule.forEach(d => { wh[d.id] = { open: d.open, start: d.start, end: d.end, brk: d.brk }; });
-                  await supabase.from('shops').update({ working_hours: wh }).eq('id', shopId);
+                  const { error } = await supabase.from('shops').update({ working_hours: wh }).eq('id', shopId);
+                  if (error) {
+                    Alert.alert('Hata', 'Dükkan saatleri kaydedilemedi.');
+                    return;
+                  }
+                }
+                if (staffId) {
+                  const { error } = await supabase
+                    .from('staff_schedules')
+                    .upsert(shopHoursScheduleToRows(staffId, schedule) as any, { onConflict: 'staff_id,day_of_week' });
+                  if (error) {
+                    Alert.alert('Hata', 'Personel çalışma saatleri kaydedilemedi.');
+                    return;
+                  }
                 }
                 onSaved?.(schedule);
                 onClose();
@@ -572,6 +589,7 @@ export default function SettingsScreen() {
   const [widgetLinks,        setWidgetLinks]        = useState<WidgetLink[]>([]);
   const [shop,               setShop]               = useState<ShopData | null>(null);
   const [shopId,             setShopId]             = useState<string | null>(null);
+  const [ownerStaffId,       setOwnerStaffId]       = useState<string | null>(null);
   const [hoursSubtitle,      setHoursSubtitle]      = useState('Pzt–Cum 09:00–19:00 · Cmt 10:00–17:00 · Paz kapalı');
   const [hoursInitialSchedule, setHoursInitialSchedule] = useState<ScheduleDay[] | undefined>(undefined);
 
@@ -596,6 +614,13 @@ export default function SettingsScreen() {
             commission_enabled: data.commission_enabled ?? false,
           });
           setCommEnabled(data.commission_enabled ?? false);
+          supabase
+            .from('staff')
+            .select('id')
+            .eq('shop_id', data.id)
+            .eq('user_id', user.id)
+            .maybeSingle()
+            .then(({ data: staffData }) => setOwnerStaffId((staffData as any)?.id ?? null));
           if (data.working_hours) {
             const wh = data.working_hours as Record<string, { open: boolean; start: string; end: string; brk: string }>;
             const loaded: ScheduleDay[] = INIT_SCHEDULE.map(d => wh[d.id] ? { ...d, ...wh[d.id] } : d);
@@ -625,6 +650,29 @@ export default function SettingsScreen() {
           text: 'Çıkış yap',
           style: 'destructive',
           onPress: async () => {
+            await supabase.auth.signOut();
+            router.replace('/(auth)/login');
+          },
+        },
+      ],
+    );
+  }
+
+  function handleDeleteAccount() {
+    Alert.alert(
+      'Hesabı Sil',
+      'Hesabını ve dükkan verilerini silmek istediğine emin misin? Bu işlem geri alınamaz.',
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await supabase.functions.invoke('delete-account');
+            if (error) {
+              Alert.alert('Hata', 'Hesap silinemedi. Lütfen tekrar deneyin.');
+              return;
+            }
             await supabase.auth.signOut();
             router.replace('/(auth)/login');
           },
@@ -691,7 +739,13 @@ export default function SettingsScreen() {
 
         {/* Profile clickable card */}
         <TouchableOpacity
-          onPress={() => setProfileOpen(true)}
+          onPress={() => {
+            if (!shopId) {
+              Alert.alert('Lütfen bekleyin', 'Dükkan bilgileri yükleniyor.');
+              return;
+            }
+            setProfileOpen(true);
+          }}
           style={styles.profileCard}
           activeOpacity={0.8}
         >
@@ -801,6 +855,13 @@ export default function SettingsScreen() {
         >
           <Text style={styles.signOutBtnText}>Çıkış yap</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleDeleteAccount}
+          style={[styles.signOutBtn, { marginTop: 12 }]}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.signOutBtnText}>Hesabımı Sil</Text>
+        </TouchableOpacity>
 
         <Text style={styles.footer}>Sıradaki · Dükkan Sahibi</Text>
       </ScrollView>
@@ -815,6 +876,7 @@ export default function SettingsScreen() {
         initialBio={shop?.bio ?? ''}
         initialPhone={shop?.phone ?? ''}
         slug={shop?.slug ?? ''}
+        onSaved={(next) => setShop((prev) => prev ? { ...prev, ...next } : prev)}
       />
 
       {/* Hours editor sheet */}
@@ -823,6 +885,7 @@ export default function SettingsScreen() {
         onClose={() => setHoursOpen(false)}
         shopName={shop?.name}
         shopId={shopId}
+        staffId={ownerStaffId}
         initialSchedule={hoursInitialSchedule}
         onSaved={(s) => setHoursSubtitle(buildHoursSubtitle(s))}
       />

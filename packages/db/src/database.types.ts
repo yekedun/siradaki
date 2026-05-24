@@ -396,6 +396,7 @@ export type Database = {
           commission_rate_bps: number | null
           commission_type: string
           created_at: string
+          email: string | null
           id: string
           is_active: boolean
           name: string
@@ -408,6 +409,7 @@ export type Database = {
           commission_rate_bps?: number | null
           commission_type?: string
           created_at?: string
+          email?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -420,6 +422,7 @@ export type Database = {
           commission_rate_bps?: number | null
           commission_type?: string
           created_at?: string
+          email?: string | null
           id?: string
           is_active?: boolean
           name?: string

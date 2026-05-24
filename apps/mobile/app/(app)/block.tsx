@@ -42,6 +42,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import {
+  Alert,
   View,
   Text,
   ScrollView,
@@ -52,6 +53,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
+import { buildBlockInsert } from '../../lib/block-actions';
 
 function nowTime(): string {
   const d = new Date();
@@ -122,6 +124,7 @@ export default function BlockScreen() {
   const [blocked, setBlocked] = useState(false);
   const [startTime] = useState<string>(nowTime); // captured when screen mounts
   const [staffId, setStaffId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -291,24 +294,25 @@ export default function BlockScreen() {
 
         {/* Button variant="primary" size="lg" full "Kapat" */}
         <View style={styles.btnWrap}>
-          <TouchableOpacity style={styles.primaryBtn} onPress={async () => {
-            if (staffId) {
-              const [h, m] = startTime.split(':').map(Number);
-              const now = new Date();
-              now.setHours(h, m, 0, 0);
-              const end = new Date(now.getTime() + dur * 60000);
-              const reasonMap: Record<string, string> = { anlik: 'walkin', mola: 'break', kisisel: 'personal' };
-              await supabase.from('blocks').insert({
-                staff_id: staffId,
-                starts_at: now.toISOString(),
-                ends_at: end.toISOString(),
-                reason: reasonMap[reason] ?? 'break',
-                created_via: 'app',
-              });
+          <TouchableOpacity style={styles.primaryBtn} disabled={saving} onPress={async () => {
+            const block = buildBlockInsert({ staffId, startTime, durationMin: dur, reason });
+            if (!block.ok) {
+              Alert.alert('Hata', block.message);
+              return;
             }
+
+            setSaving(true);
+            const { error } = await supabase.from('blocks').insert(block.payload);
+            setSaving(false);
+
+            if (error) {
+              Alert.alert('Hata', `Blok eklenemedi: ${error.message}`);
+              return;
+            }
+
             setBlocked(true);
           }}>
-            <Text style={styles.primaryBtnText}>Kapat</Text>
+            <Text style={styles.primaryBtnText}>{saving ? 'Kaydediliyor...' : 'Kapat'}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

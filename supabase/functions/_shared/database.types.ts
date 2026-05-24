@@ -396,33 +396,39 @@ export type Database = {
           commission_rate_bps: number | null
           commission_type: string
           created_at: string
+          email: string | null
           id: string
           is_active: boolean
           name: string
           role: Database["public"]["Enums"]["staff_role"]
           shop_id: string
+          slug: string | null
           user_id: string | null
         }
         Insert: {
           commission_rate_bps?: number | null
           commission_type?: string
           created_at?: string
+          email?: string | null
           id?: string
           is_active?: boolean
           name: string
           role?: Database["public"]["Enums"]["staff_role"]
           shop_id: string
+          slug?: string | null
           user_id?: string | null
         }
         Update: {
           commission_rate_bps?: number | null
           commission_type?: string
           created_at?: string
+          email?: string | null
           id?: string
           is_active?: boolean
           name?: string
           role?: Database["public"]["Enums"]["staff_role"]
           shop_id?: string
+          slug?: string | null
           user_id?: string | null
         }
         Relationships: [
