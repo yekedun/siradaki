@@ -57,6 +57,7 @@ function Chip({ selected, onPress, children }: ChipProps) {
 
 export default function EarningsScreen() {
   const [period, setPeriod] = useState<Period>('30');
+  const [shopId, setShopId] = useState<string | null>(null);
   const [barberIds, setBarberIds] = useState<string[]>([]);
   const [periodCiro,     setPeriodCiro]     = useState('—');
   const [periodKomisyon, setPeriodKomisyon] = useState('—');
@@ -79,28 +80,32 @@ export default function EarningsScreen() {
     if (!user) return;
     const { data: shopData } = await supabase.from('shops').select('id').or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`).maybeSingle();
     if (!shopData) return;
+    setShopId(shopData.id);
     const { data: barbers } = await supabase.from('staff').select('id, name').eq('shop_id', shopData.id).eq('is_active', true);
     if (barbers) setBarberIds(barbers.map((b: any) => b.id));
   }
 
   useEffect(() => {
-    if (!barberIds.length) return;
+    if (!shopId || !barberIds.length) return;
     fetchEarnings();
-  }, [period, barberIds]);
+  }, [period, shopId, barberIds]);
 
   async function fetchEarnings() {
+    if (!shopId) return;
     const now = new Date();
     let since: Date;
     if (period === 'day') { since = new Date(now); since.setHours(0,0,0,0); }
     else if (period === '7') { since = new Date(now); since.setDate(now.getDate()-7); }
     else { since = new Date(now); since.setDate(now.getDate()-30); }
 
-    const { data } = await supabase
-      .from('appointments')
-      .select('staff_id, booked_price_cents, completed_price_cents, completed_commission_cents, completed_shop_share_cents, status')
-      .in('staff_id', barberIds)
-      .gte('starts_at', since.toISOString())
-      .neq('status', 'cancelled');
+    const until = new Date(now); until.setDate(now.getDate()+1); until.setHours(0,0,0,0);
+
+    const { data } = await supabase.rpc('get_shop_appointments_revenue', {
+      p_shop_id: shopId,
+      p_from: since.toISOString(),
+      p_to: until.toISOString(),
+      p_staff_ids: barberIds,
+    });
 
     if (data) {
       const totalCiro = data.reduce((s: number, a: any) => s + estimatedAppointmentRevenueCents(a), 0);

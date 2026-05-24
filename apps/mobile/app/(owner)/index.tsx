@@ -261,12 +261,12 @@ export default function OzetScreen() {
     const filteredIds = filter === 'all' ? (barbers as any[]).map((b: any) => b.id) : [filter];
     if (!filteredIds.length) { setKpiTotal('0'); setKpiCompleted('0'); setKpiRevenue('—'); return; }
 
-    const { data: appts, error: apptsErr } = await supabase.from('appointments')
-      .select('id, status, booked_price_cents, completed_price_cents')
-      .in('staff_id', filteredIds)
-      .gte('starts_at', dayStart.toISOString())
-      .lt('starts_at', dayEnd.toISOString())
-      .neq('status', 'cancelled');
+    const { data: appts, error: apptsErr } = await supabase.rpc('get_shop_appointments_revenue', {
+      p_shop_id: shopData.id,
+      p_from: dayStart.toISOString(),
+      p_to: dayEnd.toISOString(),
+      p_staff_ids: filteredIds,
+    });
     if (apptsErr) { console.warn('[owner-summary] appointments query error:', apptsErr); return; }
 
     if (appts) {
