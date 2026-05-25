@@ -1,17 +1,20 @@
 /**
  * M11 — Staff: Hesabım screen
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   View,
   Text,
   ScrollView,
   Share,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   Alert,
   SafeAreaView,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
@@ -21,31 +24,118 @@ interface Profile {
   name: string;
   email: string;
   barberLink: string | null;
+  staffId: string | null;
+}
+
+interface DailySummaryPrefState {
+  enabled: boolean;
+}
+
+/* Toggle aynisi owner ekranindaki. Burada da kullaniyoruz. */
+function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  const anim = useRef(new Animated.Value(on ? 1 : 0)).current;
+  function handlePress() {
+    const toVal = on ? 0 : 1;
+    Animated.timing(anim, { toValue: toVal, duration: 200, useNativeDriver: false }).start();
+    onChange(!on);
+  }
+  const bgColor = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.slate[200], colors.brand[600]],
+  });
+  const thumbLeft = anim.interpolate({ inputRange: [0, 1], outputRange: [2, 20] });
+  return (
+    <Pressable onPress={handlePress} hitSlop={8}>
+      <Animated.View
+        style={{
+          width: 44, height: 26, borderRadius: 999,
+          backgroundColor: bgColor as any,
+        }}
+      >
+        <Animated.View
+          style={{
+            position: 'absolute', top: 2, width: 22, height: 22, borderRadius: 999,
+            backgroundColor: '#ffffff',
+            shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.22, shadowRadius: 3, elevation: 2,
+            left: thumbLeft as any,
+          }}
+        />
+      </Animated.View>
+    </Pressable>
+  );
 }
 
 export default function HesabimScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [dailySummary, setDailySummary] = useState<DailySummaryPrefState>({ enabled: true });
+  const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
       supabase
         .from('staff')
-        .select('name, slug, shops(slug)')
+        .select('id, name, slug, notification_prefs, shops(slug)')
         .eq('user_id', user.id)
         .maybeSingle()
         .then(({ data }) => {
-          const shopSlug = (data?.shops as any)?.slug ?? null;
-          const staffSlug = data?.slug ?? null;
+          const row = data as any;
+          const shopSlug = row?.shops?.slug ?? null;
+          const staffSlug = row?.slug ?? null;
           setProfile({
-            name: data?.name ?? user.email?.split('@')[0] ?? '—',
+            name: row?.name ?? user.email?.split('@')[0] ?? '—',
             email: user.email ?? '—',
             barberLink: buildBarberLink(shopSlug, staffSlug),
+            staffId: row?.id ?? null,
           });
+          const prefs = row?.notification_prefs ?? {};
+          setDailySummary({ enabled: prefs.daily_summary !== false });
         });
     });
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+    };
+  }, []);
+
+  async function updateDailySummary(v: boolean) {
+    const prev = dailySummary.enabled;
+    setDailySummary({ enabled: v });
+    if (!profile?.staffId) return;
+    const next = { daily_summary: v };
+    // Mevcut tercih objesinin diger anahtarlarini koru.
+    const { data: current } = await supabase
+      .from('staff')
+      .select('notification_prefs')
+      .eq('id', profile.staffId)
+      .maybeSingle();
+    const merged = { ...(current as any)?.notification_prefs, ...next };
+    const { error } = await supabase
+      .from('staff')
+      .update({ notification_prefs: merged } as any)
+      .eq('id', profile.staffId);
+    if (error) {
+      setDailySummary({ enabled: prev });
+      Alert.alert('Hata', 'Bildirim tercihi kaydedilemedi.');
+    }
+  }
+
+  async function handleCopy() {
+    if (!profile?.barberLink) return;
+    try {
+      await Clipboard.setStringAsync(profile.barberLink);
+      setCopied(true);
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      Alert.alert('Hata', 'Link panoya kopyalanamadı.');
+    }
+  }
 
   function handleSignOut() {
     Alert.alert(
@@ -124,6 +214,11 @@ export default function HesabimScreen() {
               <Text style={styles.linkUrl} numberOfLines={1} ellipsizeMode="tail">
                 {profile.barberLink}
               </Text>
+              <TouchableOpacity style={styles.copyBtn} onPress={handleCopy} activeOpacity={0.75}>
+                <Text style={[styles.copyBtnText, copied && { color: colors.mint[600] }]}>
+                  {copied ? 'Kopyalandı!' : 'Kopyala'}
+                </Text>
+              </TouchableOpacity>
               <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.75}>
                 <Text style={styles.shareBtnText}>Paylaş</Text>
               </TouchableOpacity>
@@ -133,6 +228,25 @@ export default function HesabimScreen() {
             </Text>
           </View>
         ) : null}
+
+        {/* Bildirimler */}
+        <View style={styles.notifSection}>
+          <Text style={styles.linkSectionLabel}>Bildirimler</Text>
+          <View style={styles.notifCard}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.notifTitle}>Günlük Özet</Text>
+              <Text style={styles.notifMeta}>
+                {dailySummary.enabled
+                  ? 'Açılıştan 15 dakika önce günün özeti.'
+                  : 'Günlük özet bildirimi kapalı.'}
+              </Text>
+            </View>
+            <Toggle on={dailySummary.enabled} onChange={updateDailySummary} />
+          </View>
+          <Text style={styles.notifHint}>
+            Yeni randevu ve iptal bildirimleri her zaman gönderilir.
+          </Text>
+        </View>
 
         {/* Danger actions */}
         <View style={styles.signOutWrap}>
@@ -222,6 +336,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.brand[600],
   },
+  copyBtn: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: colors.brand[600],
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  copyBtnText: {
+    fontFamily: 'Montserrat-SemiBold',
+    fontSize: 12,
+    color: colors.brand[600],
+  },
   shareBtn: {
     backgroundColor: colors.brand[600],
     borderRadius: 8,
@@ -232,6 +359,36 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-SemiBold',
     fontSize: 12,
     color: '#ffffff',
+  },
+  notifSection: { paddingHorizontal: 20, marginTop: 24 },
+  notifCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.slate[0],
+    borderWidth: 1,
+    borderColor: colors.slate[200],
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  notifTitle: {
+    fontFamily: 'Montserrat-SemiBold',
+    fontSize: 15,
+    color: colors.ink[900],
+  },
+  notifMeta: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 12,
+    color: colors.slate[500],
+    marginTop: 2,
+  },
+  notifHint: {
+    marginTop: 8,
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 11,
+    color: colors.slate[400],
+    lineHeight: 16,
   },
   linkHint: {
     marginTop: 7,

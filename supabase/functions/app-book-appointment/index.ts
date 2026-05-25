@@ -46,12 +46,19 @@ async function sendBookingNotifications(
     if (shop?.owner_user_id) {
       const { data: ownerStaff } = await supabase
         .from("staff")
-        .select("push_token")
+        .select("push_token, notification_prefs")
         .eq("shop_id", shopId)
         .eq("user_id", shop.owner_user_id)
         .maybeSingle();
 
-      if (ownerStaff?.push_token && ownerStaff.push_token !== staffMember?.push_token) {
+      // Owner: yeni randevu tercihi false ise gonderme (default true).
+      const ownerPrefs = (ownerStaff as any)?.notification_prefs ?? {};
+      const ownerWantsNew = ownerPrefs.new_appointment !== false;
+      if (
+        ownerStaff?.push_token &&
+        ownerStaff.push_token !== staffMember?.push_token &&
+        ownerWantsNew
+      ) {
         tokens.add(ownerStaff.push_token);
       }
     }

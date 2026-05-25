@@ -13,13 +13,13 @@ async function sendCancelNotification(
 
   const { data: appt } = await supabase
     .from("appointments")
-    .select("customer_name, starts_at, staff:staff_id(push_token)")
+    .select("customer_name, starts_at, staff_id, staff:staff_id(push_token, shop_id, user_id, notification_prefs)")
     .eq("id", appointmentId)
     .maybeSingle();
 
   if (!appt) return;
   const staffMember = appt.staff as any;
-  if (!staffMember?.push_token) return;
+  const shopId: string | null = staffMember?.shop_id ?? null;
 
   const timeStr = new Date(appt.starts_at).toLocaleTimeString("tr-TR", {
     hour: "2-digit",
@@ -27,20 +27,68 @@ async function sendCancelNotification(
     timeZone: "Europe/Istanbul",
   });
 
+  // Hangi push_token'lara gonderecegimizi belirle.
+  // - Atanan personel: kural olarak zorunlu (toggle yok).
+  //   Ancak personel ayni zamanda dukkan sahibi ise, owner'in cancellation
+  //   tercihini uygula (default true).
+  // - Dukkan sahibi (personel'den farkliysa): notification_prefs.cancellation
+  //   true ise gonder.
+  const tokens = new Set<string>();
+
+  let ownerUserId: string | null = null;
+  if (shopId) {
+    const { data: shop } = await supabase
+      .from("shops")
+      .select("owner_user_id")
+      .eq("id", shopId)
+      .maybeSingle();
+    ownerUserId = (shop as any)?.owner_user_id ?? null;
+  }
+
+  const staffIsOwner = ownerUserId !== null && staffMember?.user_id === ownerUserId;
+  const staffPrefs = staffMember?.notification_prefs ?? {};
+
+  if (staffMember?.push_token) {
+    if (staffIsOwner) {
+      if (staffPrefs.cancellation !== false) tokens.add(staffMember.push_token);
+    } else {
+      tokens.add(staffMember.push_token);
+    }
+  }
+
+  if (shopId && ownerUserId && !staffIsOwner) {
+    const { data: ownerStaff } = await supabase
+      .from("staff")
+      .select("push_token, notification_prefs")
+      .eq("shop_id", shopId)
+      .eq("user_id", ownerUserId)
+      .maybeSingle();
+    const ownerPrefs = (ownerStaff as any)?.notification_prefs ?? {};
+    if (
+      ownerStaff?.push_token &&
+      ownerStaff.push_token !== staffMember?.push_token &&
+      ownerPrefs.cancellation !== false
+    ) {
+      tokens.add(ownerStaff.push_token);
+    }
+  }
+
+  if (tokens.size === 0) return;
+
+  const messages = Array.from(tokens).map((to) => ({
+    to,
+    title: "Randevu İptal Edildi",
+    body: `${appt.customer_name} — ${timeStr} randevusunu iptal etti`,
+    data: { appointmentId },
+  }));
+
   await fetch(`${serviceUrl}/functions/v1/send-push`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${serviceKey}`,
     },
-    body: JSON.stringify({
-      messages: [{
-        to: staffMember.push_token,
-        title: "Randevu İptal Edildi",
-        body: `${appt.customer_name} — ${timeStr} randevusunu iptal etti`,
-        data: { appointmentId },
-      }],
-    }),
+    body: JSON.stringify({ messages }),
   }).catch((e) => console.error("[cancel] Push failed:", e));
 }
 
@@ -109,7 +157,7 @@ serve(async (req) => {
     return error("İptal işlemi başarısız", 500);
   }
 
-  // Fire-and-forget: notify staff member
+  // Fire-and-forget: notify assigned staff + owner (per prefs)
   const svcUrl = Deno.env.get("SUPABASE_URL")!;
   const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   sendCancelNotification(appointment_id, svcUrl, svcKey).catch(

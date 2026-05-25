@@ -52,12 +52,14 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
@@ -114,6 +116,75 @@ function Toggle({ on, onChange }: ToggleProps) {
         <Animated.View style={[styles.toggleThumb, { left: thumbLeft }]} />
       </Animated.View>
     </Pressable>
+  );
+}
+
+/* ─── ShareLinkBox ──────────────────────────────────────────── */
+
+interface ShareLinkBoxProps {
+  slug: string;
+}
+
+function ShareLinkBox({ slug }: ShareLinkBoxProps) {
+  const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const url = slug ? `https://siradaki.app/${slug}` : '';
+  const disabled = !slug;
+
+  useEffect(() => {
+    return () => {
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+    };
+  }, []);
+
+  async function handleCopy() {
+    if (disabled) return;
+    try {
+      await Clipboard.setStringAsync(url);
+      setCopied(true);
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      Alert.alert('Hata', 'Link panoya kopyalanamadı.');
+    }
+  }
+
+  async function handleShare() {
+    if (disabled) return;
+    try {
+      await Share.share({ message: url });
+    } catch {
+      /* user cancelled */
+    }
+  }
+
+  return (
+    <View style={styles.slugBox}>
+      <Text style={styles.slugLabel}>Rezervasyon Linki</Text>
+      <Text style={styles.slugValue} numberOfLines={1} ellipsizeMode="middle">
+        {disabled ? 'siradaki.app/—' : `siradaki.app/${slug}`}
+      </Text>
+      <View style={styles.slugBtnRow}>
+        <TouchableOpacity
+          onPress={handleCopy}
+          disabled={disabled}
+          style={[styles.slugSecondaryBtn, disabled && styles.slugBtnDisabled]}
+          activeOpacity={0.75}
+        >
+          <Text style={[styles.slugSecondaryBtnText, copied && styles.slugBtnTextActive]}>
+            {copied ? 'Kopyalandı!' : 'Kopyala'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleShare}
+          disabled={disabled}
+          style={[styles.slugPrimaryBtn, disabled && styles.slugBtnDisabled]}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.slugPrimaryBtnText}>Paylaş</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
@@ -323,11 +394,8 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
                 <Toggle on={visible} onChange={setVisible} />
               </View>
 
-              {/* Slug info */}
-              <View style={styles.slugBox}>
-                <Text style={styles.slugLabel}>Rezervasyon Linki</Text>
-                <Text style={styles.slugValue}>siradaki.app/{slug}</Text>
-              </View>
+              {/* Rezervasyon linki — paylaş/kopyala */}
+              <ShareLinkBox slug={slug} />
 
               {/* Kaydet */}
               <TouchableOpacity
@@ -586,6 +654,27 @@ interface ShopData {
   commission_enabled: boolean;
 }
 
+interface NotificationPrefs {
+  new_appointment: boolean;
+  cancellation: boolean;
+  daily_summary: boolean;
+}
+
+const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
+  new_appointment: true,
+  cancellation: true,
+  daily_summary: true,
+};
+
+function normalizePrefs(raw: unknown): NotificationPrefs {
+  const obj = (raw ?? {}) as Partial<NotificationPrefs>;
+  return {
+    new_appointment: obj.new_appointment !== false,
+    cancellation: obj.cancellation !== false,
+    daily_summary: obj.daily_summary !== false,
+  };
+}
+
 export default function SettingsScreen() {
   const router = useRouter();
   const [commEnabled,        setCommEnabled]        = useState(false);
@@ -597,6 +686,7 @@ export default function SettingsScreen() {
   const [ownerStaffId,       setOwnerStaffId]       = useState<string | null>(null);
   const [hoursSubtitle,      setHoursSubtitle]      = useState('Pzt–Cum 09:00–19:00 · Cmt 10:00–17:00 · Paz kapalı');
   const [hoursInitialSchedule, setHoursInitialSchedule] = useState<ScheduleDay[] | undefined>(undefined);
+  const [prefs,              setPrefs]              = useState<NotificationPrefs>(DEFAULT_NOTIFICATION_PREFS);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user }, error: authErr }) => {
@@ -628,11 +718,15 @@ export default function SettingsScreen() {
           setCommEnabled(data.commission_enabled ?? false);
           supabase
             .from('staff')
-            .select('id')
+            .select('id, notification_prefs')
             .eq('shop_id', data.id)
             .eq('user_id', user.id)
             .maybeSingle()
-            .then(({ data: staffData }) => setOwnerStaffId((staffData as any)?.id ?? null));
+            .then(({ data: staffData }) => {
+              const row = staffData as any;
+              setOwnerStaffId(row?.id ?? null);
+              setPrefs(normalizePrefs(row?.notification_prefs));
+            });
           if (data.working_hours) {
             const loaded: ScheduleDay[] = shopHoursScheduleFromWorkingHours(data.working_hours as any);
             setHoursInitialSchedule(loaded);
@@ -650,6 +744,21 @@ export default function SettingsScreen() {
         });
     });
   }, []);
+
+  async function updatePref(key: keyof NotificationPrefs, value: boolean) {
+    const prev = prefs;
+    const next: NotificationPrefs = { ...prev, [key]: value };
+    setPrefs(next);
+    if (!ownerStaffId) return;
+    const { error } = await supabase
+      .from('staff')
+      .update({ notification_prefs: next } as any)
+      .eq('id', ownerStaffId);
+    if (error) {
+      setPrefs(prev);
+      Alert.alert('Hata', 'Bildirim tercihi kaydedilemedi.');
+    }
+  }
 
   function handleSignOut() {
     Alert.alert(
@@ -828,6 +937,44 @@ export default function SettingsScreen() {
               <View style={styles.chevronLine2} />
             </View>
           </TouchableOpacity>
+        </View>
+
+        {/* Section: Bildirimler */}
+        <Text style={styles.sectionLabel}>Bildirimler</Text>
+        <View style={styles.operationCard}>
+          <View style={styles.opRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.opRowTitle}>Yeni Randevu</Text>
+              <Text style={styles.opRowMeta}>
+                {prefs.new_appointment
+                  ? 'Randevu alındığında bildirim gelir.'
+                  : 'Yeni randevu bildirimleri kapalı.'}
+              </Text>
+            </View>
+            <Toggle on={prefs.new_appointment} onChange={(v) => updatePref('new_appointment', v)} />
+          </View>
+          <View style={[styles.opRow, styles.opRowBorderTop]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.opRowTitle}>İptal</Text>
+              <Text style={styles.opRowMeta}>
+                {prefs.cancellation
+                  ? 'Müşteri iptal ettiğinde bildirim gelir.'
+                  : 'İptal bildirimleri kapalı.'}
+              </Text>
+            </View>
+            <Toggle on={prefs.cancellation} onChange={(v) => updatePref('cancellation', v)} />
+          </View>
+          <View style={[styles.opRow, styles.opRowBorderTop]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.opRowTitle}>Günlük Özet</Text>
+              <Text style={styles.opRowMeta}>
+                {prefs.daily_summary
+                  ? 'Açılıştan 15 dakika önce günün özeti.'
+                  : 'Günlük özet bildirimi kapalı.'}
+              </Text>
+            </View>
+            <Toggle on={prefs.daily_summary} onChange={(v) => updatePref('daily_summary', v)} />
+          </View>
         </View>
 
         {/* Section: Widget Bağlantıları */}
@@ -1360,6 +1507,45 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Montserrat-SemiBold',
     color: colors.brand[600],
+  },
+  slugBtnRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  slugSecondaryBtn: {
+    flex: 1,
+    height: 38,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: colors.brand[600],
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  slugSecondaryBtnText: {
+    fontSize: 13,
+    fontFamily: 'Montserrat-SemiBold',
+    color: colors.brand[600],
+  },
+  slugPrimaryBtn: {
+    flex: 1,
+    height: 38,
+    borderRadius: 9,
+    backgroundColor: colors.brand[600],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  slugPrimaryBtnText: {
+    fontSize: 13,
+    fontFamily: 'Montserrat-SemiBold',
+    color: '#ffffff',
+  },
+  slugBtnDisabled: {
+    opacity: 0.4,
+  },
+  slugBtnTextActive: {
+    color: colors.mint[600],
   },
 
   /* Form fields */
