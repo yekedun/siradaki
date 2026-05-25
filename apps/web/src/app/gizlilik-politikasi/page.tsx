@@ -9,8 +9,8 @@ export const metadata: Metadata = {
 };
 
 const LAST_UPDATED = '24 Mayıs 2026';
-const CONTACT_EMAIL = 'destek@siradaki.app';
-const DATA_CONTROLLER = 'Sıradaki Yazılım Teknolojileri'; // TODO: gerçek şirket adı
+const CONTACT_EMAIL = 'emreyek29@gmail.com';
+const DATA_CONTROLLER = 'Yunus Emre Kadakal';
 
 export default function GizlilikPolitikasiPage() {
   return (
