@@ -21,7 +21,6 @@ const STATIC_RPC_PROBES: RpcProbeConfig[] = [
   {
     name: "schedule_day_bounds",
     args: {
-      p_working_hours: { mon: ["09:00", "18:00"] },
       p_date: "2026-06-01",
       p_timezone: "Europe/Istanbul",
     },

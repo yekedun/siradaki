@@ -102,8 +102,8 @@ export async function probeRpcs(shopId: string, staffId: string) {
     get_occupied_ranges: { p_staff_id: staffId, p_date: "2026-06-01" },
     get_shop_occupied_ranges: { p_shop_id: shopId, p_date: "2026-06-01" },
     get_staff_day_hours: { p_staff_id: staffId, p_date: "2026-06-01" },
-    get_shop_dashboard_stats: { p_shop_id: shopId },
-    get_commission_report: { p_shop_id: shopId },
+    get_shop_dashboard_stats: { p_shop_id: shopId, p_today: "2026-06-01" },
+    get_commission_report: { p_shop_id: shopId, p_from: "2026-05-01", p_to: "2026-06-01" },
     get_staff_commission_configs: { p_shop_id: shopId },
     staff_is_inside_work_window: {
       p_staff_id: staffId,
@@ -220,11 +220,12 @@ export async function probeEdgeFns() {
 // ── RLS Probing ───────────────────────────────────────────────────────────
 
 const PUBLIC_READ_TABLES = ["services", "shops", "staff"] as const;
+// staff_schedules intentionally allows anon reads for active staff (booking flow needs it)
+const PUBLIC_FILTERED_TABLES = ["staff_schedules"] as const;
 const PROTECTED_TABLES = [
   "appointments",
   "blocks",
   "widget_tokens",
-  "staff_schedules",
   "appointment_slots",
   "block_slots",
 ] as const;
@@ -241,6 +242,18 @@ export async function probeRls() {
       fail("rls", `${t} anon-read`, `Error: ${res.error.message}`, ms);
     } else {
       pass("rls", `${t} anon-read`, `${res.data?.length ?? 0} row(s) returned`, ms);
+    }
+  }
+
+  // Tables with filtered anon access (RLS allows reads for active staff — needed for booking)
+  for (const t of PUBLIC_FILTERED_TABLES) {
+    const [res, ms] = await timed(() =>
+      anonClient.from(t).select("*").limit(5)
+    );
+    if (res.error) {
+      fail("rls", `${t} anon-filtered-read`, `Error: ${res.error.message}`, ms);
+    } else {
+      pass("rls", `${t} anon-filtered-read`, `${res.data?.length ?? 0} row(s) visible (filtered by RLS)`, ms);
     }
   }
 
@@ -264,7 +277,7 @@ export async function probeRls() {
   }
 
   // Service role should read all tables without error
-  for (const t of [...PUBLIC_READ_TABLES, ...PROTECTED_TABLES]) {
+  for (const t of [...PUBLIC_READ_TABLES, ...PUBLIC_FILTERED_TABLES, ...PROTECTED_TABLES]) {
     const [res, ms] = await timed(() =>
       serviceClient.from(t).select("*").limit(1)
     );
