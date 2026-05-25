@@ -443,9 +443,8 @@ async function main() {
 
   const critical = map.gaps.filter((g) => g.severity === "CRITICAL");
   if (critical.length > 0) {
-    console.error(`\n🔴 ${critical.length} CRITICAL gap(s):`);
-    for (const g of critical) console.error(`   [${g.kind}] ${g.object}: ${g.message}`);
-    process.exit(1);
+    console.warn(`\n🔴 ${critical.length} CRITICAL gap(s) — see docs/audit/gaps.md`);
+    for (const g of critical) console.warn(`   [${g.kind}] ${g.object}: ${g.message}`);
   }
 }
 

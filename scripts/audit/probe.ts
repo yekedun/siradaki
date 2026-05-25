@@ -459,22 +459,86 @@ export async function probeRealtime(shopId: string, staffId: string) {
   }
 }
 
+// ── Output writer ─────────────────────────────────────────────────────────
+
+export function writeProbeSummary(): void {
+  const docsDir = path.join(ROOT, "docs/audit");
+  fs.mkdirSync(docsDir, { recursive: true });
+
+  // Raw JSON
+  fs.writeFileSync(
+    path.join(docsDir, "probe-results.json"),
+    JSON.stringify(results, null, 2),
+    "utf8"
+  );
+
+  // Markdown summary
+  const categories = ["rpc", "edge_fn", "rls", "trigger", "realtime"] as const;
+  const lines = [
+    "# Probe Summary",
+    `_Generated: ${new Date().toISOString()}_`,
+    "",
+    "| Category | PASS | FAIL | SKIP | Total |",
+    "|----------|------|------|------|-------|",
+  ];
+
+  let totalPass = 0, totalFail = 0, totalSkip = 0;
+  for (const cat of categories) {
+    const catResults = results.filter((r) => r.category === cat);
+    const p = catResults.filter((r) => r.status === "PASS").length;
+    const f = catResults.filter((r) => r.status === "FAIL").length;
+    const s = catResults.filter((r) => r.status === "SKIP").length;
+    lines.push(`| ${cat} | ${p} | ${f} | ${s} | ${catResults.length} |`);
+    totalPass += p; totalFail += f; totalSkip += s;
+  }
+  lines.push(`| **TOTAL** | **${totalPass}** | **${totalFail}** | **${totalSkip}** | **${results.length}** |`);
+
+  if (totalFail > 0) {
+    lines.push("", "## ❌ Failed Checks", "");
+    for (const r of results.filter((r) => r.status === "FAIL")) {
+      lines.push(`- **[${r.category}]** \`${r.check}\`: ${r.message}`);
+    }
+  }
+
+  if (totalSkip > 0) {
+    lines.push("", "## ⏭️ Skipped Checks", "");
+    for (const r of results.filter((r) => r.status === "SKIP")) {
+      lines.push(`- **[${r.category}]** \`${r.check}\`: ${r.message}`);
+    }
+  }
+
+  fs.writeFileSync(
+    path.join(docsDir, "probe-summary.md"),
+    lines.join("\n"),
+    "utf8"
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log("🔬 Probe infrastructure ready.");
-  console.log(`   Supabase URL: ${SUPABASE_URL}`);
+  console.log("🔬 System Integration Probe starting...");
+  console.log(`   Supabase: ${SUPABASE_URL}`);
 
-  const { error } = await serviceClient.from("shops").select("id").limit(1);
-  if (error && error.code !== "PGRST116") {
-    console.error(`\n❌ Cannot connect to Supabase: ${error.message}`);
+  // Connectivity check
+  const { error: connErr } = await serviceClient.from("shops").select("id").limit(1);
+  if (connErr && connErr.code !== "PGRST116") {
+    console.error(`\n❌ Supabase connection failed: ${connErr.message}`);
+    console.error("   Run: npx supabase start");
     process.exit(1);
   }
-  console.log("   ✅ Supabase connectivity OK");
 
-  const shopId = await getTestShop();
-  const staffId = await getTestStaff(shopId);
-  console.log(`   Shop: ${shopId}, Staff: ${staffId}`);
+  let shopId: string;
+  let staffId: string;
+  try {
+    shopId = await getTestShop();
+    staffId = await getTestStaff(shopId);
+    console.log(`   Shop: ${shopId}`);
+    console.log(`   Staff: ${staffId}`);
+  } catch (e) {
+    console.error(`\n❌ Test data unavailable: ${(e as Error).message}`);
+    process.exit(1);
+  }
 
   await probeRpcs(shopId, staffId);
   await probeEdgeFns();
@@ -482,10 +546,18 @@ async function main() {
   await probeTriggers(shopId, staffId);
   await probeRealtime(shopId, staffId);
 
+  writeProbeSummary();
+
   const failed = results.filter((r) => r.status === "FAIL").length;
   const passed = results.filter((r) => r.status === "PASS").length;
   const skipped = results.filter((r) => r.status === "SKIP").length;
-  console.log(`\n📊 ${passed} PASS, ${failed} FAIL, ${skipped} SKIP`);
+
+  console.log(`\n📊 Result: ${passed} PASS, ${failed} FAIL, ${skipped} SKIP`);
+  console.log(`✅ docs/audit/probe-summary.md`);
+  console.log(`✅ docs/audit/probe-results.json`);
+
+  // Exit 0 even with FAILs — failures are findings, not execution errors
+  // (Supabase connectivity failure exits 1 above)
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
