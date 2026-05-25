@@ -3,6 +3,78 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createAdminClient } from "../_shared/supabase-admin.ts";
 import { corsOptions, error, json } from "../_shared/cors.ts";
 
+async function sendBookingNotifications(
+  appointmentId: string,
+  serviceUrl: string,
+  serviceKey: string,
+): Promise<void> {
+  const supabase = createAdminClient();
+
+  const { data: appt } = await supabase
+    .from("appointments")
+    .select(`
+      id,
+      customer_name,
+      starts_at,
+      services(name),
+      staff:staff_id(
+        push_token,
+        user_id,
+        shop:shop_id(
+          owner_user_id,
+          staff(push_token, user_id)
+        )
+      )
+    `)
+    .eq("id", appointmentId)
+    .maybeSingle();
+
+  if (!appt) return;
+
+  const staffMember = appt.staff as any;
+  const shop = staffMember?.shop as any;
+  const service = appt.services as any;
+
+  const timeStr = new Date(appt.starts_at).toLocaleTimeString("tr-TR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Istanbul",
+  });
+
+  const title = "Yeni Randevu";
+  const body = `${appt.customer_name} — ${service?.name ?? "Randevu"}, ${timeStr}`;
+
+  const tokens = new Set<string>();
+  if (staffMember?.push_token) tokens.add(staffMember.push_token);
+
+  // Owner token — only if different staff member
+  if (shop?.staff) {
+    for (const s of shop.staff as any[]) {
+      if (s.user_id === shop.owner_user_id && s.push_token && s.push_token !== staffMember?.push_token) {
+        tokens.add(s.push_token);
+      }
+    }
+  }
+
+  if (tokens.size === 0) return;
+
+  const messages = Array.from(tokens).map((to) => ({
+    to,
+    title,
+    body,
+    data: { appointmentId },
+  }));
+
+  await fetch(`${serviceUrl}/functions/v1/send-push`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${serviceKey}`,
+    },
+    body: JSON.stringify({ messages }),
+  }).catch((e) => console.error("[book] Push notification failed:", e));
+}
+
 interface BookRequest {
   shop_slug: string;
   service_id: string;
@@ -80,6 +152,16 @@ serve(async (req) => {
       should_refetch_availability: status === 409,
       ...(status === 429 ? { retry_after: 600 } : {}),
     });
+  }
+
+  // Fire-and-forget: send push notification to staff + owner
+  const apptId = (data as any)?.appointment_id;
+  if (apptId) {
+    const svcUrl = Deno.env.get("SUPABASE_URL")!;
+    const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    sendBookingNotifications(apptId, svcUrl, svcKey).catch(
+      (e) => console.error("[book] Notification dispatch error:", e)
+    );
   }
 
   return json(data);
