@@ -3,9 +3,9 @@ import * as path from "path";
 import type { IntegrationObject, GapEntry, ObjectKind } from "./types.js";
 
 function fileURLToPath(url: string): string {
-  return url.replace(/^file:\/\/\//, '').replace(/\//g, path.sep);
+  return decodeURIComponent(url.replace(/^file:\/\/\//, '').replace(/\//g, path.sep));
 }
-const ROOT = path.resolve(fileURLToPath(import.meta.url), "../..");
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const MIGRATIONS_DIR = path.join(ROOT, "supabase/migrations");
 
 // ── Pure parsers (testable) ────────────────────────────────────────────────
@@ -48,6 +48,52 @@ export function parseTriggersFromSql(sql: string): string[] {
   return names;
 }
 
+// ── Source code scanner ───────────────────────────────────────────────────
+
+export interface SourceCallSite {
+  file: string;
+  calls: string[]; // "from:tableName", "rpc:rpcName", "invoke:fnName", "channel:channelName"
+}
+
+export function parseSupabaseCallsFromTs(src: string, filePath: string): SourceCallSite {
+  const calls: string[] = [];
+
+  for (const m of src.matchAll(/\.from\(\s*['"`](\w+)['"`]/g))
+    calls.push(`from:${m[1]}`);
+  for (const m of src.matchAll(/\.rpc\(\s*['"`]([\w]+)['"`]/g))
+    calls.push(`rpc:${m[1]}`);
+  for (const m of src.matchAll(/functions\.invoke\(\s*['"`]([\w-]+)['"`]/g))
+    calls.push(`invoke:${m[1]}`);
+  for (const m of src.matchAll(/\.channel\(\s*['"`]([\w\-:]+)['"`]/g))
+    calls.push(`channel:${m[1]}`);
+
+  return { file: filePath, calls: [...new Set(calls)] };
+}
+
+export function scanDirectory(dir: string): SourceCallSite[] {
+  const results: SourceCallSite[] = [];
+  if (!fs.existsSync(dir)) return results;
+
+  function walk(d: string) {
+    for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+      const full = path.join(d, entry.name);
+      if (
+        entry.isDirectory() &&
+        !["node_modules", ".next", "dist", "__tests__", ".expo"].includes(entry.name)
+      ) {
+        walk(full);
+      } else if (entry.isFile() && /\.(tsx?|jsx?)$/.test(entry.name)) {
+        const src = fs.readFileSync(full, "utf8");
+        const site = parseSupabaseCallsFromTs(src, full.replace(ROOT + path.sep, ""));
+        if (site.calls.length > 0) results.push(site);
+      }
+    }
+  }
+
+  walk(dir);
+  return results;
+}
+
 // ── Self-test ──────────────────────────────────────────────────────────────
 
 function assert(cond: boolean, msg: string) {
@@ -79,6 +125,20 @@ function runSelfTests() {
   const triggers = parseTriggersFromSql(sql);
   assert(triggers.includes("shops_updated_at"), "should find trigger");
 
+  // scanner tests
+  const tsSrc = `
+    supabase.from('appointments').select()
+    supabase.rpc('get_shop_dashboard_stats', {})
+    supabase.functions.invoke('app-book-appointment', {})
+    supabase.channel('appointments:abc')
+  `;
+  const site = parseSupabaseCallsFromTs(tsSrc, "fake/file.tsx");
+  assert(site.calls.includes("from:appointments"), "should find from:appointments");
+  assert(site.calls.includes("rpc:get_shop_dashboard_stats"), "should find rpc");
+  assert(site.calls.includes("invoke:app-book-appointment"), "should find invoke");
+  assert(site.calls.includes("channel:appointments:abc"), "should find channel");
+  console.log("  ✅ Scanner self-tests passed");
+
   console.log("  ✅ All self-tests passed");
 }
 
@@ -89,7 +149,17 @@ async function main() {
     runSelfTests();
     process.exit(0);
   }
-  console.log("build-map: run with --test to validate parsers, full implementation coming soon");
+
+  const sites = [
+    ...scanDirectory(path.join(ROOT, "apps/mobile/app")),
+    ...scanDirectory(path.join(ROOT, "apps/mobile/components")),
+    ...scanDirectory(path.join(ROOT, "apps/web/src")),
+    ...scanDirectory(path.join(ROOT, "supabase/functions")),
+  ];
+  console.log(`Scanned ${sites.length} files with Supabase calls:`);
+  for (const s of sites) {
+    console.log(`  ${s.file}: ${s.calls.join(", ")}`);
+  }
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
