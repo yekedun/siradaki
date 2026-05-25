@@ -11,9 +11,13 @@
     "backend:remote-smoke": "powershell -ExecutionPolicy Bypass -File scripts/scheduling-remote-smoke.ps1",
     "backend:remote-smoke:skip-push": "powershell -ExecutionPolicy Bypass -File scripts/scheduling-remote-smoke.ps1 -SkipPush",
     "db:sync": "bash supabase/functions/_sync-types.sh",
-    "db:check": "node -e \"const fs=require('fs');const a=fs.readFileSync('packages/db/src/database.types.ts','utf8');const b=fs.readFileSync('supabase/functions/_shared/database.types.ts','utf8');if(a!==b){console.error('database.types out of sync - run pnpm db:sync');process.exit(1)}\""
+    "db:check": "node -e \"const fs=require('fs');const a=fs.readFileSync('packages/db/src/database.types.ts','utf8');const b=fs.readFileSync('supabase/functions/_shared/database.types.ts','utf8');if(a!==b){console.error('database.types out of sync - run pnpm db:sync');process.exit(1)}\"",
+    "audit:map": "tsx scripts/audit/build-map.ts",
+    "audit:probe": "tsx scripts/audit/probe.ts",
+    "audit": "pnpm audit:map && pnpm audit:probe"
   },
   "devDependencies": {
+    "tsx": "^4.22.3",
     "turbo": "^2.0.0",
     "typescript": "^5.4.0"
   },
