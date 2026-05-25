@@ -1,4 +1,5 @@
-﻿export type Json =
+Connecting to db 5432
+export type Json =
   | string
   | number
   | boolean
@@ -154,53 +155,6 @@ export type Database = {
           },
         ]
       }
-      barbers: {
-        Row: {
-          avatar_url: string | null
-          created_at: string
-          display_name: string
-          id: string
-          invite_email: string | null
-          is_active: boolean
-          shop_id: string
-          shop_slug: string | null
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          display_name: string
-          id?: string
-          invite_email?: string | null
-          is_active?: boolean
-          shop_id: string
-          shop_slug?: string | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string
-          display_name?: string
-          id?: string
-          invite_email?: string | null
-          is_active?: boolean
-          shop_id?: string
-          shop_slug?: string | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "barbers_shop_id_fkey"
-            columns: ["shop_id"]
-            isOneToOne: false
-            referencedRelation: "shops"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       block_slots: {
         Row: {
           block_id: string
@@ -275,30 +229,6 @@ export type Database = {
           },
         ]
       }
-      customer_profiles: {
-        Row: {
-          created_at: string
-          full_name: string
-          phone: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          full_name?: string
-          phone?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          full_name?: string
-          phone?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       services: {
         Row: {
           created_at: string
@@ -352,6 +282,7 @@ export type Database = {
           name: string | null
           owner_id: string | null
           owner_user_id: string
+          phone: string | null
           slug: string
           timezone: string
           updated_at: string
@@ -368,6 +299,7 @@ export type Database = {
           name?: string | null
           owner_id?: string | null
           owner_user_id: string
+          phone?: string | null
           slug: string
           timezone?: string
           updated_at?: string
@@ -384,6 +316,7 @@ export type Database = {
           name?: string | null
           owner_id?: string | null
           owner_user_id?: string
+          phone?: string | null
           slug?: string
           timezone?: string
           updated_at?: string
@@ -575,6 +508,25 @@ export type Database = {
         Returns: {
           ends_at: string
           starts_at: string
+        }[]
+      }
+      get_shop_appointments_revenue: {
+        Args: {
+          p_from: string
+          p_shop_id: string
+          p_staff_ids?: string[]
+          p_to: string
+        }
+        Returns: {
+          booked_price_cents: number
+          completed_commission_cents: number
+          completed_price_cents: number
+          completed_shop_share_cents: number
+          ends_at: string
+          id: string
+          staff_id: string
+          starts_at: string
+          status: string
         }[]
       }
       get_shop_dashboard_stats: {
@@ -1331,3 +1283,6 @@ export const Constants = {
   },
 } as const
 
+<claude-code-hint v="1" type="plugin" value="supabase@claude-plugins-official" />
+A new version of Supabase CLI is available: v2.101.0 (currently installed v2.98.1)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
