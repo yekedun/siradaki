@@ -282,6 +282,93 @@ export function buildIntegrationMap(): IntegrationMap {
   return { objects, gaps, sourceSites };
 }
 
+// ── Output generators ─────────────────────────────────────────────────────
+
+export function generateIntegrationMapMd(map: IntegrationMap): string {
+  const lines: string[] = [
+    "# System Integration Map",
+    `_Generated: ${new Date().toISOString()}_`,
+    "",
+    "## DB Tables",
+    "",
+    "| Table | Consumers | Callers (first 3) |",
+    "|-------|-----------|-------------------|",
+  ];
+
+  for (const obj of map.objects.filter((o) => o.kind === "table")) {
+    const callers = obj.consumers.slice(0, 3).join(", ");
+    const more = obj.consumers.length > 3 ? ` +${obj.consumers.length - 3} more` : "";
+    lines.push(`| \`${obj.name}\` | ${obj.consumers.length} | ${callers}${more} |`);
+  }
+
+  lines.push("", "## RPCs (Public Functions)", "", "| RPC | Defined In | Consumers |", "|-----|-----------|-----------|");
+  for (const obj of map.objects.filter((o) => o.kind === "rpc")) {
+    lines.push(`| \`${obj.name}\` | ${obj.definedIn?.split("/").pop() ?? "-"} | ${obj.consumers.length} |`);
+  }
+
+  lines.push("", "## Trigger Functions (internal)", "", "| Function | Defined In |", "|----------|-----------|");
+  for (const obj of map.objects.filter((o) => o.kind === "trigger_fn")) {
+    lines.push(`| \`${obj.name}\` | ${obj.definedIn?.split("/").pop() ?? "-"} |`);
+  }
+
+  lines.push("", "## Triggers", "", "| Trigger | Defined In |", "|---------|-----------|");
+  for (const obj of map.objects.filter((o) => o.kind === "trigger")) {
+    lines.push(`| \`${obj.name}\` | ${obj.definedIn?.split("/").pop() ?? "-"} |`);
+  }
+
+  lines.push("", "## Edge Functions", "", "| Edge Fn | Consumers | Callers |", "|---------|-----------|---------|");
+  for (const obj of map.objects.filter((o) => o.kind === "edge_fn")) {
+    lines.push(`| \`${obj.name}\` | ${obj.consumers.length} | ${obj.consumers.join(", ")} |`);
+  }
+
+  lines.push("", "## Consumer Cross-Reference", "", "| File | Calls |", "|------|-------|");
+  for (const site of map.sourceSites.sort((a, b) => a.file.localeCompare(b.file))) {
+    lines.push(`| \`${site.file}\` | ${site.calls.join(", ")} |`);
+  }
+
+  return lines.join("\n");
+}
+
+export function generateGapsMd(gaps: GapEntry[]): string {
+  const critical = gaps.filter((g) => g.severity === "CRITICAL");
+  const warning = gaps.filter((g) => g.severity === "WARNING");
+  const info = gaps.filter((g) => g.severity === "INFO");
+
+  const lines = [
+    "# Integration Gaps",
+    `_Generated: ${new Date().toISOString()}_`,
+    `_Total: ${gaps.length} gaps — ${critical.length} CRITICAL, ${warning.length} WARNING, ${info.length} INFO_`,
+    "",
+  ];
+
+  if (critical.length > 0) {
+    lines.push("## 🔴 CRITICAL — May crash at runtime", "");
+    for (const g of critical) {
+      lines.push(`- **[${g.kind.toUpperCase()}]** \`${g.object}\`: ${g.message}`);
+    }
+    lines.push("");
+  }
+
+  if (warning.length > 0) {
+    lines.push("## 🟡 WARNING — Missing wiring or dead code", "");
+    for (const g of warning) {
+      lines.push(`- **[${g.kind.toUpperCase()}]** \`${g.object}\`: ${g.message}`);
+    }
+    lines.push("");
+  }
+
+  if (info.length > 0) {
+    lines.push("## 🟢 INFO — Expected gaps (planned)", "");
+    for (const g of info) {
+      lines.push(`- **[${g.kind.toUpperCase()}]** \`${g.object}\`: ${g.message}`);
+    }
+  }
+
+  if (gaps.length === 0) lines.push("✅ No gaps found.");
+
+  return lines.join("\n");
+}
+
 // ── Self-test ──────────────────────────────────────────────────────────────
 
 function assert(cond: boolean, msg: string) {
@@ -340,21 +427,26 @@ async function main() {
 
   console.log("🔍 Building integration map...");
   const map = buildIntegrationMap();
-  console.log(`  Objects: ${map.objects.length}`);
-  console.log(`  Gaps: ${map.gaps.length}`);
-  console.log(`  Source files: ${map.sourceSites.length}`);
+
+  const docsDir = path.join(ROOT, "docs/audit");
+  fs.mkdirSync(docsDir, { recursive: true });
+
+  const mapPath = path.join(docsDir, "integration-map.md");
+  const gapsPath = path.join(docsDir, "gaps.md");
+
+  fs.writeFileSync(mapPath, generateIntegrationMapMd(map), "utf8");
+  fs.writeFileSync(gapsPath, generateGapsMd(map.gaps), "utf8");
+
+  console.log(`✅ ${mapPath}`);
+  console.log(`✅ ${gapsPath}`);
+  console.log(`   ${map.objects.length} objects, ${map.gaps.length} gaps`);
 
   const critical = map.gaps.filter((g) => g.severity === "CRITICAL");
-  const warnings = map.gaps.filter((g) => g.severity === "WARNING");
   if (critical.length > 0) {
-    console.error(`\n🔴 CRITICAL (${critical.length}):`);
+    console.error(`\n🔴 ${critical.length} CRITICAL gap(s):`);
     for (const g of critical) console.error(`   [${g.kind}] ${g.object}: ${g.message}`);
+    process.exit(1);
   }
-  if (warnings.length > 0) {
-    console.log(`\n🟡 WARNING (${warnings.length}):`);
-    for (const g of warnings) console.log(`   [${g.kind}] ${g.object}: ${g.message}`);
-  }
-  // output files written in Task 5
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
