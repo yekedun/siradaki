@@ -217,6 +217,66 @@ export async function probeEdgeFns() {
   }
 }
 
+// ── RLS Probing ───────────────────────────────────────────────────────────
+
+const PUBLIC_READ_TABLES = ["services", "shops", "staff"] as const;
+const PROTECTED_TABLES = [
+  "appointments",
+  "blocks",
+  "widget_tokens",
+  "staff_schedules",
+  "appointment_slots",
+  "block_slots",
+] as const;
+
+export async function probeRls() {
+  console.log("\n── RLS Probing ──────────────────────────────────────────");
+
+  // Anon should be able to read public tables
+  for (const t of PUBLIC_READ_TABLES) {
+    const [res, ms] = await timed(() =>
+      anonClient.from(t).select("id").limit(1)
+    );
+    if (res.error) {
+      fail("rls", `${t} anon-read`, `Error: ${res.error.message}`, ms);
+    } else {
+      pass("rls", `${t} anon-read`, `${res.data?.length ?? 0} row(s) returned`, ms);
+    }
+  }
+
+  // Anon should NOT see rows in protected tables (0 rows or explicit error)
+  for (const t of PROTECTED_TABLES) {
+    const [res, ms] = await timed(() =>
+      anonClient.from(t).select("id").limit(5)
+    );
+    if (res.error) {
+      pass("rls", `${t} anon-blocked`, `RLS blocked: ${res.error.code}`, ms);
+    } else if ((res.data?.length ?? 0) === 0) {
+      pass("rls", `${t} anon-blocked`, "0 rows (RLS filtered)", ms);
+    } else {
+      fail(
+        "rls",
+        `${t} anon-blocked`,
+        `${res.data!.length} rows returned — RLS missing!`,
+        ms
+      );
+    }
+  }
+
+  // Service role should read all tables without error
+  for (const t of [...PUBLIC_READ_TABLES, ...PROTECTED_TABLES]) {
+    const [res, ms] = await timed(() =>
+      serviceClient.from(t).select("id").limit(1)
+    );
+    // PGRST116 = no rows found, that's fine
+    if (res.error && res.error.code !== "PGRST116") {
+      fail("rls", `${t} service-read`, `Error: ${res.error.message}`, ms);
+    } else {
+      pass("rls", `${t} service-read`, "OK", ms);
+    }
+  }
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -236,6 +296,7 @@ async function main() {
 
   await probeRpcs(shopId, staffId);
   await probeEdgeFns();
+  await probeRls();
 
   const failed = results.filter((r) => r.status === "FAIL").length;
   const passed = results.filter((r) => r.status === "PASS").length;
