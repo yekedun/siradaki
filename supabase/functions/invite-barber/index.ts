@@ -52,7 +52,8 @@ serve(async (req) => {
 
   if (tokenErr) return error("Token oluşturulamadı: " + tokenErr.message, 500);
 
-  const inviteLink = `siradaki://invite/${tokenRow.token}`;
+  const publicInviteBaseUrl = Deno.env.get("PUBLIC_INVITE_BASE_URL") ?? "https://siradaki.app/invite";
+  const inviteLink = `${publicInviteBaseUrl.replace(/\/$/, "")}/${tokenRow.token}`;
 
   return json({ invite_link: inviteLink, token: tokenRow.token }, 201);
 });

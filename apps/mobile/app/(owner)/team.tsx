@@ -726,10 +726,7 @@ export default function TeamScreen() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({
-          email: '',
-          display_name: 'Davetli Berber',
-        }),
+        body: JSON.stringify({}),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
