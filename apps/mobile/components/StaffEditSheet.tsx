@@ -45,8 +45,8 @@ export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
         .update({ name: name.trim(), phone: phone.trim() || null, is_active: isActive })
         .eq('id', staff.id);
       if (err) { setError(err.message); return; }
-      onSaved();
       onClose();
+      onSaved();
     } finally {
       setLoading(false);
     }
@@ -55,7 +55,7 @@ export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
   if (!staff) return null;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
+    <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={onClose}>
       <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
       <View style={styles.sheet}>
         <View style={styles.handle} />
@@ -117,5 +117,5 @@ const styles = StyleSheet.create({
   toggleSub:   { fontSize: 12, fontFamily: 'Montserrat-Regular', color: colors.slate[500], marginTop: 2 },
   actions:     { flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 16,
                   borderTopWidth: 1, borderTopColor: colors.slate[100] },
-  error:       { fontSize: 13, color: '#ef4444', paddingHorizontal: 20, marginBottom: 8 },
+  error:       { fontSize: 13, color: colors.coral[600], paddingHorizontal: 20, marginBottom: 8 },
 });
