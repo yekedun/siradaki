@@ -46,6 +46,7 @@ import {
   View,
   Text,
   ScrollView,
+  Switch,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
@@ -53,6 +54,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
+import { TextField } from '../../components/ds/TextField';
 const REASON_MAP: Record<'anlik' | 'mola' | 'kisisel', string> = {
   anlik: 'walkin',
   mola: 'break',
@@ -72,6 +74,9 @@ function addMins(time: string, mins: number): string {
 
 /* Duration options — exact from BlokScreen source */
 const DURATIONS = [15, 30, 45, 60, 90, 120] as const;
+
+/* Preset duration chips for the new all-day / preset section */
+const PRESET_DURATIONS = [30, 60, 120];
 
 /* Reason options — exact from BlokScreen source */
 const REASONS = [
@@ -123,12 +128,21 @@ function Card({ children, padding = 16 }: { children: React.ReactNode; padding?:
 
 /* ── SCREEN ──────────────────────────────────────────────────────── */
 export default function BlockScreen() {
-  const [dur, setDur] = useState(30);
+  const [dur, setDur] = useState<number | 'custom'>(30);
+  const [allDay, setAllDay] = useState(false);
+  const [customInput, setCustomInput] = useState('');
+  const [showCustom, setShowCustom] = useState(false);
   const [reason, setReason] = useState<'anlik' | 'mola' | 'kisisel'>('mola');
   const [blocked, setBlocked] = useState(false);
   const [startTime] = useState<string>(nowTime); // captured when screen mounts
   const [staffId, setStaffId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const effectiveDur = allDay
+    ? 24 * 60
+    : dur === 'custom'
+      ? (parseInt(customInput) || 0)
+      : dur;
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -139,7 +153,7 @@ export default function BlockScreen() {
   }, []);
 
   const curReason = REASONS.find(r => r.id === reason)!;
-  const endTime = addMins(startTime, dur);
+  const endTime = addMins(startTime, effectiveDur);
 
   /* ── Success / blocked state ────────────────────────────────── */
   if (blocked) {
@@ -225,29 +239,68 @@ export default function BlockScreen() {
           </Card>
         </View>
 
-        {/* SectionLabel "Süre" */}
-        <SectionLabel>Süre</SectionLabel>
-
-        {/* Duration grid: 3 cols, gap 8, padding '0 20px'
-            Values: 15, 30, 45, 60, 90, 120 — label: "dakika" */}
-        <View style={styles.durGrid}>
-          {DURATIONS.map(m => {
-            const sel = dur === m;
-            return (
-              <TouchableOpacity
-                key={m}
-                onPress={() => setDur(m)}
-                activeOpacity={0.8}
-                style={[styles.durChip, sel ? styles.durChipActive : styles.durChipInactive]}
-              >
-                {/* Number: 20px Bold tabular-nums */}
-                <Text style={[styles.durNum, sel && styles.durNumActive]}>{m}</Text>
-                {/* Unit: 11px Regular marginTop 2 opacity 0.7 letterSpacing 0.06em "dakika" */}
-                <Text style={[styles.durUnit, sel && styles.durUnitActive]}>dakika</Text>
-              </TouchableOpacity>
-            );
-          })}
+        {/* All-day toggle */}
+        <View style={styles.allDayRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.allDayTitle}>Bugünü Tamamen Kapat</Text>
+            <Text style={styles.allDaySub}>Tüm gün için blok oluşturur</Text>
+          </View>
+          <Switch
+            value={allDay}
+            onValueChange={setAllDay}
+            trackColor={{ false: colors.slate[300], true: colors.ink[900] }}
+            thumbColor="#fff"
+          />
         </View>
+
+        {/* SectionLabel "Süre" — hidden when all-day */}
+        {!allDay && (
+          <>
+            <SectionLabel>Süre</SectionLabel>
+
+            {/* Preset duration chips: 30dk / 1sa / 2sa / Özel */}
+            <View style={styles.durGrid}>
+              {PRESET_DURATIONS.map(d => {
+                const sel = dur === d;
+                return (
+                  <TouchableOpacity
+                    key={d}
+                    style={[styles.durChip, sel ? styles.durChipActive : styles.durChipInactive]}
+                    onPress={() => { setDur(d); setShowCustom(false); }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.durNum, sel && styles.durNumActive]}>
+                      {d < 60 ? d : d / 60}
+                    </Text>
+                    <Text style={[styles.durUnit, sel && styles.durUnitActive]}>
+                      {d < 60 ? 'dk' : 'sa'}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              <TouchableOpacity
+                style={[styles.durChip, dur === 'custom' && styles.durChipActive]}
+                onPress={() => { setDur('custom'); setShowCustom(true); }}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.durNum, dur === 'custom' && styles.durNumActive]}>Özel</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Custom minutes input */}
+            {showCustom && (
+              <View style={{ paddingHorizontal: 20, marginTop: 8 }}>
+                <TextField
+                  label="Dakika"
+                  value={customInput}
+                  onChangeText={setCustomInput}
+                  keyboardType="number-pad"
+                  placeholder="örn. 45"
+                />
+              </View>
+            )}
+          </>
+        )}
 
         {/* SectionLabel "Sebep" */}
         <SectionLabel>Sebep</SectionLabel>
@@ -291,7 +344,7 @@ export default function BlockScreen() {
         <View style={styles.px20}>
           <View style={styles.previewCard}>
             <Text style={styles.previewText}>
-              {curReason.title.toUpperCase()} · {dur}DK
+              {curReason.title.toUpperCase()} · {effectiveDur}DK
             </Text>
           </View>
         </View>
@@ -307,7 +360,7 @@ export default function BlockScreen() {
             setSaving(true);
             try {
               const { error } = await supabase.functions.invoke('create-manual-block', {
-                body: { staff_id: staffId, duration_min: dur, reason: REASON_MAP[reason] },
+                body: { staff_id: staffId, duration_min: effectiveDur, reason: REASON_MAP[reason] },
               });
               if (error) {
                 Alert.alert('Hata', `Blok eklenemedi: ${error.message}`);
@@ -388,6 +441,26 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   px20: { paddingHorizontal: 20 },
+
+  /* All-day toggle row */
+  allDayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+    gap: 12,
+  },
+  allDayTitle: {
+    fontSize: 15,
+    fontFamily: 'Montserrat-SemiBold',
+    color: colors.ink[900],
+  },
+  allDaySub: {
+    fontSize: 12,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.slate[500],
+    marginTop: 2,
+  },
 
   /* Current time card content */
   currentTimeOverline: {
