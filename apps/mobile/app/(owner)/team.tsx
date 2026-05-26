@@ -21,6 +21,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -30,8 +31,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
+
+const FN_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1';
 import {
   rowsToStaffSchedule,
   staffScheduleToRows,
@@ -550,6 +554,7 @@ export default function TeamScreen() {
   const [commOpen,       setCommOpen]       = useState(false);
   const [selectedId,     setSelectedId]     = useState<string | null>(null);
   const [shopId,         setShopId]         = useState<string | null>(null);
+  const [inviteLoading,  setInviteLoading]  = useState(false);
 
   const selected = staff.find((s) => s.id === selectedId);
 
@@ -718,6 +723,37 @@ export default function TeamScreen() {
     setCommOpen(false);
   }
 
+  async function handleInvite() {
+    setInviteLoading(true);
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const res = await fetch(`${FN_BASE}/invite-barber`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) { Alert.alert('Hata', 'Davet linki oluşturulamadı'); return; }
+      const { invite_link } = await res.json();
+
+      const msg = encodeURIComponent(
+        `Sıradaki randevu uygulamasına berber olarak katılman için davet linki:\n${invite_link}`
+      );
+      const waUrl = `whatsapp://send?text=${msg}`;
+      const canOpen = await Linking.canOpenURL(waUrl);
+      if (canOpen) {
+        await Linking.openURL(waUrl);
+      } else {
+        await Clipboard.setStringAsync(invite_link);
+        Alert.alert('Link Kopyalandı', 'Davet linki panoya kopyalandı.');
+      }
+    } finally {
+      setInviteLoading(false);
+    }
+  }
+
   return (
     <View style={styles.screen}>
       {/* OverlineHeader */}
@@ -759,6 +795,18 @@ export default function TeamScreen() {
             ))}
           </View>
         )}
+
+        {/* Berber Davet Et */}
+        <TouchableOpacity
+          style={[styles.addButton, inviteLoading && { opacity: 0.6 }]}
+          onPress={handleInvite}
+          disabled={inviteLoading}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.addButtonText}>
+            {inviteLoading ? 'Link oluşturuluyor…' : '+ Berber Davet Et'}
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Add staff sheet */}
@@ -1201,5 +1249,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Montserrat-Regular',
     color: colors.slate[500],
+  },
+
+  /* Invite button */
+  addButton: {
+    marginTop: 16,
+    height: 52,
+    backgroundColor: colors.brand[600],
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addButtonText: {
+    fontSize: 15,
+    fontFamily: 'Montserrat-SemiBold',
+    color: '#ffffff',
   },
 });
