@@ -51,10 +51,17 @@ export default async function BarberPage({ params }: Props) {
   // All active staff for the booking flow
   const { data: allStaff } = await supabase
     .from('staff')
-    .select('id, name')
+    .select('id, name, phone, role')
     .eq('shop_id', shop.id)
     .eq('is_active', true)
     .order('name');
+
+  // Owner always first, then alphabetical by name
+  const sortedStaff = (allStaff ?? []).sort((a, b) => {
+    if (a.role === 'owner') return -1;
+    if (b.role === 'owner') return 1;
+    return (a.name ?? '').localeCompare(b.name ?? '', 'tr');
+  });
 
   // Active services
   const { data: services } = await supabase
@@ -78,7 +85,7 @@ export default async function BarberPage({ params }: Props) {
         duration_min: s.duration_min,
         price:        Math.round(s.price_cents / 100),
       }))}
-      staff={(allStaff ?? []).map(s => ({ id: s.id, name: s.name }))}
+      staff={sortedStaff.map(s => ({ id: s.id, name: s.name, phone: s.phone ?? null }))}
       preselectedStaffId={staffMember?.id ?? null}
     />
   );

@@ -10,7 +10,7 @@ import { BookingModal } from '../../components/BookingModal';
 import { nextBookingSuccessState } from './booking-flow-state';
 
 /* ── Types ────────────────────────────────────────────────────── */
-interface StaffMember { id: string; name: string; }
+interface StaffMember { id: string; name: string; phone: string | null; }
 interface Shop { id: string; name: string; address: string | null; slug: string; }
 interface Props { shop: Shop; services: Service[]; staff: StaffMember[]; preselectedStaffId?: string | null; }
 interface RawSlot { starts_at: string; available: boolean; }
@@ -103,8 +103,9 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
   const selISO    = selRaw?.starts_at ?? '';
 
   /* Booking summary */
-  const svc       = services.find(s => s.id === selService);
-  const staffName = staff.find(s => s.id === selStaff)?.name;
+  const svc          = services.find(s => s.id === selService);
+  const selectedStaff = staff.find(s => s.id === selStaff) ?? null;
+  const staffName    = selectedStaff?.name;
   const summary   = svc
     ? `${svc.name} · ${svc.duration_min} dk · ${toDateStr(selDate).split('-').reverse().join('.')} ${selSlot ?? ''}${staffName ? ' · '+staffName : ''}`
     : '';
@@ -249,6 +250,7 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
         shopId={shop.id}
         shopSlug={shop.slug}
         staffId={selStaff}
+        staffPhone={selectedStaff?.phone ?? null}
         serviceId={selService ?? ''}
         startsAt={selISO}
         onSuccess={() => {

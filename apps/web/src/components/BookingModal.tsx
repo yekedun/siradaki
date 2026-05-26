@@ -16,6 +16,7 @@ interface BookingModalProps {
   shopId: string;
   shopSlug: string;
   staffId: string | null;
+  staffPhone?: string | null;
   serviceId: string;
   startsAt: string;
   onSuccess: () => void;
@@ -169,7 +170,11 @@ function ModalLoading() {
 }
 
 /* ── Success ──────────────────────────────────────────────────────── */
-function ModalSuccess({ summary, onClose }: { summary: string; onClose: () => void }) {
+function ModalSuccess({
+  summary, onClose, staffPhone,
+}: {
+  summary: string; onClose: () => void; staffPhone?: string | null;
+}) {
   return (
     <div style={{ padding: '28px 28px 24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -216,6 +221,33 @@ function ModalSuccess({ summary, onClose }: { summary: string; onClose: () => vo
           Tamam
         </button>
       </div>
+
+      {staffPhone && (
+        <button
+          onClick={() => {
+            const phone = staffPhone.replace(/\D/g, '');
+            const msg = encodeURIComponent(
+              `Merhaba, ${summary} randevusu aldım. Bilginize 🙏`
+            );
+            window.open(`whatsapp://send?phone=90${phone}&text=${msg}`, '_self');
+          }}
+          style={{
+            width: '100%',
+            padding: '12px 20px',
+            marginTop: 8,
+            background: '#25D366',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 10,
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          💬 Berberi WhatsApp ile Bilgilendir
+        </button>
+      )}
     </div>
   );
 }
@@ -260,7 +292,7 @@ function ModalError({ errorType, onClose }: { errorType: ErrorType; onClose: () 
    ════════════════════════════════════════════════════════════════════ */
 export function BookingModal({
   open, onClose, summary,
-  shopId, shopSlug, staffId, serviceId, startsAt, onSuccess,
+  shopId, shopSlug, staffId, staffPhone, serviceId, startsAt, onSuccess,
 }: BookingModalProps) {
   const [state,     setState]     = useState<ModalState>('form');
   const [errorType, setErrorType] = useState<ErrorType>('conflict');
@@ -330,7 +362,7 @@ export function BookingModal({
       >
         {state === 'form'    && <ModalForm    summary={summary} onClose={handleClose} onConfirm={handleConfirm} />}
         {state === 'loading' && <ModalLoading />}
-        {state === 'success' && <ModalSuccess summary={summary} onClose={handleClose} />}
+        {state === 'success' && <ModalSuccess summary={summary} onClose={handleClose} staffPhone={staffPhone} />}
         {state === 'error'   && <ModalError   errorType={errorType} onClose={handleClose} />}
       </div>
     </div>

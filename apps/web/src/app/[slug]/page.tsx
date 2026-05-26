@@ -50,10 +50,17 @@ export default async function ShopPage({ params }: Props) {
   // Active staff
   const { data: staff } = await supabase
     .from('staff')
-    .select('id, name')
+    .select('id, name, phone, role')
     .eq('shop_id', shop.id)
     .eq('is_active', true)
     .order('name');
+
+  // Owner always first, then alphabetical by name
+  const sortedStaff = (staff ?? []).sort((a, b) => {
+    if (a.role === 'owner') return -1;
+    if (b.role === 'owner') return 1;
+    return (a.name ?? '').localeCompare(b.name ?? '', 'tr');
+  });
 
   return (
     <BookingClient
@@ -69,7 +76,7 @@ export default async function ShopPage({ params }: Props) {
         duration_min: s.duration_min,
         price:        Math.round(s.price_cents / 100),
       }))}
-      staff={(staff ?? []).map(s => ({ id: s.id, name: s.name }))}
+      staff={sortedStaff.map(s => ({ id: s.id, name: s.name, phone: s.phone ?? null }))}
     />
   );
 }
