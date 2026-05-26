@@ -27,10 +27,11 @@ Sistemin uçtan uca çalışır hale gelmesi için gereken 5 akış ve yan özel
 ### Sahip tarafı
 1. Uygulamayı indirir, "Google ile Giriş Yap" tuşuna basar.
 2. Google OAuth tamamlanır.
-3. **İlk giriş ekranı** açılır: telefon numarası + dükkan adı + dükkan slug'ı (URL için).
-4. Kaydet → `shop_status = 'pending'` olarak kaydedilir.
-5. Sahip "Başvurun alındı, onay bekleniyor" ekranını görür. Uygulamaya giremez.
-6. Onay gelince push bildirimi alır → uygulamaya girer.
+3. **İlk giriş ekranı** açılır: telefon numarası + dükkan adı.
+4. Slug otomatik üretilir: dükkan adından Türkçe karakterler dönüştürülür, küçük harf + tire → `neco-kuafor` gibi. Kullanıcıya gösterilmez.
+5. Kaydet → `shop_status = 'pending'` olarak kaydedilir.
+6. Sahip "Başvurun alındı, onay bekleniyor" ekranını görür. Uygulamaya giremez.
+7. Onay gelince push bildirimi alır → uygulamaya girer.
 
 ### Admin tarafı (siradaki.app/admin)
 - Yeni başvuru geldiğinde: push bildirimi + email (emreyek29@gmail.com).
@@ -51,7 +52,7 @@ Sistemin uçtan uca çalışır hale gelmesi için gereken 5 akış ve yan özel
 1. Sahip: Ekip → "Berber Davet Et" tuşu.
 2. Sistem: tek kullanımlık davet token'ı üretir (`invite_tokens` tablosu, 48 saat geçerli).
 3. Link: `siradaki.app/invite/{token}` — sahip bunu WhatsApp'tan berbere atar.
-4. Berber linke tıklar → web'de "Google ile Giriş Yap".
+4. Berber linke tıklar → **uygulama içinde** "Google ile Giriş Yap" ekranı (deep link / universal link — tarayıcıya yönlendirme yok).
 5. Telefon no ekranı → kaydet.
 6. `staff` tablosuna eklenir, `shop_id` token'dan alınır.
 7. Mobil uygulamayı açtığında berber akışına yönlendirilir.
@@ -116,7 +117,8 @@ Düzenleme ekranı içeriği:
 
 ### Sahip Aynı Zamanda Berber
 - Sahip kendi profili ekip listesinde görünür.
-- Müşteri web'den sahibi de seçebilir.
+- Müşteri web'den sahibi de seçebilir — ama "Sahip" veya "Dükkan Sahibi" etiketi gösterilmez, normal berber gibi görünür.
+- Sahip her zaman berber listesinin **ilk sırasında** gösterilir (müşteri web + ekip listesi).
 - Sahibin kendi randevuları berber akışında da görünür.
 
 ---
