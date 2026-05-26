@@ -20,6 +20,11 @@ export default function InviteScreen() {
   }, [token]);
 
   async function validateToken() {
+    if (!token) {
+      setState('error');
+      setMessage('Davet linki geçersiz.');
+      return;
+    }
     const { data } = await supabase
       .from('invite_tokens')
       .select('id, used_at, expires_at')
@@ -44,6 +49,11 @@ export default function InviteScreen() {
     }
 
     const session = (await supabase.auth.getSession()).data.session;
+    if (!session) {
+      setState('error');
+      setMessage('Oturum alınamadı, tekrar deneyin.');
+      return;
+    }
     const res = await fetch(`${FN_BASE}/accept-invite`, {
       method: 'POST',
       headers: {
