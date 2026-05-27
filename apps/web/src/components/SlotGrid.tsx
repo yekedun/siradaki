@@ -86,7 +86,7 @@ export function SlotGrid({
           <button
             key={s.time}
             disabled={!s.available}
-            onClick={() => s.available && onSelect(s.time)}
+            onClick={() => onSelect(s.time)}
             className={[
               'h-[50px] rounded-md flex flex-col items-center justify-center gap-0.5',
               'font-sans text-sm tabular-nums transition-all duration-150',
@@ -96,7 +96,7 @@ export function SlotGrid({
                   ? s.hot
                     ? 'bg-umber-100 border border-umber-600 text-umber-700 font-semibold hover:shadow-sm cursor-pointer motion-safe:active:scale-[0.97]'
                     : 'bg-slate-0 border border-slate-200 text-ink-900 font-semibold shadow-xs hover:border-slate-300 hover:shadow-sm cursor-pointer motion-safe:active:scale-[0.97]'
-                  : 'bg-slate-100 border-transparent text-slate-400 cursor-not-allowed',
+                  : 'bg-slate-100 border border-transparent text-slate-400 cursor-not-allowed',
             ].join(' ')}
           >
             <span>{s.time}</span>
