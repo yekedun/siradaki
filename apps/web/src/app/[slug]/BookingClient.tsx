@@ -101,7 +101,7 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
     <div className="min-h-screen bg-slate-50 font-sans">
 
       {/* Header */}
-      <header className="bg-slate-0 shadow-xs">
+      <header className="bg-slate-0 shadow-xs border-b border-slate-100">
         <div className="max-w-[480px] mx-auto px-5 py-7">
           <div className="text-2xs font-semibold tracking-widest text-slate-400 uppercase">
             Online Randevu · Sıradaki
@@ -113,7 +113,7 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
             <div className="text-sm text-slate-500 mt-1.5">{shop.address}</div>
           )}
           {showBarberBadge && (
-            <div className="inline-flex items-center gap-1.5 mt-3 bg-brand-100 border border-brand-100 text-brand-700 text-xs font-semibold rounded-pill px-3 py-1">
+            <div className="inline-flex items-center gap-1.5 mt-3 bg-brand-100 border border-[#A5B4FC] text-brand-700 text-xs font-semibold rounded-pill px-3 py-1">
               ✂ {preselectedName}&apos;in linkindesin
             </div>
           )}
@@ -247,7 +247,7 @@ function StaffChip({ label, selected, onClick }: { label: string; selected: bool
     <button
       onClick={onClick}
       className={[
-        'px-4 py-2 rounded-pill text-sm font-semibold cursor-pointer font-sans border',
+        'px-4 py-3 rounded-pill text-sm font-semibold cursor-pointer font-sans border',
         'transition-all duration-150 motion-safe:active:scale-[0.97]',
         selected
           ? 'bg-ink-900 border-ink-900 text-white'
