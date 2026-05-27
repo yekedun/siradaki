@@ -406,7 +406,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 12,
     paddingHorizontal: 16,
-    paddingTop: 20,
     paddingBottom: 90,
   },
 
