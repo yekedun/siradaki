@@ -1,6 +1,6 @@
 const ALLOWED_ORIGINS = [
-  'https://siradaki.app',
-  'https://www.siradaki.app',
+  'https://sıradaki.com',
+  'https://www.sıradaki.com',
   'http://localhost:3000',
   'http://localhost:8081',
 ];

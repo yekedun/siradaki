@@ -129,7 +129,7 @@ export default function NotFound() {
                 </div>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg-1)' }}>{s.name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--fg-3)', marginTop: 2 }}>siradaki.app/{s.slug}</div>
+                  <div style={{ fontSize: 12, color: 'var(--fg-3)', marginTop: 2 }}>sıradaki.com/{s.slug}</div>
                 </div>
               </Link>
             ))}
@@ -145,7 +145,7 @@ export default function NotFound() {
           fontSize: 12, color: 'var(--fg-4)', fontFamily: 'var(--font-mono)',
         }}
       >
-        siradaki.app · Randevu ve ekip yönetim platformu
+        sıradaki.com · Randevu ve ekip yönetim platformu
       </footer>
 
     </div>

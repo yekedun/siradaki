@@ -1,5 +1,5 @@
 // W2 · Dükkan Booking Sayfası — Server component
-// Route: /[slug]  →  siradaki.app/keskin-berber
+// Route: /[slug]  →  sıradaki.com/keskin-berber
 // Fetches shop/services/staff on the server, passes to BookingClient
 
 import { notFound } from 'next/navigation';

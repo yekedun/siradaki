@@ -185,7 +185,7 @@ export default function LandingPage() {
             { label: 'Gizlilik Politikası', href: '/gizlilik-politikasi' },
             { label: 'Kullanım Koşulları', href: '/kullanim-kosullari' },
             { label: 'Çerez Politikası', href: '/cerez-politikasi' },
-            { label: 'İletişim', href: 'mailto:destek@siradaki.app' },
+            { label: 'İletişim', href: 'mailto:destek@sıradaki.com' },
           ].map(l => (
             <a key={l.href} href={l.href} style={{ fontSize: 13, color: 'var(--fg-3)', textDecoration: 'none', fontWeight: 500 }}>
               {l.label}
