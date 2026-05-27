@@ -1,5 +1,7 @@
 'use client';
 
+// ServiceSelector — service row layout (index.html / screen-22)
+
 export interface Service {
   id: string;
   name: string;
