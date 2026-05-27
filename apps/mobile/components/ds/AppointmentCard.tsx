@@ -9,6 +9,7 @@ interface AppointmentCardProps {
   duration: number | string;
   name: string;
   service: string;
+  notes?: string | null;
   state?: AppointmentState;
   onPress?: () => void;
   style?: ViewStyle;
@@ -19,6 +20,7 @@ export function AppointmentCard({
   duration,
   name,
   service,
+  notes,
   state = 'upcoming',
   onPress,
   style,
@@ -68,6 +70,14 @@ export function AppointmentCard({
         >
           {service}
         </Text>
+        {!!notes && (
+          <Text
+            style={[styles.notesLine, isActive && styles.notesLineActive]}
+            numberOfLines={1}
+          >
+            {notes}
+          </Text>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -130,6 +140,15 @@ const styles = StyleSheet.create({
   },
   serviceDefault: { color: colors.slate[500] },
   serviceActive:  { color: 'rgba(255,255,255,0.6)' },
+
+  notesLine: {
+    fontSize: 11,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.slate[400],
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+  notesLineActive: { color: 'rgba(255,255,255,0.5)' },
 
   /* Shared overrides */
   textWhite:    { color: '#ffffff' },

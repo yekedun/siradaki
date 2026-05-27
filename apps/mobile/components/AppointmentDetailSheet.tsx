@@ -36,6 +36,7 @@ export interface AppointmentDetail {
   customerName: string;
   customerPhone: string | null;
   serviceName: string;
+  notes?: string | null;
 }
 
 interface AppointmentDetailSheetProps {
@@ -151,6 +152,10 @@ export function AppointmentDetailSheet({
       {/* Service: 14px Regular fg-3 marginTop 4 */}
       <Text style={styles.serviceName}>{appointment.serviceName}</Text>
 
+      {!!appointment.notes && (
+        <Text style={styles.notes}>{appointment.notes}</Text>
+      )}
+
       {/* Action buttons row: flex row, gap 8, marginTop 20
           Button variant="secondary" full: transparent bg, border ink-900, color ink-900
           size md: height 44 */}
@@ -206,6 +211,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.slate[500],
     marginTop: 4,
+  },
+
+  notes: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 13,
+    color: colors.slate[600],
+    marginTop: 8,
+    lineHeight: 20,
   },
 
   /* Actions row: flex row, gap 8, marginTop 20 */

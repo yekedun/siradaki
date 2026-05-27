@@ -11,6 +11,7 @@ export interface AppointmentAgendaRow {
   starts_at: string;
   ends_at: string;
   status: string;
+  notes?: string | null;
   services?: AppointmentServiceJoin | AppointmentServiceJoin[] | null;
 }
 
@@ -30,6 +31,7 @@ export function appointmentRowToAgendaItem(row: AppointmentAgendaRow, now = new 
     dur,
     name: row.customer_name,
     svc: service?.name ?? 'Hizmet',
+    notes: row.notes ?? null,
     state,
   };
 }

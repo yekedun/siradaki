@@ -148,6 +148,7 @@ export interface AddAppointmentModalProps {
     staffId: string | null;
     date: string;
     time: string;
+    notes?: string;
   }) => void;
   /** Services to display in the selector. Defaults to the design mock data. */
   services?: ServiceOption[];
@@ -168,6 +169,7 @@ export function AddAppointmentModal({
 }: AddAppointmentModalProps) {
   const [name,           setName]           = useState('');
   const [phone,          setPhone]          = useState('');
+  const [notes,          setNotes]          = useState('');
   const [svc,            setSvc]            = useState<string | null>(() => getInitialAppointmentServiceId(services));
   const [dayIdx,         setDayIdx]         = useState(2);              // index 2 = today
   const [slot,           setSlot]           = useState('');
@@ -180,6 +182,7 @@ export function AddAppointmentModal({
   useEffect(() => {
     if (!visible) return;
     setSvc((current) => resolveAppointmentServiceId(current, services));
+    setNotes('');
   }, [visible, services]);
 
   const curSvc  = services.find(s => s.id === svc);
@@ -206,7 +209,7 @@ export function AddAppointmentModal({
   function handleSave() {
     if (!canSave) return;
     if (!svc) return;
-    // TODO: connect Supabase — insert appointment record
+    const trimmedNotes = notes.trim();
     onSave({
       customerName: name.trim(),
       customerPhone: phone,
@@ -214,6 +217,7 @@ export function AddAppointmentModal({
       staffId: selectedStaffId,
       date: formatLocalAppointmentDate(selDate),
       time: slot,
+      ...(trimmedNotes ? { notes: trimmedNotes } : {}),
     });
   }
 
@@ -267,6 +271,21 @@ export function AddAppointmentModal({
               placeholder="0(5xx) xxx xx xx"
               placeholderTextColor={colors.slate[300]}
               keyboardType="phone-pad"
+            />
+          </View>
+
+          {/* ── Not ────────────────────────────────────────────── */}
+          <View style={[styles.fieldWrap, styles.fieldGap]}>
+            <Text style={styles.fieldLabel}>Not (opsiyonel)</Text>
+            <TextInput
+              style={[styles.textInput, styles.notesInput]}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Özel istek veya hatırlatma…"
+              placeholderTextColor={colors.slate[300]}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
             />
           </View>
 
@@ -466,6 +485,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
+  },
+
+  notesInput: {
+    height: 72,
+    paddingTop: 10,
   },
 
   /* ── SectionLabel ────────────────────────────────────────────────

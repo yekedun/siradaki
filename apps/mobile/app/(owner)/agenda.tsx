@@ -69,6 +69,7 @@ interface AppItem {
   dur: number;
   name: string;
   svc: string;
+  notes?: string | null;
   state: AppState;
 }
 interface BlokItem {
@@ -129,7 +130,7 @@ export default function AgendaScreen() {
     const dayEnd = new Date(selectedDate); dayEnd.setDate(dayEnd.getDate()+1); dayEnd.setHours(0,0,0,0);
 
     const [{ data: appts, error: apptsErr }, { data: blocks, error: blocksErr }] = await Promise.all([
-      supabase.from('appointments').select('id, staff_id, customer_name, starts_at, ends_at, status, services(name, duration_min)')
+      supabase.from('appointments').select('id, staff_id, customer_name, starts_at, ends_at, status, notes, services(name, duration_min)')
         .in('staff_id', barbers.map((b: any) => b.id))
         .gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString())
         .neq('status', 'cancelled'),
@@ -220,6 +221,7 @@ export default function AgendaScreen() {
       customerName: item.name,
       customerPhone: (data as any)?.customer_phone ?? null,
       serviceName: item.svc,
+      notes: item.notes,
     });
     setShowDetail(true);
   }
@@ -282,6 +284,7 @@ export default function AgendaScreen() {
                       duration={item.dur}
                       name={item.name}
                       service={item.svc}
+                      notes={item.notes}
                       state={item.state}
                       onPress={() => handleOpenDetail(item)}
                     />
@@ -347,6 +350,7 @@ export default function AgendaScreen() {
               starts_at: buildLocalAppointmentTimestamp(data.date, data.time),
               customer_name: data.customerName,
               customer_phone: data.customerPhone || null,
+              ...(data.notes ? { notes: data.notes } : {}),
             },
           });
           if (fnErr) {

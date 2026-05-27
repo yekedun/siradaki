@@ -131,11 +131,12 @@ interface ApptCardProps {
   duration: number;
   name: string;
   service: string;
+  notes?: string | null;
   state?: ApptState;
   onPress?: () => void;
 }
 
-function AppointmentCard({ time, duration, name, service, state = 'upcoming', onPress }: ApptCardProps) {
+function AppointmentCard({ time, duration, name, service, notes, state = 'upcoming', onPress }: ApptCardProps) {
   const v = {
     upcoming: {
       bg: colors.slate[0],
@@ -194,6 +195,11 @@ function AppointmentCard({ time, duration, name, service, state = 'upcoming', on
         <Text style={[styles.apptService, { color: v.sub }]} numberOfLines={1}>
           {service}
         </Text>
+        {!!notes && (
+          <Text style={[styles.apptNotes, { color: v.sub }]} numberOfLines={1}>
+            {notes}
+          </Text>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -264,7 +270,7 @@ function EmptyState({ onCta, dateLabel }: { onCta?: () => void; dateLabel?: stri
 
 type ListItem =
   | { kind: 'section'; label: string; topMargin?: number }
-  | { kind: 'appt'; id: string; time: string; duration: number; name: string; service: string; state?: ApptState; isDetail?: boolean }
+  | { kind: 'appt'; id: string; time: string; duration: number; name: string; service: string; notes?: string | null; state?: ApptState; isDetail?: boolean }
   | { kind: 'blok'; time: string; duration: number; label: string };
 
 /* ── TR month names for header meta ─────────────────────────────── */
@@ -321,7 +327,7 @@ export default function RandevularScreen() {
     const dayEnd = new Date(targetDate); dayEnd.setDate(targetDate.getDate()+1); dayEnd.setHours(0,0,0,0);
 
     const [{ data: appts }, { data: blocks }] = await Promise.all([
-      supabase.from('appointments').select('id, customer_name, service_name, starts_at, duration_min, status')
+      supabase.from('appointments').select('id, customer_name, service_name, starts_at, duration_min, status, notes')
         .eq('staff_id', staffId).neq('status', 'cancelled')
         .gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString()).order('starts_at'),
       supabase.from('blocks').select('id, starts_at, ends_at, reason')
@@ -340,7 +346,7 @@ export default function RandevularScreen() {
       const timeStr = formatTime(start);
       const state: ApptState = a.status === 'completed' ? 'done'
         : (start <= now && now < end) ? 'active' : 'upcoming';
-      const item: ListItem = { kind: 'appt', id: a.id, time: timeStr, duration: a.duration_min ?? 30, name: a.customer_name, service: a.service_name, state, isDetail: state !== 'done' };
+      const item: ListItem = { kind: 'appt', id: a.id, time: timeStr, duration: a.duration_min ?? 30, name: a.customer_name, service: a.service_name, notes: a.notes ?? null, state, isDetail: state !== 'done' };
       if (state === 'done') done.push(item);
       else if (state === 'active') active.push(item);
       else upcoming.push({ ...item, _startMs: start.getTime() } as any);
@@ -380,6 +386,7 @@ export default function RandevularScreen() {
       customerName: item.name,
       customerPhone: (data as any)?.customer_phone ?? null,
       serviceName: item.service,
+      notes: item.notes,
     });
     setShowDetail(true);
   }
@@ -434,6 +441,7 @@ export default function RandevularScreen() {
                 duration={item.duration}
                 name={item.name}
                 service={item.service}
+                notes={item.notes}
                 state={item.state}
                 onPress={item.isDetail ? () => openDetail(item) : undefined}
               />
@@ -475,6 +483,7 @@ export default function RandevularScreen() {
                 starts_at: `${data.date}T${data.time}:00`,
                 customer_name: data.customerName,
                 customer_phone: data.customerPhone || null,
+                ...(data.notes ? { notes: data.notes } : {}),
               },
             });
             if (error) throw error;
@@ -636,6 +645,14 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Regular',
     fontSize: 12,
     marginTop: 2,
+  },
+
+  apptNotes: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 11,
+    marginTop: 2,
+    fontStyle: 'italic',
+    opacity: 0.7,
   },
 
   /* BlokCard: bg slate-100 (stripe pattern simulated), 1px dashed slate-400,
