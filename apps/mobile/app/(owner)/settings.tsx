@@ -49,6 +49,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -1011,6 +1012,28 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Yasal */}
+        <View style={styles.legalSection}>
+          <TouchableOpacity
+            onPress={() => Linking.openURL('https://siradaki.app/kullanim-kosullari')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.legalLink}>Kullanım Koşulları</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => Linking.openURL('https://siradaki.app/gizlilik-politikasi')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.legalLink}>Gizlilik Politikası</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => Linking.openURL('https://siradaki.app/cerez-politikasi')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.legalLink}>Çerez Politikası</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Sign out */}
         <TouchableOpacity
           onPress={handleSignOut}
@@ -1278,6 +1301,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Montserrat-SemiBold',
     color: colors.ink[900],
+  },
+
+  /* Yasal */
+  legalSection: {
+    marginHorizontal: 20,
+    marginTop: 28,
+    gap: 14,
+  },
+  legalLink: {
+    fontSize: 13,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.slate[500],
+    textDecorationLine: 'underline',
   },
 
   /* Sign out */

@@ -45,6 +45,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -320,10 +321,16 @@ export default function RegisterScreen() {
 
         {/* Fine print — marginTop:16 11px slate-400 lineHeight:1.55 */}
         <Text style={styles.finePrint}>
-          {'Kayıt olarak '}
-          <Text style={styles.finePrintLink}>Kullanım Koşulları</Text>
+          {"Kayıt olarak "}
+          <Text
+            style={styles.finePrintLink}
+            onPress={() => Linking.openURL("https://siradaki.app/kullanim-kosullari")}
+          >{"Kullanım Koşulları"}</Text>
           {"’nı ve "}
-          <Text style={styles.finePrintLink}>Gizlilik Politikası</Text>
+          <Text
+            style={styles.finePrintLink}
+            onPress={() => Linking.openURL("https://siradaki.app/gizlilik-politikasi")}
+          >{"Gizlilik Politikası"}</Text>
           {"’nı kabul etmiş olursun."}
         </Text>
 

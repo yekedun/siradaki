@@ -12,6 +12,7 @@ import {
   Pressable,
   StyleSheet,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
@@ -248,6 +249,28 @@ export default function HesabimScreen() {
           </Text>
         </View>
 
+        {/* Yasal */}
+        <View style={styles.legalSection}>
+          <TouchableOpacity
+            onPress={() => Linking.openURL('https://siradaki.app/kullanim-kosullari')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.legalLink}>Kullanım Koşulları</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => Linking.openURL('https://siradaki.app/gizlilik-politikasi')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.legalLink}>Gizlilik Politikası</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => Linking.openURL('https://siradaki.app/cerez-politikasi')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.legalLink}>Çerez Politikası</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Danger actions */}
         <View style={styles.signOutWrap}>
           <TouchableOpacity style={styles.dangerBtn} onPress={handleSignOut}>
@@ -398,6 +421,17 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 
+  legalSection: {
+    marginHorizontal: 20,
+    marginTop: 28,
+    gap: 14,
+  },
+  legalLink: {
+    fontSize: 13,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.slate[500],
+    textDecorationLine: 'underline',
+  },
   signOutWrap: { paddingHorizontal: 20, paddingTop: 32 },
   dangerBtn: {
     height: 52,
