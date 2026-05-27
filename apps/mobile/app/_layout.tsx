@@ -1,8 +1,10 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useFonts } from 'expo-font';
+import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
+import type { Href } from 'expo-router';
 import { supabase, determineUserRole } from '../lib/supabase';
 import { isPublicAuthRoute, routeForRole, shouldSkipRoleRouting } from '../lib/router-guard';
 
@@ -20,6 +22,25 @@ export default function RootLayout() {
   const segments = useSegments();
   const firstSegment = segments[0];
   const routedRef = useRef(false);
+  const segmentRef = useRef(firstSegment);
+  const pendingNotif = useRef(false);
+
+  useEffect(() => { segmentRef.current = firstSegment; }, [firstSegment]);
+
+  // Notification tap → navigate to appointments screen
+  useEffect(() => {
+    Notifications.getLastNotificationResponseAsync().then(res => {
+      if (res) pendingNotif.current = true;
+    });
+
+    const sub = Notifications.addNotificationResponseReceivedListener(() => {
+      const seg = segmentRef.current;
+      if (seg === '(owner)') router.push('/(owner)/agenda' as Href);
+      else router.push('/(app)/' as Href);
+    });
+
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
@@ -45,6 +66,11 @@ export default function RootLayout() {
 
     determineUserRole(session.user.id).then(role => {
       router.replace(routeForRole(role));
+      if (pendingNotif.current) {
+        pendingNotif.current = false;
+        const target: Href = role === 'owner' ? '/(owner)/agenda' : '/(app)/';
+        setTimeout(() => router.push(target), 250);
+      }
     });
   }, [loaded, session, firstSegment]);
 
