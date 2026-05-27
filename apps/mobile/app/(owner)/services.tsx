@@ -41,7 +41,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors } from '../../lib/theme';
+import { colors, radius } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { serviceFormToDb, serviceRowToView } from '../../lib/service-mappers';
 
@@ -638,12 +638,11 @@ const styles = StyleSheet.create({
 
   /* Service row */
   row: {
-    backgroundColor: colors.slate[0],
+    padding: 14,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.slate[200],
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    backgroundColor: colors.slate[0],
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
