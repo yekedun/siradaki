@@ -82,13 +82,13 @@ export function AppointmentDetailSheet({
           text: 'İptal Et', style: 'destructive',
           onPress: async () => {
             setBusy(true);
-            const { error } = await supabase
-              .from('appointments')
-              .update({ status: 'cancelled' })
-              .eq('id', appt.id);
+            const { error: fnError } = await supabase.functions.invoke(
+              'staff-cancel-appointment',
+              { body: { appointment_id: appt.id } },
+            );
             setBusy(false);
-            if (error) {
-              Alert.alert('Hata', error.message);
+            if (fnError) {
+              Alert.alert('Hata', 'Randevu iptal edilemedi. Lütfen tekrar deneyin.');
               return;
             }
             onCancel(appt.id);
