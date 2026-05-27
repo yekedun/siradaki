@@ -382,7 +382,7 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
               </View>
 
               {/* Profil Görünür toggle */}
-              <View style={styles.toggleRow}>
+              <View style={styles.sheetToggleRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.toggleRowTitle}>Profil Görünür</Text>
                   <Text style={styles.toggleRowSub}>
@@ -913,7 +913,7 @@ export default function SettingsScreen() {
           {/* Dükkan Saatleri */}
           <TouchableOpacity
             onPress={() => setHoursOpen(true)}
-            style={[styles.opRow, styles.opRowBorderTop]}
+            style={styles.opRow}
             activeOpacity={0.75}
           >
             <View style={{ flex: 1 }}>
@@ -929,7 +929,7 @@ export default function SettingsScreen() {
           {/* Hizmetler */}
           <TouchableOpacity
             onPress={() => router.push('/(owner)/services')}
-            style={[styles.opRow, styles.opRowBorderTop]}
+            style={[styles.opRow, styles.opRowLast]}
             activeOpacity={0.75}
           >
             <View style={{ flex: 1 }}>
@@ -959,7 +959,7 @@ export default function SettingsScreen() {
             </View>
             <Toggle on={prefs.new_appointment} onChange={(v) => updatePref('new_appointment', v)} />
           </View>
-          <View style={[styles.opRow, styles.opRowBorderTop]}>
+          <View style={styles.opRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.opRowTitle}>İptal</Text>
               <Text style={styles.opRowMeta}>
@@ -970,7 +970,7 @@ export default function SettingsScreen() {
             </View>
             <Toggle on={prefs.cancellation} onChange={(v) => updatePref('cancellation', v)} />
           </View>
-          <View style={[styles.opRow, styles.opRowBorderTop]}>
+          <View style={[styles.opRow, styles.opRowLast]}>
             <View style={{ flex: 1 }}>
               <Text style={styles.opRowTitle}>Günlük Özet</Text>
               <Text style={styles.opRowMeta}>
@@ -1195,19 +1195,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.slate[0],
     borderWidth: 1,
     borderColor: colors.slate[200],
-    borderRadius: 14,
-    overflow: 'hidden',
+    borderRadius: 12,
+    padding: 14,
   },
   opRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 16,
     paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.slate[100],
   },
   opRowBorderTop: {
     borderTopWidth: 1,
     borderTopColor: colors.slate[100],
+  },
+  opRowLast: {
+    borderBottomWidth: 0,
   },
   opRowTitle: {
     fontSize: 15,
@@ -1470,8 +1474,21 @@ const styles = StyleSheet.create({
     color: colors.brand[600],
   },
 
-  /* Toggle row (in sheet) */
+  /* Toggle row (main screen) */
   toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.slate[100],
+  },
+  toggleRowLast: {
+    borderBottomWidth: 0,
+  },
+
+  /* Toggle row (in sheet) */
+  sheetToggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
