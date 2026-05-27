@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ interface TextFieldProps {
   secureTextEntry?: boolean;
   keyboardType?: KeyboardTypeOptions;
   editable?: boolean;
+  error?: string | null;
   style?: ViewStyle;
 }
 
@@ -28,8 +29,11 @@ export function TextField({
   secureTextEntry,
   keyboardType,
   editable = true,
+  error,
   style,
 }: TextFieldProps) {
+  const [focused, setFocused] = useState(false);
+
   return (
     <View style={[styles.wrapper, style]}>
       <Text style={styles.label}>{label}</Text>
@@ -41,29 +45,34 @@ export function TextField({
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         editable={editable}
-        style={styles.input}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={[
+          styles.input,
+          focused && styles.inputFocused,
+          !!error && styles.inputError,
+          !editable && styles.inputDisabled,
+        ]}
       />
+      {!!error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: { gap: 6 },
-
   label: {
     fontSize: 11,
     fontFamily: 'Montserrat-SemiBold',
-    /* source: letterSpacing 0.16em; theme token overline = 2.5 (design intent) */
     letterSpacing: 2.5,
     textTransform: 'uppercase',
     color: colors.slate[500],
     lineHeight: 11,
   },
-
   input: {
     fontFamily: 'Montserrat-Regular',
     fontSize: 15,
-    lineHeight: 21, /* 15 * 1.4 */
+    lineHeight: 21,
     color: colors.ink[900],
     backgroundColor: colors.slate[0],
     borderWidth: 1,
@@ -71,5 +80,22 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: 14,
     paddingVertical: 12,
+  },
+  inputFocused: {
+    borderColor: colors.brand[600],
+    borderWidth: 1.5,
+  },
+  inputError: {
+    borderColor: colors.coral[600],
+  },
+  inputDisabled: {
+    backgroundColor: colors.slate[100],
+    color: colors.slate[400],
+  },
+  errorText: {
+    fontSize: 12,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.coral[600],
+    marginTop: -2,
   },
 });

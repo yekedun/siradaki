@@ -46,6 +46,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { colors } from '../../lib/theme';
 import { Button } from '../../components/ds/Button';
@@ -242,10 +243,11 @@ export default function RegisterScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.kav}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        style={styles.kav}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <ScrollView
         style={styles.screen}
         contentContainerStyle={styles.content}
@@ -350,11 +352,16 @@ export default function RegisterScreen() {
           </View>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.slate[0],
+  },
   kav: {
     flex: 1,
     backgroundColor: colors.slate[0],
@@ -370,8 +377,8 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
 
-  /* Top — marginTop:8 */
-  top: { marginTop: 8 },
+  /* Top — marginTop:40 */
+  top: { marginTop: 40 },
 
   /* Mark — 40×40 ink-900 borderRadius:999 marginBottom:24 */
   mark: {

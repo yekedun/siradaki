@@ -32,7 +32,7 @@ import {
   View,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { colors } from '../../lib/theme';
+import { colors, radius } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { buildOwnerRoleFilter, isMissingColumnError } from '../../lib/supabase-role';
 import { StaffEditSheet, type StaffMember as EditableStaffMember } from '../../components/StaffEditSheet';
@@ -561,6 +561,7 @@ export default function TeamScreen() {
   const [inviteLoading,  setInviteLoading]  = useState(false);
   const [editStaff,      setEditStaff]      = useState<EditableStaffMember | null>(null);
   const [editVisible,    setEditVisible]    = useState(false);
+  const [inviteLink,     setInviteLink]     = useState<string | null>(null);
 
   const selected = staff.find((s) => s.id === selectedId);
 
@@ -750,6 +751,8 @@ export default function TeamScreen() {
       const { invite_link } = await res.json();
       if (!invite_link) { Alert.alert('Hata', 'Davet linki alınamadı'); return; }
 
+      setInviteLink(invite_link);
+
       const msg = encodeURIComponent(
         `Sıradaki randevu uygulamasına berber olarak katılman için davet linki:\n${invite_link}`
       );
@@ -830,6 +833,12 @@ export default function TeamScreen() {
             {inviteLoading ? 'Link oluşturuluyor…' : '+ Berber Davet Et'}
           </Text>
         </TouchableOpacity>
+
+        {inviteLink ? (
+          <View style={styles.inviteBox}>
+            <Text style={styles.inviteText}>{inviteLink}</Text>
+          </View>
+        ) : null}
       </ScrollView>
 
       {/* Add staff sheet */}
@@ -946,9 +955,12 @@ const styles = StyleSheet.create({
   staffRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    padding: 14,
     gap: 12,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.slate[200],
+    backgroundColor: colors.slate[0],
   },
   staffRowBorder: {
     borderBottomWidth: 1,
@@ -1295,5 +1307,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Montserrat-SemiBold',
     color: '#ffffff',
+  },
+
+  /* Invite link box */
+  inviteBox: {
+    backgroundColor: colors.slate[100],
+    borderRadius: radius.sm,
+    padding: 12,
+    marginTop: 8,
+  },
+  inviteText: {
+    fontFamily: 'SpaceMono',
+    fontSize: 12,
+    color: colors.ink[900],
   },
 });

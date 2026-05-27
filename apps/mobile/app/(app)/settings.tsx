@@ -12,8 +12,8 @@ import {
   Pressable,
   StyleSheet,
   Alert,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import { colors } from '../../lib/theme';
@@ -265,7 +265,7 @@ export default function HesabimScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.slate[50] },
+  safe: { flex: 1, backgroundColor: colors.slate[0] },
   scroll: { flex: 1 },
   content: { paddingBottom: 24 },
 

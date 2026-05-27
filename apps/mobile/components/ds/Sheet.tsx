@@ -91,9 +91,9 @@ const styles = StyleSheet.create({
 
   sheet: {
     backgroundColor: '#ffffff',
-    borderTopLeftRadius: radius.lg,   /* 18 */
-    borderTopRightRadius: radius.lg,  /* 18 */
-    paddingTop: 12,
+    borderTopLeftRadius: radius.xl,   /* 24 */
+    borderTopRightRadius: radius.xl,  /* 24 */
+    paddingTop: 20,
     paddingBottom: 24,
     maxHeight: '78%',
     ...shadows.lg,

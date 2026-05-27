@@ -49,8 +49,8 @@ import {
   Switch,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
@@ -107,8 +107,9 @@ function OverlineHeader({
   title: string;
   meta?: string;
 }) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.ohWrap}>
+    <View style={[styles.ohWrap, { paddingTop: insets.top + 12 }]}>
       <Text style={styles.ohEyebrow}>{eyebrow}</Text>
       <Text style={styles.ohTitle}>{title}</Text>
       {meta != null && <Text style={styles.ohMeta}>{meta}</Text>}
@@ -398,10 +399,9 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 100 },
 
-  /* OverlineHeader: padding '8px 20px 16px' */
+  /* OverlineHeader: paddingHorizontal 20, paddingBottom 16; paddingTop set dynamically via insets */
   ohWrap: {
     paddingHorizontal: 20,
-    paddingTop: 8,
     paddingBottom: 16,
   },
   ohEyebrow: {

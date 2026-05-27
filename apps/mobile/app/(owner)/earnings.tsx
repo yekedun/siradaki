@@ -18,41 +18,19 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { estimatedAppointmentRevenueCents } from '../../lib/revenue-mappers';
 import { useShop } from '../../lib/ShopContext';
+import { Chip, ChipRow } from '../../components/ds/Chip';
 
 /* ─── Types ─────────────────────────────────────────────────── */
 
 import { formatCents } from '../../lib/utils';
 
 type Period = 'day' | '7' | '30';
-
-/* ─── Chip ──────────────────────────────────────────────────── */
-
-interface ChipProps {
-  selected: boolean;
-  onPress: () => void;
-  children: string;
-}
-
-function Chip({ selected, onPress, children }: ChipProps) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[styles.chip, selected && styles.chipSelected]}
-      activeOpacity={0.75}
-    >
-      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-        {children}
-      </Text>
-    </TouchableOpacity>
-  );
-}
 
 /* ─── Main Screen ───────────────────────────────────────────── */
 
@@ -179,19 +157,11 @@ export default function EarningsScreen() {
       </View>
 
       {/* Period chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipRow}
-      >
-        {([['day', 'Bugün'], ['7', '7 gün'], ['30', '30 gün']] as [Period, string][]).map(
-          ([key, label]) => (
-            <Chip key={key} selected={period === key} onPress={() => setPeriod(key)}>
-              {label}
-            </Chip>
-          ),
-        )}
-      </ScrollView>
+      <ChipRow padded style={{ marginBottom: 16 }}>
+        <Chip selected={period === 'day'} onPress={() => setPeriod('day')}>Bugün</Chip>
+        <Chip selected={period === '7'}   onPress={() => setPeriod('7')}>7 gün</Chip>
+        <Chip selected={period === '30'}  onPress={() => setPeriod('30')}>30 gün</Chip>
+      </ChipRow>
 
       {/* Hero KPI card */}
       <View style={styles.heroCard}>
@@ -323,36 +293,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     color: colors.ink[900],
     marginTop: 10,
-  },
-
-  /* Chips */
-  chipRow: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingBottom: 4,
-  },
-  chip: {
-    height: 34,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    backgroundColor: colors.slate[0],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipSelected: {
-    backgroundColor: colors.ink[900],
-    borderColor: colors.ink[900],
-  },
-  chipText: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.ink[900],
-  },
-  chipTextSelected: {
-    color: '#ffffff',
   },
 
   /* Hero card */
