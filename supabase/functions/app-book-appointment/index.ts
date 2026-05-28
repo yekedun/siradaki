@@ -112,7 +112,7 @@ serve(async (req) => {
   if (req.method !== "POST") return error("Method not allowed", 405);
 
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader) return error("Giris gerekli", 401);
+  if (!authHeader) return error("Giriş gerekli", 401);
 
   const userClient = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -123,13 +123,13 @@ serve(async (req) => {
     data: { user },
     error: authErr,
   } = await userClient.auth.getUser();
-  if (authErr || !user) return error("Gecersiz oturum", 401);
+  if (authErr || !user) return error("Geçersiz oturum", 401);
 
   let body: BookRequest;
   try {
     body = await req.json();
   } catch {
-    return error("Gecersiz JSON");
+    return error("Geçersiz JSON");
   }
 
   const { shop_slug, service_id, starts_at, customer_name, customer_phone } = body;

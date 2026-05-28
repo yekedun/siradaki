@@ -28,20 +28,25 @@ export default function InviteScreen() {
       return;
     }
 
-    const res = await fetch(`${FN_BASE}/open-invite`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
-    });
+    try {
+      const res = await fetch(`${FN_BASE}/open-invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setState('error');
+        setMessage(data.error ?? 'Davet linki geçersiz.');
+        return;
+      }
+
+      setState('ready');
+    } catch {
       setState('error');
-      setMessage(data.error ?? 'Davet linki geçersiz.');
-      return;
+      setMessage('Bağlantı hatası. İnternet bağlantınızı kontrol edin.');
     }
-
-    setState('ready');
   }
 
   async function handleGoogleSignIn() {
@@ -60,19 +65,25 @@ export default function InviteScreen() {
       return;
     }
 
-    const res = await fetch(`${FN_BASE}/accept-invite`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ token }),
-    });
+    try {
+      const res = await fetch(`${FN_BASE}/accept-invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ token }),
+      });
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setState('error');
+        setMessage(data.error ?? 'Davet kabul edilemedi');
+        return;
+      }
+    } catch {
       setState('error');
-      setMessage(data.error ?? 'Davet kabul edilemedi');
+      setMessage('Bağlantı hatası. İnternet bağlantınızı kontrol edin.');
       return;
     }
 

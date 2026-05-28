@@ -241,7 +241,7 @@ export function BookingModal({
           staff_id:       staffId,
           starts_at:      startsAt,
           customer_name:  name.trim(),
-          customer_phone: phone.trim() || undefined,
+          customer_phone: phone.trim(),
           customer_notes: note.trim()  || undefined,
         }),
       });

@@ -138,7 +138,7 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
             <div className="flex flex-wrap gap-2">
               <StaffChip label="Herhangi" selected={selStaff === null} onClick={() => { setSelStaff(null); setSelSlot(null); }} />
               {staff.map(s => (
-                <StaffChip key={s.id} label={s.name} selected={selStaff === s.id} onClick={() => { setSelStaff(s.id); setSelSlot(null); }} />
+                <StaffChip key={s.id} label={s.name ?? 'İsimsiz'} selected={selStaff === s.id} onClick={() => { setSelStaff(s.id); setSelSlot(null); }} />
               ))}
             </div>
           </Section>
