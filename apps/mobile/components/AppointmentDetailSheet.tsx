@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   notes: {
     fontFamily: 'Montserrat-Regular',
     fontSize: 13,
-    color: colors.slate[600],
+    color: colors.slate[500],
     marginTop: 8,
     lineHeight: 20,
   },

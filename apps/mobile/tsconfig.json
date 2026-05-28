@@ -15,7 +15,6 @@
     }
   },
   "include": [
-    ".",
     "app/**/*.ts",
     "app/**/*.tsx",
     "components/**/*.ts",
@@ -23,7 +22,11 @@
     "lib/**/*.ts",
     "__tests__/**/*.ts",
     "__tests__/**/*.tsx",
-    ".expo/types/**/*.ts",
     "expo-env.d.ts"
+  ],
+  "exclude": [
+    ".expo",
+    "dist",
+    "node_modules"
   ]
 }

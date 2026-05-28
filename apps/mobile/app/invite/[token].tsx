@@ -10,7 +10,7 @@ const FN_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1';
 
 export default function InviteScreen() {
   const { token } = useLocalSearchParams<{ token: string }>();
-  const [state,   setState]   = useState<'checking' | 'ready' | 'signing' | 'error'>('checking');
+  const [state, setState] = useState<'checking' | 'ready' | 'signing' | 'error'>('checking');
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -24,20 +24,23 @@ export default function InviteScreen() {
   async function validateToken() {
     if (!token) {
       setState('error');
-      setMessage('Davet linki geçersiz.');
+      setMessage('Davet linki gecersiz.');
       return;
     }
-    const { data } = await supabase
-      .from('invite_tokens')
-      .select('id, used_at, expires_at')
-      .eq('token', token)
-      .maybeSingle();
 
-    if (!data) { setState('error'); setMessage('Davet linki geçersiz.'); return; }
-    if (data.used_at) { setState('error'); setMessage('Bu davet linki daha önce kullanılmış.'); return; }
-    if (new Date(data.expires_at) < new Date()) {
-      setState('error'); setMessage('Davet linkinin süresi dolmuş. Sahipten yeni link isteyin.'); return;
+    const res = await fetch(`${FN_BASE}/open-invite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setState('error');
+      setMessage(data.error ?? 'Davet linki gecersiz.');
+      return;
     }
+
     setState('ready');
   }
 
@@ -53,59 +56,65 @@ export default function InviteScreen() {
     const session = (await supabase.auth.getSession()).data.session;
     if (!session) {
       setState('error');
-      setMessage('Oturum alınamadı, tekrar deneyin.');
+      setMessage('Oturum alinamadi, tekrar deneyin.');
       return;
     }
+
     const res = await fetch(`${FN_BASE}/accept-invite`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token}`,
+        Authorization: `Bearer ${session.access_token}`,
       },
       body: JSON.stringify({ token }),
     });
 
     if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => ({}));
       setState('error');
-      setMessage(d.error ?? 'Davet kabul edilemedi');
+      setMessage(data.error ?? 'Davet kabul edilemedi');
       return;
     }
 
     router.replace('/');
   }
 
-  if (state === 'checking') return (
-    <View style={styles.center}>
-      <ActivityIndicator size="large" color={colors.brand[600]} />
-      <Text style={styles.sub}>Davet kontrol ediliyor…</Text>
-    </View>
-  );
+  if (state === 'checking') {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={colors.brand[600]} />
+        <Text style={styles.sub}>Davet kontrol ediliyor...</Text>
+      </View>
+    );
+  }
 
-  if (state === 'error') return (
-    <View style={styles.center}>
-      <Text style={styles.icon}>❌</Text>
-      <Text style={styles.title}>Geçersiz Davet</Text>
-      <Text style={styles.sub}>{message}</Text>
-    </View>
-  );
+  if (state === 'error') {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.icon}>!</Text>
+        <Text style={styles.title}>Gecersiz Davet</Text>
+        <Text style={styles.sub}>{message}</Text>
+      </View>
+    );
+  }
 
-  if (state === 'signing') return (
-    <View style={styles.center}>
-      <ActivityIndicator size="large" color={colors.brand[600]} />
-      <Text style={styles.sub}>Giriş yapılıyor…</Text>
-    </View>
-  );
+  if (state === 'signing') {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={colors.brand[600]} />
+        <Text style={styles.sub}>Giris yapiliyor...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.center}>
       <View style={styles.mark}><Text style={styles.markLetter}>S</Text></View>
-      <Text style={styles.title}>Berber Olarak Katıl</Text>
+      <Text style={styles.title}>Berber Olarak Katil</Text>
       <Text style={styles.sub}>
-        Sıradaki'ye berber olarak eklendiniz. Devam etmek için Google hesabınızla giriş yapın.
+        Siradaki'ye berber olarak eklendiniz. Devam etmek icin Google hesabinizla giris yapin.
       </Text>
-      <Button variant="primary" size="lg" full
-        onPress={handleGoogleSignIn}>
+      <Button variant="primary" size="lg" full onPress={handleGoogleSignIn}>
         Google ile Devam Et
       </Button>
     </View>
@@ -113,14 +122,42 @@ export default function InviteScreen() {
 }
 
 const styles = StyleSheet.create({
-  center:     { flex: 1, backgroundColor: colors.slate[0], alignItems: 'center',
-                 justifyContent: 'center', padding: 32, gap: 16 },
-  mark:       { width: 56, height: 56, borderRadius: 999, backgroundColor: colors.ink[900],
-                 alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  markLetter: { fontSize: 24, fontFamily: 'Montserrat-Bold', color: '#fff' },
-  icon:       { fontSize: 48 },
-  title:      { fontSize: 24, fontFamily: 'Montserrat-Bold', color: colors.ink[900],
-                 textAlign: 'center' },
-  sub:        { fontSize: 15, fontFamily: 'Montserrat-Regular', color: colors.slate[500],
-                 textAlign: 'center', lineHeight: 22 },
+  center: {
+    flex: 1,
+    backgroundColor: colors.slate[0],
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    gap: 16,
+  },
+  mark: {
+    width: 56,
+    height: 56,
+    borderRadius: 999,
+    backgroundColor: colors.ink[900],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  markLetter: {
+    fontSize: 24,
+    fontFamily: 'Montserrat-Bold',
+    color: '#fff',
+  },
+  icon: {
+    fontSize: 48,
+  },
+  title: {
+    fontSize: 24,
+    fontFamily: 'Montserrat-Bold',
+    color: colors.ink[900],
+    textAlign: 'center',
+  },
+  sub: {
+    fontSize: 15,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.slate[500],
+    textAlign: 'center',
+    lineHeight: 22,
+  },
 });

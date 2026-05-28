@@ -75,3 +75,31 @@ import_map = "./functions/import_map.json"
 [functions.delete-account]
 verify_jwt = true
 import_map = "./functions/import_map.json"
+
+[functions.accept-invite]
+verify_jwt = true
+import_map = "./functions/import_map.json"
+
+[functions.open-invite]
+verify_jwt = false
+import_map = "./functions/import_map.json"
+
+[functions.invite-barber]
+verify_jwt = true
+import_map = "./functions/import_map.json"
+
+[functions.register-shop]
+verify_jwt = true
+import_map = "./functions/import_map.json"
+
+[functions.staff-cancel-appointment]
+verify_jwt = true
+import_map = "./functions/import_map.json"
+
+[functions.send-push]
+verify_jwt = true
+import_map = "./functions/import_map.json"
+
+[functions.daily-summary-push]
+verify_jwt = true
+import_map = "./functions/import_map.json"

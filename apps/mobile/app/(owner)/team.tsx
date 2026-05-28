@@ -611,7 +611,7 @@ export default function TeamScreen() {
       const c = commByStaff.get(s.id);
       return {
         id: s.id,
-        name: s.name,
+        name: s.name?.trim() || 'Isimsiz personel',
         status: (s.is_active ? 'Aktif' : 'Pasif') as 'Aktif' | 'Pasif',
         meta: c?.type === 'percentage' && c.bps
           ? `%${Math.round(c.bps / 100)} komisyon`

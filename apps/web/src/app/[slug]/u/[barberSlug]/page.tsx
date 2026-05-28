@@ -36,6 +36,7 @@ export default async function BarberPage({ params }: Props) {
     .from('shops')
     .select('id, name, display_name, address, slug')
     .eq('slug', slug)
+    .eq('status', 'active')
     .maybeSingle();
 
   if (!shop) notFound();
@@ -46,20 +47,20 @@ export default async function BarberPage({ params }: Props) {
     .select('id, name, slug')
     .eq('shop_id', shop.id)
     .eq('slug', barberSlug)
+    .eq('is_active', true)
     .maybeSingle();
+
+  if (!staffMember) notFound();
 
   // All active staff for the booking flow
   const { data: allStaff } = await supabase
     .from('staff')
-    .select('id, name, phone, role')
+    .select('id, name')
     .eq('shop_id', shop.id)
     .eq('is_active', true)
     .order('name');
 
-  // Owner always first, then alphabetical by name
   const sortedStaff = (allStaff ?? []).sort((a, b) => {
-    if (a.role === 'owner') return -1;
-    if (b.role === 'owner') return 1;
     return (a.name ?? '').localeCompare(b.name ?? '', 'tr');
   });
 
@@ -85,8 +86,8 @@ export default async function BarberPage({ params }: Props) {
         duration_min: s.duration_min,
         price:        Math.round(s.price_cents / 100),
       }))}
-      staff={sortedStaff.map(s => ({ id: s.id, name: s.name, phone: s.phone ?? null }))}
-      preselectedStaffId={staffMember?.id ?? null}
+      staff={sortedStaff.map(s => ({ id: s.id, name: s.name, phone: null }))}
+      preselectedStaffId={staffMember.id}
     />
   );
 }
