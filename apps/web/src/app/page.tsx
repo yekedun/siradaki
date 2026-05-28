@@ -75,7 +75,7 @@ export default function LandingPage() {
           Müşterileriniz sizi<br />sosyal medyadan bulsun.
         </h1>
         <p style={{ fontSize: 17, lineHeight: 1.7, color: SUB, maxWidth: 460, margin: '0 0 44px' }}>
-          Instagram'a linkinizi koyun. Müşterileriniz randevusunu kendisi alsın —
+          Instagram&apos;a linkinizi koyun. Müşterileriniz randevusunu kendisi alsın —
           siz sadece işinize bakın.
         </p>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -173,7 +173,7 @@ export default function LandingPage() {
           Dükkanınızı dijitale taşıyın.
         </h2>
         <p style={{ fontSize: 15, color: SUB, marginBottom: 40, lineHeight: 1.7, maxWidth: 380, margin: '0 auto 40px' }}>
-          Kaydolun, linkinizi alın, Instagram'a koyun.<br />İlk randevu bugün gelebilir.
+          Kaydolun, linkinizi alın, Instagram&apos;a koyun.<br />İlk randevu bugün gelebilir.
         </p>
         <Link href="/kayit" style={{
           fontSize: 12, fontWeight: 600, color: BG,
