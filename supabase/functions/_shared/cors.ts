@@ -8,7 +8,11 @@ const ALLOWED_ORIGINS = [
 function getAllowOrigin(req?: Request): string {
   if (!req) return '*';
   const origin = req.headers.get('Origin') ?? '';
-  return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  // Return matched origin exactly, or '*' for unrecognised origins.
+  // Do NOT fall back to ALLOWED_ORIGINS[0]: that value contains the Turkish
+  // dotless-ı (U+0131) which is not a valid HTTP header ByteString and crashes
+  // the Deno runtime: "Argument 2 is not a valid ByteString".
+  return ALLOWED_ORIGINS.includes(origin) ? origin : '*';
 }
 
 export function cors(response: Response, req?: Request): Response {
@@ -47,10 +51,25 @@ export function json(data: unknown, status = 200, req?: Request): Response {
   );
 }
 
+// req is now the 4th param — existing callers (error(msg), error(msg, status),
+// error(msg, status, extras)) are backward compatible; pass req for correct CORS origin.
 export function error(
   message: string,
   status = 400,
   extras?: Record<string, unknown>,
+  req?: Request,
 ): Response {
-  return json({ error: message, ...(extras ?? {}) }, status);
+  return json({ error: message, ...(extras ?? {}) }, status, req);
+}
+
+const MAX_BODY_BYTES = 16_000; // 16 KB — sufficient for all booking payloads
+
+// Call at the top of every POST handler. Returns a 413 Response if the
+// request body exceeds the limit, null otherwise.
+export function bodyGuard(req: Request): Response | null {
+  const contentLength = parseInt(req.headers.get('content-length') ?? '0', 10);
+  if (contentLength > MAX_BODY_BYTES) {
+    return error('Request body too large', 413, {}, req);
+  }
+  return null;
 }
