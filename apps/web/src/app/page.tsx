@@ -1,217 +1,208 @@
+// / · Sıradaki Landing Page
+// Hero + features + CTA + footer with legal links
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Sıradaki — Berber Randevu Sistemi',
-  description: "Instagram'a linkinizi koyun. Müşterileriniz randevusunu kendisi alsın.",
+  title: 'Sıradaki — Berber Randevu ve Ekip Yönetimi',
+  description: 'Dükkanını dijitale taşı. Müşterilerine online randevu al, ekibini yönet, kazancını takip et.',
 };
-
-const steps = [
-  { n: '01', title: 'Dükkanını tanıt', desc: 'Adını, şehrini, hizmetlerini gir. 5 dakikada rezervasyon linkin hazır.' },
-  { n: '02', title: 'Linkini paylaş', desc: 'Instagram, WhatsApp, TikTok. Nereye koysan çalışır. Her berber için ayrı link.' },
-  { n: '03', title: 'Randevular gelir', desc: 'Müşteri müsait saati seçer, randevuyu alır. Telefon beklemenize gerek yok.' },
-];
-
-const features = [
-  { n: '01', title: 'Online Randevu', desc: 'Müşterileriniz 7/24 randevu alabilir. Dolu saatler görünmez, sadece müsaitler.' },
-  { n: '02', title: 'Kişisel Link', desc: "Her ustanın kendi linki var. Instagram bio'suna koy, direkt sana gelsin." },
-  { n: '03', title: 'Ekip Yönetimi', desc: 'Birden fazla usta çalışıyorsa herkese ayrı ajanda. Kimin ne zaman boş olduğunu görün.' },
-  { n: '04', title: 'Kazanç Takibi', desc: 'Günlük, haftalık, aylık gelir raporları. Komisyon hesabı dahil.' },
-  { n: '05', title: 'Mobil Uygulama', desc: "iOS ve Android'de çalışır. Gittiğin her yerden randevularını yönet." },
-  { n: '06', title: 'İzin Yönetimi', desc: 'Tatil, öğle arası, geç gelme. Tek tıkla slotları kapat.' },
-];
-
-const BG   = '#F8F5F0';
-const INK  = '#0F0E0C';
-const SUB  = '#6B6560';
-const MUTE = '#9B9590';
-const DIV  = '#E5DFD5';
-const CARD = '#FDFBF8';
-const MONO = 'ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace';
-const SERIF = 'Georgia, "Times New Roman", serif';
 
 export default function LandingPage() {
   return (
-    <div style={{ background: BG, color: INK, minHeight: '100vh', fontFamily: 'var(--font-montserrat), "Helvetica Neue", Arial, sans-serif' }}>
+    <div style={{ fontFamily: 'var(--font-sans)', color: 'var(--fg-1)', minHeight: '100vh' }}>
 
-      {/* NAV */}
+      {/* ── Nav ─────────────────────────────────────────────── */}
       <nav style={{
-        borderBottom: `1px solid ${DIV}`,
-        height: 56,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 24px',
-        position: 'sticky', top: 0,
-        background: BG, zIndex: 10,
+        background: 'var(--bg-elevated)', borderBottom: '1px solid var(--divider)',
+        padding: '0 24px', height: 56, display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10,
       }}>
-        <span style={{ fontFamily: MONO, fontSize: 14, fontWeight: 500, letterSpacing: '-0.01em' }}>
+        <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--fg-1)' }}>
           Sıradaki
         </span>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <Link href="/giris" style={{ fontSize: 13, color: SUB, textDecoration: 'none', fontWeight: 500 }}>
+          <Link href="/giris" style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-3)', textDecoration: 'none' }}>
             Giriş
           </Link>
           <Link href="/kayit" style={{
-            fontSize: 12, fontWeight: 600, color: BG,
-            background: INK, padding: '9px 20px',
-            textDecoration: 'none', letterSpacing: '0.06em', textTransform: 'uppercase',
+            fontSize: 13, fontWeight: 700, color: '#fff', textDecoration: 'none',
+            background: 'var(--brand-600)', padding: '8px 16px', borderRadius: 8,
           }}>
-            Ücretsiz Başla
+            Ücretsiz Dene
           </Link>
         </div>
       </nav>
 
-      {/* HERO */}
-      <section style={{ maxWidth: 1024, margin: '0 auto', padding: '88px 24px 72px', borderBottom: `1px solid ${DIV}` }}>
-        <p style={{ fontFamily: MONO, fontSize: 10, fontWeight: 500, letterSpacing: '0.2em', textTransform: 'uppercase', color: MUTE, marginBottom: 32 }}>
-          Berber · Kuaför · Barber
-        </p>
-        <h1 style={{
-          fontFamily: SERIF,
-          fontSize: 'clamp(36px, 6vw, 64px)',
-          fontWeight: 400, lineHeight: 1.05,
-          letterSpacing: '-0.02em',
-          margin: '0 0 24px', maxWidth: 680,
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <section style={{ textAlign: 'center', padding: '72px 24px 56px', maxWidth: 640, margin: '0 auto' }}>
+        <div style={{
+          display: 'inline-block', fontSize: 11, fontWeight: 700,
+          letterSpacing: '0.18em', textTransform: 'uppercase',
+          color: 'var(--brand-600)', background: 'var(--brand-100)',
+          padding: '4px 12px', borderRadius: 999, marginBottom: 24,
         }}>
-          Müşterileriniz sizi<br />sosyal medyadan bulsun.
+          Berber · Kuaför · Barber
+        </div>
+        <h1 style={{
+          fontSize: 'clamp(32px, 6vw, 52px)', fontWeight: 700,
+          letterSpacing: '-0.03em', lineHeight: 1.05,
+          color: 'var(--fg-1)', margin: '0 0 20px',
+        }}>
+          Dükkanını Dijitale Taşı
         </h1>
-        <p style={{ fontSize: 17, lineHeight: 1.7, color: SUB, maxWidth: 460, margin: '0 0 44px' }}>
-          Instagram&apos;a linkinizi koyun. Müşterileriniz randevusunu kendisi alsın —
-          siz sadece işinize bakın.
+        <p style={{
+          fontSize: 17, lineHeight: 1.65, color: 'var(--fg-3)',
+          margin: '0 auto 40px', maxWidth: 460,
+        }}>
+          Müşterilerine online randevu al, ekibini yönet ve kazancını takip et —
+          hepsi tek uygulamada.
         </p>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
           <Link href="/kayit" style={{
-            fontSize: 12, fontWeight: 600, color: BG,
-            background: INK, padding: '14px 36px',
-            textDecoration: 'none', letterSpacing: '0.06em', textTransform: 'uppercase',
+            fontSize: 15, fontWeight: 700, color: '#fff', textDecoration: 'none',
+            background: 'var(--brand-600)', padding: '14px 28px', borderRadius: 12,
+            display: 'inline-block',
           }}>
             Ücretsiz Başla
           </Link>
           <a href="#nasil-calisir" style={{
-            fontSize: 14, fontWeight: 500, color: INK,
-            padding: '13px 24px',
-            textDecoration: 'none',
-            border: `1px solid #C8C0B4`,
-            letterSpacing: '-0.01em',
+            fontSize: 15, fontWeight: 600, color: 'var(--fg-2)', textDecoration: 'none',
+            background: 'var(--bg-elevated)', padding: '14px 28px', borderRadius: 12,
+            border: '1.5px solid var(--border)', display: 'inline-block',
           }}>
             Nasıl çalışır? →
           </a>
         </div>
       </section>
 
-      {/* STATS */}
-      <section style={{ maxWidth: 1024, margin: '0 auto', padding: '0 24px', borderBottom: `1px solid ${DIV}`, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
-        {[
-          { value: '5 dk', label: 'Kurulum süresi' },
-          { value: '7/24', label: 'Randevu alınabilir' },
-          { value: '0 ₺', label: 'Başlangıç ücreti' },
-        ].map((s, i) => (
-          <div key={i} style={{
-            padding: '36px 0',
-            borderRight: i < 2 ? `1px solid ${DIV}` : undefined,
-            paddingLeft: i > 0 ? 40 : 0,
-          }}>
-            <div style={{ fontFamily: SERIF, fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 400, letterSpacing: '-0.03em', marginBottom: 8, lineHeight: 1 }}>
-              {s.value}
-            </div>
-            <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTE }}>
-              {s.label}
-            </div>
+      {/* ── Features ─────────────────────────────────────────── */}
+      <section id="nasil-calisir" style={{ background: 'var(--bg-elevated)', padding: '56px 24px' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--fg-4)', marginBottom: 12 }}>
+              Özellikler
+            </p>
+            <h2 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--fg-1)', margin: 0 }}>
+              İhtiyacın olan her şey
+            </h2>
           </div>
-        ))}
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section id="nasil-calisir" style={{ maxWidth: 1024, margin: '0 auto', padding: '72px 24px', borderBottom: `1px solid ${DIV}` }}>
-        <p style={{ fontFamily: MONO, fontSize: 10, fontWeight: 500, letterSpacing: '0.2em', textTransform: 'uppercase', color: MUTE, marginBottom: 48 }}>
-          Nasıl çalışır
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 40 }}>
-          {steps.map((s) => (
-            <div key={s.n}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-                <span style={{ fontFamily: MONO, fontSize: 11, color: '#C8C0B4', flexShrink: 0 }}>{s.n}</span>
-                <div style={{ height: 1, flex: 1, background: DIV }} />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
+            {[
+              {
+                emoji: '📅',
+                title: 'Online Randevu',
+                desc: 'Müşterilerin 7/24 randevu alabilir. Seninle dolu saatleri görmez, sadece müsaitleri.',
+              },
+              {
+                emoji: '👥',
+                title: 'Ekip Yönetimi',
+                desc: 'Birden fazla usta çalışıyorsa herkese ayrı ajanda. Kimin ne zaman boş olduğunu görebilirsin.',
+              },
+              {
+                emoji: '💰',
+                title: 'Kazanç Takibi',
+                desc: 'Aylık, haftalık, ustalara göre kazanç raporları. Komisyon hesaplaması dahil.',
+              },
+              {
+                emoji: '🔗',
+                title: 'Kişisel Link',
+                desc: 'Her ustanın kendi randevu linki. Instagram\'a koy, müşterilerin direkt sana gelsin.',
+              },
+              {
+                emoji: '📱',
+                title: 'Mobil Uygulama',
+                desc: 'iOS ve Android uygulaması. Gittiğin her yerden randevularını gör ve yönet.',
+              },
+              {
+                emoji: '🚫',
+                title: 'Gelmedi / İzin',
+                desc: 'Tatil günlerini, öğle aralarını ve geç gelmeleri tek tıkla engelleyebilirsin.',
+              },
+            ].map(f => (
+              <div key={f.title} style={{
+                background: 'var(--bg)', border: '1.5px solid var(--border)',
+                borderRadius: 16, padding: '24px 20px',
+              }}>
+                <div style={{ fontSize: 28, marginBottom: 12 }}>{f.emoji}</div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--fg-1)', margin: '0 0 8px' }}>{f.title}</h3>
+                <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--fg-3)', margin: 0 }}>{f.desc}</p>
               </div>
-              <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 10, letterSpacing: '-0.01em' }}>{s.title}</h3>
-              <p style={{ fontSize: 13, lineHeight: 1.7, color: SUB, margin: 0 }}>{s.desc}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* FEATURES */}
-      <section style={{ maxWidth: 1024, margin: '0 auto', padding: '72px 24px', borderBottom: `1px solid ${DIV}` }}>
-        <p style={{ fontFamily: MONO, fontSize: 10, fontWeight: 500, letterSpacing: '0.2em', textTransform: 'uppercase', color: MUTE, marginBottom: 48 }}>
-          Özellikler
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 2 }}>
-          {features.map((f) => (
-            <div key={f.n} style={{
-              border: `1px solid ${DIV}`,
-              padding: '28px 24px',
-              background: CARD,
-            }}>
-              <span style={{ fontFamily: MONO, fontSize: 10, color: '#C8C0B4', display: 'block', marginBottom: 14 }}>{f.n}</span>
-              <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, letterSpacing: '-0.01em' }}>{f.title}</h3>
-              <p style={{ fontSize: 13, lineHeight: 1.7, color: SUB, margin: 0 }}>{f.desc}</p>
-            </div>
-          ))}
+      {/* ── How It Works ─────────────────────────────────────── */}
+      <section style={{ padding: '56px 24px' }}>
+        <div style={{ maxWidth: 640, margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--fg-4)', marginBottom: 12 }}>
+            3 Adımda Başla
+          </p>
+          <h2 style={{ fontSize: 'clamp(22px, 3.5vw, 32px)', fontWeight: 700, letterSpacing: '-0.02em', margin: '0 0 40px' }}>
+            5 dakikada dükkanını kur
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, textAlign: 'left' }}>
+            {[
+              { n: '1', title: 'Dükkanını tanıt', desc: 'Adını, şehrini gir. Rezervasyon linkin hazır.' },
+              { n: '2', title: 'Hizmetlerini ekle', desc: 'Saç kesimi, sakal tıraşı... fiyat ve süreyle birlikte.' },
+              { n: '3', title: 'Linki paylaş', desc: 'Instagram veya WhatsApp\'a at. Randevular akmaya başlar.' },
+            ].map(s => (
+              <div key={s.n} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 999, background: 'var(--brand-600)',
+                  color: '#fff', fontSize: 15, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>
+                  {s.n}
+                </div>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg-1)', marginBottom: 4 }}>{s.title}</div>
+                  <div style={{ fontSize: 13, color: 'var(--fg-3)', lineHeight: 1.55 }}>{s.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Link href="/kayit" style={{
+            display: 'block', marginTop: 40, fontSize: 15, fontWeight: 700,
+            color: '#fff', textDecoration: 'none',
+            background: 'var(--brand-600)', padding: '16px', borderRadius: 14, textAlign: 'center',
+          }}>
+            Ücretsiz Başla
+          </Link>
         </div>
       </section>
 
-      {/* CTA */}
-      <section style={{ maxWidth: 1024, margin: '0 auto', padding: '88px 24px', borderBottom: `1px solid ${DIV}`, textAlign: 'center' }}>
-        <p style={{ fontFamily: MONO, fontSize: 10, fontWeight: 500, letterSpacing: '0.2em', textTransform: 'uppercase', color: MUTE, marginBottom: 24 }}>
-          Başlamak için hazır mısınız?
-        </p>
-        <h2 style={{
-          fontFamily: SERIF,
-          fontSize: 'clamp(28px, 4vw, 48px)',
-          fontWeight: 400, letterSpacing: '-0.02em',
-          margin: '0 0 20px', lineHeight: 1.1,
-        }}>
-          Dükkanınızı dijitale taşıyın.
-        </h2>
-        <p style={{ fontSize: 15, color: SUB, marginBottom: 40, lineHeight: 1.7, maxWidth: 380, margin: '0 auto 40px' }}>
-          Kaydolun, linkinizi alın, Instagram&apos;a koyun.<br />İlk randevu bugün gelebilir.
-        </p>
-        <Link href="/kayit" style={{
-          fontSize: 12, fontWeight: 600, color: BG,
-          background: INK, padding: '16px 44px',
-          textDecoration: 'none', letterSpacing: '0.06em', textTransform: 'uppercase',
-          display: 'inline-block',
-        }}>
-          Ücretsiz Başla
-        </Link>
-      </section>
-
-      {/* FOOTER */}
+      {/* ── Footer ───────────────────────────────────────────── */}
       <footer style={{
-        maxWidth: 1024, margin: '0 auto',
-        padding: '32px 24px',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        flexWrap: 'wrap', gap: 16,
+        background: 'var(--bg-elevated)', borderTop: '1px solid var(--divider)',
+        padding: '32px 24px', textAlign: 'center',
       }}>
-        <span style={{ fontFamily: MONO, fontSize: 12, color: '#C8C0B4' }}>Sıradaki</span>
-        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-          {[
-            { label: 'Gizlilik', href: '/gizlilik-politikasi' },
-            { label: 'Koşullar', href: '/kullanim-kosullari' },
-            { label: 'Çerezler', href: '/cerez-politikasi' },
-          ].map((l) => (
-            <Link key={l.href} href={l.href} style={{ fontSize: 12, color: MUTE, textDecoration: 'none' }}>
-              {l.label}
-            </Link>
-          ))}
-          <a href="mailto:destek@siradaki.com" style={{ fontSize: 12, color: MUTE, textDecoration: 'none' }}>
-            İletişim
-          </a>
+        <div style={{ marginBottom: 16 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--fg-1)' }}>Sıradaki</span>
         </div>
-        <span style={{ fontFamily: MONO, fontSize: 11, color: '#C8C0B4' }}>
-          © {new Date().getFullYear()}
-        </span>
+        <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+          {[
+            { label: 'Gizlilik Politikası', href: '/gizlilik-politikasi' },
+            { label: 'Kullanım Koşulları', href: '/kullanim-kosullari' },
+            { label: 'Çerez Politikası', href: '/cerez-politikasi' },
+            { label: 'İletişim', href: 'mailto:destek@sıradaki.com' },
+          ].map(l => (
+            l.href.startsWith('mailto:') ? (
+              <a key={l.href} href={l.href} style={{ fontSize: 13, color: 'var(--fg-3)', textDecoration: 'none', fontWeight: 500 }}>
+                {l.label}
+              </a>
+            ) : (
+              <Link key={l.href} href={l.href} style={{ fontSize: 13, color: 'var(--fg-3)', textDecoration: 'none', fontWeight: 500 }}>
+                {l.label}
+              </Link>
+            )
+          ))}
+        </div>
+        <p style={{ fontSize: 11, color: 'var(--fg-4)', margin: 0 }}>
+          © {new Date().getFullYear()} Sıradaki. Tüm hakları saklıdır.
+        </p>
       </footer>
-
     </div>
   );
 }
