@@ -138,13 +138,13 @@ serve(async (req) => {
   if (!shop_slug || !service_id || !starts_at || !customer_name) {
     return error("shop_slug, service_id, starts_at, customer_name zorunlu");
   }
-  if (customer_name.trim().length < 2) return error("Isim en az 2 karakter olmali");
+  if (customer_name.trim().length < 2) return error("İsim en az 2 karakter olmalı");
   if (customer_phone && !isValidPhone(customer_phone.trim())) {
     return error("Geçersiz müşteri telefon numarası", 400);
   }
 
   const slotDate = new Date(starts_at);
-  if (isNaN(slotDate.getTime())) return error("Gecersiz starts_at");
+  if (isNaN(slotDate.getTime())) return error("Geçersiz starts_at");
 
   const supabase = createAdminClient();
 
@@ -163,7 +163,7 @@ serve(async (req) => {
   if (rpcError) {
     const status = mapRpcErrorStatus(rpcError.code);
     if (status === 500) console.error("create_appointment_atomic failed:", rpcError);
-    return error(rpcError.message ?? "Randevu olusturulamadi", status, {
+    return error(rpcError.message ?? "Randevu oluşturulamadı", status, {
       code: status === 409 ? "BOOKING_CONFLICT" : status === 429 ? "RATE_LIMITED" : status === 403 ? "FORBIDDEN" : "BOOKING_ERROR",
       should_refetch_availability: status === 409,
       ...(status === 429 ? { retry_after: 600 } : {}),

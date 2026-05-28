@@ -27,9 +27,9 @@ serve(async (req) => {
     .eq("token_hash", tokenHash)
     .single();
 
-  if (!widgetToken) return error("Gecersiz token", 401);
+  if (!widgetToken) return error("Geçersiz token", 401);
   if (widgetToken.expires_at && new Date(widgetToken.expires_at) < new Date()) {
-    return error("Token suresi dolmus", 401);
+    return error("Token süresi dolmuş", 401);
   }
   // Per-token cooldown using already-fetched last_used_at (no extra DB round-trip).
   if (widgetToken.last_used_at) {
@@ -43,14 +43,14 @@ serve(async (req) => {
   try {
     body = await req.json();
   } catch {
-    return error("Gecersiz JSON");
+    return error("Geçersiz JSON");
   }
 
   const { duration_min, reason = "walkin" } = body;
   let staff_id = body.staff_id ?? body.barber_id;
 
   if (!duration_min || duration_min < 5 || duration_min > 480) {
-    return error("duration_min 5-480 dakika arasinda olmali");
+    return error("duration_min 5-480 dakika arasında olmalı");
   }
 
   if (!staff_id) {
@@ -93,7 +93,7 @@ serve(async (req) => {
   if (rpcError) {
     const status = rpcError.code === "P0001" ? 409 : rpcError.code === "22023" ? 400 : 500;
     if (status === 500) console.error("create_block_atomic failed:", rpcError);
-    return error(rpcError.message ?? "Blok olusturulamadi", status, {
+    return error(rpcError.message ?? "Blok oluşturulamadı", status, {
       code: status === 409 ? "BLOCK_CONFLICT" : "BLOCK_ERROR",
       should_refetch_availability: status === 409,
     });
