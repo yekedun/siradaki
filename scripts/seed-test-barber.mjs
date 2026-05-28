@@ -1,7 +1,31 @@
 import { createClient } from '@supabase/supabase-js';
+import { execFileSync } from 'child_process';
 
-const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz';
+function readSupabaseStatusEnv() {
+  try {
+    const out = execFileSync('supabase', ['status', '-o', 'env'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    return Object.fromEntries(
+      out
+        .split(/\r?\n/)
+        .map((line) => line.match(/^([A-Z0-9_]+)=(.*)$/))
+        .filter(Boolean)
+        .map((m) => [m[1], m[2].replace(/^"|"$/g, '')])
+    );
+  } catch {
+    return {};
+  }
+}
+
+const localEnv = readSupabaseStatusEnv();
+const SUPABASE_URL = process.env.SUPABASE_URL ?? localEnv.API_URL ?? 'http://127.0.0.1:54321';
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? localEnv.SECRET_KEY ?? localEnv.SERVICE_ROLE_KEY;
+
+if (!SERVICE_KEY) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY missing. Run `supabase start` or set it in the shell.');
+}
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },

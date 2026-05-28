@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import type { ProbeResult } from "./types.js";
@@ -13,9 +14,33 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 
 // ── Supabase clients ──────────────────────────────────────────────────────
 
-const SUPABASE_URL = "http://127.0.0.1:54201";
-const ANON_KEY = "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH";
-const SERVICE_ROLE_KEY = "sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz";
+function readSupabaseStatusEnv(): Record<string, string> {
+  try {
+    const out = execFileSync("supabase", ["status", "-o", "env"], {
+      cwd: ROOT,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    return Object.fromEntries(
+      out
+        .split(/\r?\n/)
+        .map((line) => line.match(/^([A-Z0-9_]+)=(.*)$/))
+        .filter((m): m is RegExpMatchArray => Boolean(m))
+        .map((m) => [m[1], m[2].replace(/^"|"$/g, "")])
+    );
+  } catch {
+    return {};
+  }
+}
+
+const localEnv = readSupabaseStatusEnv();
+const SUPABASE_URL = process.env.SUPABASE_URL ?? localEnv.API_URL ?? "http://127.0.0.1:54321";
+const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? localEnv.PUBLISHABLE_KEY ?? localEnv.ANON_KEY ?? "";
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? localEnv.SECRET_KEY ?? localEnv.SERVICE_ROLE_KEY ?? "";
+
+if (!ANON_KEY || !SERVICE_ROLE_KEY) {
+  throw new Error("Supabase local keys missing. Run `supabase start` or set SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY.");
+}
 
 export const anonClient = createClient(SUPABASE_URL, ANON_KEY);
 export const serviceClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -220,11 +245,10 @@ export async function probeEdgeFns() {
 // ── RLS Probing ───────────────────────────────────────────────────────────
 
 const PUBLIC_READ_TABLES = ["services", "shops", "staff"] as const;
-// staff_schedules intentionally allows anon reads for active staff (booking flow needs it)
-const PUBLIC_FILTERED_TABLES = ["staff_schedules"] as const;
 const PROTECTED_TABLES = [
   "appointments",
   "blocks",
+  "staff_schedules",
   "widget_tokens",
   "appointment_slots",
   "block_slots",
@@ -242,18 +266,6 @@ export async function probeRls() {
       fail("rls", `${t} anon-read`, `Error: ${res.error.message}`, ms);
     } else {
       pass("rls", `${t} anon-read`, `${res.data?.length ?? 0} row(s) returned`, ms);
-    }
-  }
-
-  // Tables with filtered anon access (RLS allows reads for active staff — needed for booking)
-  for (const t of PUBLIC_FILTERED_TABLES) {
-    const [res, ms] = await timed(() =>
-      anonClient.from(t).select("*").limit(5)
-    );
-    if (res.error) {
-      fail("rls", `${t} anon-filtered-read`, `Error: ${res.error.message}`, ms);
-    } else {
-      pass("rls", `${t} anon-filtered-read`, `${res.data?.length ?? 0} row(s) visible (filtered by RLS)`, ms);
     }
   }
 
@@ -277,7 +289,7 @@ export async function probeRls() {
   }
 
   // Service role should read all tables without error
-  for (const t of [...PUBLIC_READ_TABLES, ...PUBLIC_FILTERED_TABLES, ...PROTECTED_TABLES]) {
+  for (const t of [...PUBLIC_READ_TABLES, ...PROTECTED_TABLES]) {
     const [res, ms] = await timed(() =>
       serviceClient.from(t).select("*").limit(1)
     );

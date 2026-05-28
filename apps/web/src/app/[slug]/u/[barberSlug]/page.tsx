@@ -8,15 +8,16 @@ import { supabase } from '../../../../lib/supabase';
 import BookingClient from '../../BookingClient';
 
 interface Props {
-  params: { slug: string; barberSlug: string };
+  params: Promise<{ slug: string; barberSlug: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug, barberSlug } = await params;
   const { data: staffMember } = await supabase
     .from('staff')
     .select('name, shops(name)')
-    .eq('slug', params.barberSlug)
-    .eq('shops.slug', params.slug)
+    .eq('slug', barberSlug)
+    .eq('shops.slug', slug)
     .eq('is_active', true)
     .maybeSingle();
 
@@ -29,7 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function BarberPage({ params }: Props) {
-  const { slug, barberSlug } = params;
+  const { slug, barberSlug } = await params;
 
   // Shop
   const { data: shop } = await supabase

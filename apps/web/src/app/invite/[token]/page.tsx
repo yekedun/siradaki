@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import OpenInviteClient from './OpenInviteClient';
 
 interface Props {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }
 
 export const metadata: Metadata = {
@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   description: 'Sıradaki berber davetini uygulamada aç.',
 };
 
-export default function InvitePage({ params }: Props) {
-  return <OpenInviteClient token={params.token} />;
+export default async function InvitePage({ params }: Props) {
+  const { token } = await params;
+  return <OpenInviteClient token={token} />;
 }

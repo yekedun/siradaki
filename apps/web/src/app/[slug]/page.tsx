@@ -8,15 +8,16 @@ import { supabase } from '../../lib/supabase';
 import BookingClient from './BookingClient';
 
 interface Props {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 /* ── Metadata ─────────────────────────────────────────────────── */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
   const { data: shop } = await supabase
     .from('shops')
     .select('name, display_name, address')
-    .eq('slug', params.slug)
+    .eq('slug', slug)
     .eq('status', 'active')
     .maybeSingle();
   if (!shop) return { title: 'Dükkan Bulunamadı' };
@@ -29,7 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 /* ── Page ─────────────────────────────────────────────────────── */
 export default async function ShopPage({ params }: Props) {
-  const { slug } = params;
+  const { slug } = await params;
 
   // Shop
   const { data: shop } = await supabase

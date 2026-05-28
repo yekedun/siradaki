@@ -1,6 +1,7 @@
 // / · Sıradaki Landing Page
 // Hero + features + CTA + footer with legal links
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Sıradaki — Berber Randevu ve Ekip Yönetimi',
@@ -21,15 +22,15 @@ export default function LandingPage() {
           Sıradaki
         </span>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <a href="/giris" style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-3)', textDecoration: 'none' }}>
+          <Link href="/giris" style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg-3)', textDecoration: 'none' }}>
             Giriş
-          </a>
-          <a href="/kayit" style={{
+          </Link>
+          <Link href="/kayit" style={{
             fontSize: 13, fontWeight: 700, color: '#fff', textDecoration: 'none',
             background: 'var(--brand-600)', padding: '8px 16px', borderRadius: 8,
           }}>
             Ücretsiz Dene
-          </a>
+          </Link>
         </div>
       </nav>
 
@@ -58,13 +59,13 @@ export default function LandingPage() {
           hepsi tek uygulamada.
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <a href="/kayit" style={{
+          <Link href="/kayit" style={{
             fontSize: 15, fontWeight: 700, color: '#fff', textDecoration: 'none',
             background: 'var(--brand-600)', padding: '14px 28px', borderRadius: 12,
             display: 'inline-block',
           }}>
             Ücretsiz Başla
-          </a>
+          </Link>
           <a href="#nasil-calisir" style={{
             fontSize: 15, fontWeight: 600, color: 'var(--fg-2)', textDecoration: 'none',
             background: 'var(--bg-elevated)', padding: '14px 28px', borderRadius: 12,
@@ -162,13 +163,13 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-          <a href="/kayit" style={{
+          <Link href="/kayit" style={{
             display: 'block', marginTop: 40, fontSize: 15, fontWeight: 700,
             color: '#fff', textDecoration: 'none',
             background: 'var(--brand-600)', padding: '16px', borderRadius: 14, textAlign: 'center',
           }}>
             Ücretsiz Başla
-          </a>
+          </Link>
         </div>
       </section>
 
@@ -187,9 +188,15 @@ export default function LandingPage() {
             { label: 'Çerez Politikası', href: '/cerez-politikasi' },
             { label: 'İletişim', href: 'mailto:destek@sıradaki.com' },
           ].map(l => (
-            <a key={l.href} href={l.href} style={{ fontSize: 13, color: 'var(--fg-3)', textDecoration: 'none', fontWeight: 500 }}>
-              {l.label}
-            </a>
+            l.href.startsWith('mailto:') ? (
+              <a key={l.href} href={l.href} style={{ fontSize: 13, color: 'var(--fg-3)', textDecoration: 'none', fontWeight: 500 }}>
+                {l.label}
+              </a>
+            ) : (
+              <Link key={l.href} href={l.href} style={{ fontSize: 13, color: 'var(--fg-3)', textDecoration: 'none', fontWeight: 500 }}>
+                {l.label}
+              </Link>
+            )
           ))}
         </div>
         <p style={{ fontSize: 11, color: 'var(--fg-4)', margin: 0 }}>
