@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createAdminClient } from "../_shared/supabase-admin.ts";
-import { corsOptions, error, json } from "../_shared/cors.ts";
+import { corsOptions, error, json, bodyGuard } from "../_shared/cors.ts";
 
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_SEC = 600;
@@ -8,7 +8,10 @@ const RATE_LIMIT_WINDOW_SEC = 600;
 async function isRateLimited(ip: string): Promise<boolean> {
   const url = Deno.env.get("UPSTASH_REDIS_REST_URL");
   const token = Deno.env.get("UPSTASH_REDIS_REST_TOKEN");
-  if (!url || !token) return false;
+  if (!url || !token) {
+    console.warn("[widget-book] Upstash not configured — IP rate limiting is disabled");
+    return false;
+  }
 
   const key = `rl:book:${ip}`;
   try {
@@ -67,6 +70,9 @@ function isValidPhone(phone: string): boolean {
 serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions();
   if (req.method !== "POST") return error("Method not allowed", 405);
+
+  const guard = bodyGuard(req);
+  if (guard) return guard;
 
   const ip = getClientIp(req);
   if (await isRateLimited(ip)) {

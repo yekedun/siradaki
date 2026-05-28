@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createAdminClient } from "../_shared/supabase-admin.ts";
-import { corsOptions, error, json } from "../_shared/cors.ts";
+import { corsOptions, error, json, bodyGuard } from "../_shared/cors.ts";
 
 async function sendBookingNotifications(
   appointmentId: string,
@@ -110,6 +110,9 @@ function isValidPhone(phone: string): boolean {
 serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions();
   if (req.method !== "POST") return error("Method not allowed", 405);
+
+  const guard = bodyGuard(req);
+  if (guard) return guard;
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) return error("Giriş gerekli", 401);

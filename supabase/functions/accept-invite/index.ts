@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createAdminClient } from "../_shared/supabase-admin.ts";
-import { corsOptions, error, json } from "../_shared/cors.ts";
+import { corsOptions, error, json, bodyGuard } from "../_shared/cors.ts";
 
 function toSlug(name: string): string {
   return name.toLowerCase()
@@ -13,6 +13,9 @@ function toSlug(name: string): string {
 serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions();
   if (req.method !== "POST") return error("Method not allowed", 405);
+
+  const guard = bodyGuard(req);
+  if (guard) return guard;
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) return error("Authorization header eksik", 401);
@@ -45,9 +48,13 @@ serve(async (req) => {
     .maybeSingle();
 
   if (inviteErr) return error("Token okunamadı: " + inviteErr.message, 500);
-  if (!inviteRow) return error("Geçersiz token", 404);
-  if (inviteRow.used_at) return error("Token zaten kullanılmış", 409);
-  if (new Date(inviteRow.expires_at) < new Date()) return error("Token süresi dolmuş", 410);
+  if (
+    !inviteRow ||
+    inviteRow.used_at ||
+    new Date(inviteRow.expires_at) < new Date()
+  ) {
+    return error("Invalid or expired invite link", 404);
+  }
 
   const { data: shop, error: shopErr } = await admin
     .from("shops")
