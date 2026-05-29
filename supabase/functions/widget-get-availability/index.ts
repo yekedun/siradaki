@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createAdminClient } from "../_shared/supabase-admin.ts";
-import { corsOptions, error, json } from "../_shared/cors.ts";
+import { corsOptions, error, jsonCached } from "../_shared/cors.ts";
 import { computeAvailableSlots } from "@berber/shared/slot-utils";
 
 type WorkingHours = Record<
@@ -115,7 +115,7 @@ serve(async (req) => {
 
     if (closed) {
       // Personel o gün çalışmıyor → tüm slotlar available=false
-      return json({
+      return jsonCached({
         staff_id: staffMember.id,
         closed: true,
         occupied: [],
@@ -141,7 +141,7 @@ serve(async (req) => {
       timezone,
     });
 
-    return json({
+    return jsonCached({
       staff_id: staffMember.id,
       closed: false,
       occupied: occupied ?? [],
@@ -250,12 +250,12 @@ serve(async (req) => {
   // (slotMap boş olur ama "Fully booked" yerine "Closed today" gösterilmeli)
   const allClosed = perStaff.every((p) => p.closed);
   if (allClosed) {
-    return json({ staff_id: "any", closed: true, slots: [] });
+    return jsonCached({ staff_id: "any", closed: true, slots: [] });
   }
 
   const slots = Array.from(slotMap.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([starts_at, { ends_at, available }]) => ({ starts_at, ends_at, available }));
 
-  return json({ staff_id: "any", closed: false, slots });
+  return jsonCached({ staff_id: "any", closed: false, slots });
 });

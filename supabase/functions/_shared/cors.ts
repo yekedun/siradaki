@@ -58,6 +58,21 @@ export function error(
   return json({ error: message, ...(extras ?? {}) }, status, req);
 }
 
+// For public read-only endpoints (e.g. widget-get-availability) — lets CDN/browser
+// cache responses so repeated identical requests don't hit the DB.
+export function jsonCached(data: unknown, maxAgeSec = 30, req?: Request): Response {
+  return cors(
+    new Response(JSON.stringify(data), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': `public, max-age=${maxAgeSec}, stale-while-revalidate=${maxAgeSec * 2}`,
+      },
+    }),
+    req,
+  );
+}
+
 const MAX_BODY_BYTES = 16_000; // 16 KB — sufficient for all booking payloads
 
 // Call at the top of every POST handler. Returns a 413 Response if the

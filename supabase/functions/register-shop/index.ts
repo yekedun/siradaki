@@ -44,9 +44,58 @@ serve(async (req) => {
   const admin = createAdminClient();
 
   const { data: existing } = await admin.from("shops")
-    .select("id").or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
+    .select("id, status, slug, name").or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
     .maybeSingle();
-  if (existing) return error("Bu hesaba zaten dükkan bağlı", 409);
+  if (existing && existing.status !== "rejected") return error("Bu hesaba zaten dükkan bağlı", 409);
+
+  // Rejected shop: allow reapplication — update name + reset to pending
+  if (existing && existing.status === "rejected") {
+    const { error: updateErr } = await admin.from("shops")
+      .update({ name: shop_name.trim(), status: "pending" })
+      .eq("id", existing.id);
+    if (updateErr) return error("Yeniden başvuru yapılamadı: " + updateErr.message, 500);
+
+    // Update owner staff record name/phone
+    await admin.from("staff")
+      .update({
+        name: user.user_metadata?.full_name ?? shop_name.trim(),
+        phone: phone?.trim() || null,
+      })
+      .eq("shop_id", existing.id)
+      .eq("user_id", user.id);
+
+    // Notify admin of re-application
+    const adminToken = Deno.env.get("ADMIN_EXPO_PUSH_TOKEN");
+    if (adminToken) {
+      await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: adminToken,
+          title: "Yeniden Başvuru",
+          body: `${shop_name.trim()} tekrar onay bekliyor`,
+          data: { type: "new_shop", shopId: existing.id },
+        }),
+      }).catch(() => {});
+    }
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    const adminEmail = Deno.env.get("ADMIN_EMAIL");
+    const fromEmail = Deno.env.get("SYSTEM_FROM_EMAIL") ?? "sistem@siradaki.app";
+    if (resendKey && adminEmail) {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: fromEmail,
+          to: adminEmail,
+          subject: `Yeniden başvuru: ${escapeHtml(shop_name.trim())}`,
+          html: `<p><b>${escapeHtml(shop_name.trim())}</b> yeniden onay bekliyor.</p><p><a href="https://siradaki.app/admin">Admin panelini aç</a></p>`,
+        }),
+      }).catch(() => {});
+    }
+
+    return json({ shop: { id: existing.id, slug: existing.slug, status: "pending" } }, 201);
+  }
 
   let body: { shop_name: string; phone?: string };
   try {

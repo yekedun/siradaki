@@ -13,9 +13,13 @@ function getAdminClient() {
 function assertAdmin(adminKey: string) {
   const secret = process.env.ADMIN_SECRET_KEY ?? '';
   if (!secret) throw new Error('ADMIN_SECRET_KEY env var eksik');
-  if (adminKey.length !== secret.length) throw new Error('Yetkisiz');
-  const a = Buffer.from(adminKey);
-  const b = Buffer.from(secret);
+  // Pad both buffers to the same length before comparing so an attacker
+  // cannot infer secret length from which branch is taken.
+  const maxLen = Math.max(adminKey.length, secret.length);
+  const a = Buffer.alloc(maxLen);
+  const b = Buffer.alloc(maxLen);
+  Buffer.from(adminKey).copy(a);
+  Buffer.from(secret).copy(b);
   if (!timingSafeEqual(a, b)) throw new Error('Yetkisiz');
 }
 

@@ -92,6 +92,7 @@ export async function determineUserRole(
     .select('id')
     .eq('user_id', userId)
     .eq('is_active', true)
+    .limit(1)
     .maybeSingle();
   if (staffError) return 'unknown';
 
