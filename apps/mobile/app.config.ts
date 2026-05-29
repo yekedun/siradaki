@@ -68,7 +68,7 @@ const baseConfig = ({ config }: ConfigContext): ExpoConfig => ({
   ],
   scheme: 'siradaki',
   updates: {
-    url: 'https://u.expo.dev/d1da3258-795a-4a62-b8ad-96c48e79a635',
+    url: 'https://u.expo.dev/25ac450c-8b07-4703-805f-3d4fea1b8db7',
   },
   runtimeVersion: {
     policy: 'appVersion',
@@ -78,7 +78,7 @@ const baseConfig = ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     eas: {
-      projectId: 'd1da3258-795a-4a62-b8ad-96c48e79a635',
+      projectId: '25ac450c-8b07-4703-805f-3d4fea1b8db7',
     },
   },
 });
