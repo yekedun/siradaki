@@ -88,6 +88,7 @@ export default function LoginScreen() {
         return;
       }
       trackEvent('login_success', { method: 'google' });
+      // routing is handled by _layout.tsx onAuthStateChange — no explicit navigate needed
     } finally {
       setLoading(false);
     }

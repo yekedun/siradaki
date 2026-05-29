@@ -47,7 +47,11 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
   const [modalOpen,  setModalOpen]  = useState(false);
 
   function handleBookingStart() {
-    trackWebEvent('web_booking_started', { shop_slug: shop.slug, ...(selService ? { service_id: selService } : {}) });
+    trackWebEvent('web_booking_started', {
+      shop_slug: shop.slug,
+      ...(selService ? { service_id: selService } : {}),
+      ...(selStaff   ? { staff_id:   selStaff }   : {}),
+    });
     setModalOpen(true);
   }
 
@@ -227,7 +231,11 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
         serviceId={selService ?? ''}
         startsAt={selISO}
         onSuccess={() => {
-          trackWebEvent('web_booking_completed', { shop_slug: shop.slug, ...(selService ? { service_id: selService } : {}) });
+          trackWebEvent('web_booking_completed', {
+            shop_slug: shop.slug,
+            ...(selService ? { service_id: selService } : {}),
+            ...(selStaff   ? { staff_id:   selStaff }   : {}),
+          });
           const next = nextBookingSuccessState({ modalOpen, selectedSlot: selSlot });
           setModalOpen(next.modalOpen);
           setSelSlot(next.selectedSlot);
