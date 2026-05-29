@@ -396,7 +396,7 @@ export default function AgendaScreen() {
             Alert.alert('Hata', msg);
             return;
           }
-          trackEvent('appointment_created');
+          trackEvent('appointment_created', { shop_slug: shopSlug, service_id: data.serviceId, staff_id: data.staffId });
           setShowAdd(false);
           loadAgenda();
         }}

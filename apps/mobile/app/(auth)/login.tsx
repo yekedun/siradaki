@@ -63,7 +63,7 @@ export default function LoginScreen() {
         password,
       });
       if (authError) {
-        trackEvent('login_fail', { method: 'email', reason: authError.message });
+        trackEvent('login_fail', { method: 'email', code: authError.status ?? 'unknown' });
         setError(authError.message);
         return;
       }
@@ -83,7 +83,7 @@ export default function LoginScreen() {
     try {
       const result = await signInWithGoogle();
       if (result.error) {
-        trackEvent('login_fail', { method: 'google', reason: result.error });
+        trackEvent('login_fail', { method: 'google', code: 'google_auth_error' });
         setError(result.error);
         return;
       }

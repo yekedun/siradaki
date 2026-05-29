@@ -1,3 +1,4 @@
+// 'use client' keeps posthog-js out of the server bundle entirely
 'use client';
 
 import posthog from 'posthog-js';
