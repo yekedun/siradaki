@@ -2,471 +2,843 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Sıradaki — Berber Randevu Sistemi',
-  description: "Instagram'a linkini at. Müşterilerin 7/24 randevusunu kendisi alsın.",
+  title: 'Sıradaki — Berber Randevu & Ekip Yönetimi',
+  description: 'Berber dükkanın için randevu defteri, ekip takvimi ve online randevu — hepsi tek uygulamada.',
 };
 
-const CSS = `
-  :root { color-scheme: light only; }
+const LP_CSS = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
 
   .lp {
-    font-family: var(--font-sans, -apple-system, 'Helvetica Neue', sans-serif);
-    color: #111;
-    background: #fff;
-    min-height: 100vh;
+    --lp-black:   #0A0A0A;
+    --lp-ink:     #0B1220;
+    --lp-white:   #F9F9F6;
+    --lp-accent:  #FF4D1C;
+    --lp-navy:    #1E3A8A;
+    --lp-dim:     rgba(249,249,246,0.46);
+    --lp-display: 'Bebas Neue', sans-serif;
+    --lp-body:    'Plus Jakarta Sans', var(--font-sans, sans-serif);
+    --lp-mark:    'Montserrat', 'MontserratLocal', Helvetica, Arial, sans-serif;
+    font-family: var(--lp-body);
+    background: var(--lp-black);
+    color: var(--lp-white);
+    overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
 
-  /* ── Nav ──────────────────────────── */
+  .lp-wrap {
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 56px;
+  }
+
+  /* ── NAV ─────────────────────────────────── */
   .lp-nav {
-    border-bottom: 1px solid #e5e5e5;
-    height: 56px;
-    position: sticky;
-    top: 0;
-    z-index: 50;
-    background: rgba(255,255,255,0.92);
-    backdrop-filter: blur(12px);
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 100;
+    transition: background .3s, border-color .3s;
+    border-bottom: 1px solid transparent;
   }
-  .lp-nav .wrap { height: 100%; display: flex; align-items: center; justify-content: space-between; }
-  .lp-logo { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; color: #111; text-decoration: none; }
-  .nav-actions { display: flex; gap: 10px; align-items: center; }
-  .nav-link { font-size: 13px; font-weight: 500; color: #888; text-decoration: none; transition: color 0.15s; }
-  .nav-link:hover { color: #111; }
-  .nav-cta {
-    font-size: 13px; font-weight: 600; color: #fff; text-decoration: none;
-    background: #1E3A8A; padding: 7px 16px; border-radius: 7px;
-    transition: background 0.15s;
-  }
-  .nav-cta:hover { background: #15296B; }
 
-  /* ── Hero ─────────────────────────── */
-  .hero {
+  .lp-nav.scrolled {
+    background: rgba(10,10,10,.94);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom-color: rgba(255,255,255,.07);
+  }
+
+  .lp-nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 72px;
+    padding: 0 56px;
+  }
+
+  .lp-logo {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+
+  .lp-wordmark {
+    font-family: var(--lp-mark);
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: -.3px;
+    color: var(--lp-white);
+  }
+
+  .lp-nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+  }
+
+  .lp-nav-link {
+    font-family: var(--lp-body);
+    font-weight: 600;
+    font-size: 14px;
+    color: rgba(249,249,246,.62);
+    text-decoration: none;
+    transition: color .15s;
+  }
+  .lp-nav-link:hover { color: var(--lp-white); }
+
+  .lp-nav-cta {
+    font-family: var(--lp-body);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: .04em;
+    color: #fff;
+    background: var(--lp-accent);
+    padding: 11px 24px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: opacity .15s;
+  }
+  .lp-nav-cta:hover { opacity: .84; }
+
+  /* ── HERO ────────────────────────────────── */
+  .lp-hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 130px 56px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .lp-hero-ghost {
+    position: absolute;
+    right: -2vw;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--lp-display);
+    font-size: 52vw;
+    line-height: 1;
+    color: rgba(255,255,255,.022);
+    pointer-events: none;
+    user-select: none;
+    letter-spacing: -.02em;
+  }
+
+  .lp-hero-overline {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--lp-accent);
+    margin-bottom: 28px;
+    animation: lpFadeUp .55s ease both .1s;
+  }
+
+  .lp-hero-h1 {
+    font-family: var(--lp-display);
+    font-size: clamp(80px, 12vw, 184px);
+    line-height: .88;
+    letter-spacing: .01em;
+    text-transform: uppercase;
+    margin-bottom: 48px;
+    animation: lpFadeUp .65s ease both .2s;
+  }
+
+  .lp-hero-h1 .o { color: var(--lp-accent); }
+
+  .lp-hero-divider {
+    width: 48px;
+    height: 2px;
+    background: var(--lp-accent);
+    margin-bottom: 28px;
+    animation: lpFadeUp .5s ease both .32s;
+  }
+
+  .lp-hero-sub {
+    max-width: 460px;
+    font-size: 17px;
+    line-height: 1.72;
+    color: var(--lp-dim);
+    margin-bottom: 44px;
+    animation: lpFadeUp .55s ease both .38s;
+  }
+
+  .lp-hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    flex-wrap: wrap;
+    animation: lpFadeUp .55s ease both .46s;
+  }
+
+  .lp-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--lp-accent);
+    color: #fff;
+    font-family: var(--lp-body);
+    font-weight: 700;
+    font-size: 15px;
+    padding: 16px 36px;
+    text-decoration: none;
+    transition: box-shadow .2s, transform .18s ease;
+  }
+  .lp-btn-primary .arr { transition: transform .2s ease; display: inline-block; }
+  .lp-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 28px -8px rgba(255,77,28,.55); }
+  .lp-btn-primary:hover .arr { transform: translateX(4px); }
+
+  .lp-btn-ghost {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(249,249,246,.5);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(249,249,246,.2);
+    padding-bottom: 2px;
+    transition: color .15s, border-color .15s;
+  }
+  .lp-btn-ghost:hover { color: var(--lp-white); border-color: var(--lp-white); }
+
+  .lp-hero-stats {
+    display: flex;
+    margin-top: 80px;
+    padding-top: 40px;
+    border-top: 1px solid rgba(255,255,255,.1);
+    animation: lpFadeUp .55s ease both .54s;
+  }
+
+  .lp-hero-stat {
+    flex: 1;
+    padding-right: 40px;
+    border-right: 1px solid rgba(255,255,255,.08);
+    margin-right: 40px;
+  }
+  .lp-hero-stat:last-child { border-right: none; margin-right: 0; padding-right: 0; }
+
+  .lp-stat-num {
+    font-family: var(--lp-display);
+    font-size: 50px;
+    line-height: 1;
+    letter-spacing: .02em;
+    color: var(--lp-white);
+  }
+
+  .lp-stat-lbl {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.28);
+    margin-top: 8px;
+  }
+
+  /* ── SECTION SHARED ──────────────────────── */
+  .lp-s-over {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--lp-accent);
+    margin-bottom: 12px;
+  }
+
+  .lp-s-title {
+    font-family: var(--lp-display);
+    font-size: clamp(48px, 6vw, 88px);
+    line-height: .92;
+    text-transform: uppercase;
+    margin-bottom: 64px;
+  }
+
+  /* ── FEATURES ────────────────────────────── */
+  .lp-features {
+    background: var(--lp-white);
+    color: var(--lp-black);
+    padding: 120px 0;
+  }
+
+  .lp-feat-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 60px;
+    gap: 1px;
+    background: #D8D8D4;
+    border: 1px solid #D8D8D4;
+  }
+
+  .lp-feat-card {
+    background: var(--lp-white);
+    padding: 52px;
+    position: relative;
+    overflow: hidden;
+    transition: background .2s;
+  }
+  .lp-feat-card:hover { background: #F0F0EC; }
+
+  .lp-feat-n {
+    font-family: var(--lp-display);
+    font-size: 88px;
+    line-height: 1;
+    color: #E6E6E2;
+    margin-bottom: 8px;
+    transition: color .25s;
+    display: block;
+  }
+  .lp-feat-card:hover .lp-feat-n { color: var(--lp-accent); }
+
+  .lp-feat-rule {
+    width: 32px;
+    height: 2px;
+    background: var(--lp-black);
+    margin-bottom: 20px;
+    transition: background .25s;
+  }
+  .lp-feat-card:hover .lp-feat-rule { background: var(--lp-accent); }
+
+  .lp-feat-title {
+    font-family: var(--lp-display);
+    font-size: 36px;
+    line-height: 1;
+    text-transform: uppercase;
+    color: var(--lp-black);
+    margin-bottom: 14px;
+  }
+
+  .lp-feat-desc {
+    font-size: 15px;
+    line-height: 1.78;
+    color: #6E6E72;
+    max-width: 340px;
+  }
+
+  /* ── HOW IT WORKS ────────────────────────── */
+  .lp-hiw {
+    background: var(--lp-black);
+    padding: 120px 0;
+  }
+
+  .lp-hiw .lp-s-title { color: var(--lp-white); }
+
+  .lp-hiw-steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border: 1px solid rgba(255,255,255,.08);
+  }
+
+  .lp-step {
+    padding: 52px 44px;
+    border-right: 1px solid rgba(255,255,255,.08);
+    position: relative;
+    overflow: hidden;
+  }
+  .lp-step:last-child { border-right: none; }
+
+  .lp-step::after {
+    content: attr(data-n);
+    position: absolute;
+    top: 10px; right: 14px;
+    font-family: var(--lp-display);
+    font-size: 120px;
+    line-height: 1;
+    color: rgba(255,255,255,.04);
+    pointer-events: none;
+  }
+
+  .lp-step-badge {
+    display: inline-flex;
     align-items: center;
-    padding: 80px 0 88px;
-    border-bottom: 1px solid #e5e5e5;
-  }
-  .hero-eyebrow {
-    font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
-    text-transform: uppercase; color: #888; margin-bottom: 20px;
-    display: flex; align-items: center; gap: 10px;
-  }
-  .hero-eyebrow::before {
-    content: ''; display: block; width: 20px; height: 1px; background: #bbb;
-  }
-  .hero-h1 {
-    font-size: clamp(38px, 5.5vw, 58px); font-weight: 700;
-    letter-spacing: -0.03em; line-height: 1.06; color: #111; margin-bottom: 20px;
-  }
-  .hero-h1 span { color: #1E3A8A; }
-  .hero-sub {
-    font-size: clamp(14px, 1.8vw, 16px); line-height: 1.75; color: #666;
-    margin-bottom: 36px; max-width: 400px;
-  }
-  .hero-btns { display: flex; gap: 10px; flex-wrap: wrap; }
-
-  .btn-p {
-    font-size: 14px; font-weight: 700; color: #fff; text-decoration: none;
-    background: #1E3A8A; padding: 12px 28px; border-radius: 8px;
-    display: inline-block; transition: background 0.15s, transform 0.12s;
-  }
-  .btn-p:hover { background: #15296B; transform: translateY(-1px); }
-  .btn-g {
-    font-size: 14px; font-weight: 500; color: #666; text-decoration: none;
-    padding: 12px 20px; border-radius: 8px; border: 1px solid #e0e0e0;
-    display: inline-block; transition: border-color 0.15s, color 0.15s;
-  }
-  .btn-g:hover { border-color: #1E3A8A; color: #1E3A8A; }
-
-  /* ── Booking mock ─────────────────── */
-  .mock {
-    border: 1.5px solid #e0e0e0; border-radius: 14px;
-    overflow: hidden; box-shadow: 0 12px 48px rgba(0,0,0,0.09);
-    background: #fff;
-  }
-  .mock-bar {
-    background: #f5f5f5; border-bottom: 1px solid #e5e5e5;
-    padding: 10px 14px; display: flex; align-items: center; gap: 10px;
-  }
-  .mock-dots { display: flex; gap: 5px; }
-  .mock-dots span { width: 10px; height: 10px; border-radius: 50%; display: block; }
-  .mock-dots span:nth-child(1) { background: #ff5f57; }
-  .mock-dots span:nth-child(2) { background: #febc2e; }
-  .mock-dots span:nth-child(3) { background: #28c840; }
-  .mock-url {
-    font-family: ui-monospace, 'Cascadia Code', monospace;
-    font-size: 11px; color: #888; background: #ebebeb;
-    padding: 3px 10px; border-radius: 4px; flex: 1;
-  }
-  .mock-url b { color: #111; font-weight: 600; }
-
-  .mock-body { padding: 20px; }
-  .mock-berber-row {
-    display: flex; align-items: center; gap: 12px;
-    margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid #f0f0f0;
-  }
-  .mock-ava {
-    width: 44px; height: 44px; border-radius: 10px;
-    background: #1E3A8A; color: #fff;
-    font-size: 18px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  }
-  .mock-name { font-size: 13px; font-weight: 700; color: #111; margin-bottom: 3px; }
-  .mock-meta { font-size: 11px; color: #888; }
-
-  .mock-services { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-  .mock-svc {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 9px 12px; border: 1.5px solid #e5e5e5; border-radius: 8px; font-size: 13px;
-  }
-  .mock-svc.sel { border-color: #1E3A8A; background: #EFF3FB; }
-  .mock-svc-n { font-weight: 500; color: #111; }
-  .mock-svc-p { color: #888; font-weight: 500; font-size: 12px; }
-  .mock-svc.sel .mock-svc-p { color: #1E3A8A; }
-
-  .mock-lbl {
-    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
-    text-transform: uppercase; color: #aaa; margin-bottom: 8px;
-  }
-  .mock-slots {
-    display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 5px; margin-bottom: 16px;
-  }
-  .mock-slot {
-    font-size: 11px; font-weight: 600; text-align: center;
-    padding: 7px 4px; border-radius: 7px; border: 1.5px solid transparent;
-  }
-  .mock-slot.off  { background: #f5f5f5; color: #ccc; }
-  .mock-slot.on   { background: #fff; color: #111; border-color: #e0e0e0; }
-  .mock-slot.pick { background: #1E3A8A; color: #fff; }
-
-  .mock-cta-btn {
-    width: 100%; background: #1E3A8A; color: #fff; font-size: 13px;
-    font-weight: 700; padding: 11px; border: none; border-radius: 9px;
-    cursor: default; letter-spacing: -0.01em;
+    justify-content: center;
+    width: 34px; height: 34px;
+    border: 1.5px solid var(--lp-accent);
+    font-family: var(--lp-display);
+    font-size: 19px;
+    color: var(--lp-accent);
+    margin-bottom: 32px;
   }
 
-  /* ── Stats ────────────────────────── */
-  .stats-strip { border-bottom: 1px solid #e5e5e5; }
-  .stats-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); text-align: center;
+  .lp-step-title {
+    font-family: var(--lp-display);
+    font-size: 34px;
+    text-transform: uppercase;
+    color: var(--lp-white);
+    margin-bottom: 14px;
   }
-  .stat { padding: 28px 16px; border-right: 1px solid #e5e5e5; }
-  .stat:last-child { border-right: none; }
-  .stat-n {
-    display: block; font-size: clamp(28px, 5vw, 40px); font-weight: 700;
-    letter-spacing: -0.03em; line-height: 1; margin-bottom: 6px; color: #111;
-  }
-  .stat-l { font-size: 12px; color: #888; font-weight: 500; }
 
-  /* ── Sections ─────────────────────── */
-  .sec { padding: 72px 0; border-bottom: 1px solid #e5e5e5; }
-  .sec-hdr { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; }
-  .sec-num {
-    font-family: ui-monospace, 'Cascadia Code', monospace;
-    font-size: 11px; color: #bbb; letter-spacing: 0.08em; flex-shrink: 0;
+  .lp-step-desc {
+    font-size: 14px;
+    line-height: 1.82;
+    color: rgba(249,249,246,.36);
   }
-  .sec-rule { flex: 1; height: 1px; background: #e5e5e5; }
-  .sec-title { font-size: clamp(22px, 3.5vw, 30px); font-weight: 700; letter-spacing: -0.025em; color: #111; margin-bottom: 10px; }
-  .sec-lead { font-size: 15px; color: #666; line-height: 1.7; max-width: 480px; }
 
-  /* ── Steps ────────────────────────── */
-  .steps { margin-top: 40px; max-width: 560px; }
-  .step { display: flex; gap: 20px; padding: 22px 0; border-bottom: 1px solid #f0f0f0; }
-  .step:last-child { border-bottom: none; }
-  .step-n {
-    font-family: ui-monospace, 'Cascadia Code', monospace;
-    font-size: 12px; color: #ccc; width: 24px; flex-shrink: 0; padding-top: 1px;
+  /* ── PRICING ─────────────────────────────── */
+  .lp-pricing {
+    background: var(--lp-white);
+    color: var(--lp-black);
+    padding: 120px 0;
+    position: relative;
+    overflow: hidden;
   }
-  .step-title { font-size: 15px; font-weight: 700; color: #111; margin-bottom: 4px; }
-  .step-desc { font-size: 13px; color: #888; line-height: 1.65; }
 
-  /* ── Features ─────────────────────── */
-  .feat-grid {
-    margin-top: 40px; display: grid; grid-template-columns: repeat(2, 1fr);
-    border: 1px solid #e5e5e5; border-radius: 12px; overflow: hidden;
+  .lp-pricing-ghost {
+    position: absolute;
+    right: -1%;
+    bottom: -12%;
+    font-family: var(--lp-display);
+    font-size: clamp(180px, 26vw, 380px);
+    line-height: 1;
+    color: rgba(10,10,10,.046);
+    pointer-events: none;
+    user-select: none;
   }
-  .feat-item {
-    padding: 24px; border-right: 1px solid #e5e5e5;
-    border-bottom: 1px solid #e5e5e5; transition: background 0.15s;
-  }
-  .feat-item:hover { background: #fafafa; }
-  .feat-item:nth-child(even) { border-right: none; }
-  .feat-item:nth-last-child(-n+2) { border-bottom: none; }
-  .feat-icon { font-size: 20px; margin-bottom: 10px; }
-  .feat-name { font-size: 14px; font-weight: 700; color: #111; margin-bottom: 6px; }
-  .feat-desc { font-size: 13px; color: #888; line-height: 1.65; }
 
-  /* ── CTA ──────────────────────────── */
-  .cta-sec { padding: 88px 0; }
-  .cta-box {
-    border: 1.5px solid #e5e5e5; border-radius: 16px;
-    padding: 56px 40px; text-align: center;
-    max-width: 600px; margin: 0 auto;
+  .lp-pricing-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: start;
+    position: relative;
+    z-index: 1;
   }
-  .cta-title { font-size: clamp(22px, 4vw, 34px); font-weight: 700; letter-spacing: -0.025em; color: #111; margin-bottom: 12px; }
-  .cta-sub { font-size: 15px; color: #888; line-height: 1.7; margin-bottom: 28px; }
-  .cta-badges { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
-  .cta-badge { font-size: 12px; color: #bbb; }
-  .cta-sep { width: 3px; height: 3px; border-radius: 50%; background: #ddd; display: inline-block; }
 
-  /* ── Footer ───────────────────────── */
-  .lp-foot {
-    border-top: 1px solid #e5e5e5;
-    padding: 32px 0;
-    display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 12px;
+  .lp-pricing-tag {
+    display: inline-block;
+    background: var(--lp-accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    margin-bottom: 32px;
   }
-  .foot-brand { font-size: 14px; font-weight: 700; color: #111; }
-  .foot-links { display: flex; gap: 18px; flex-wrap: wrap; }
-  .foot-links a { font-size: 13px; color: #888; text-decoration: none; transition: color 0.15s; }
-  .foot-links a:hover { color: #111; }
-  .foot-copy { font-size: 12px; color: #ccc; width: 100%; }
 
-  /* ── Scroll reveal ────────────────── */
-  [data-rv] { opacity: 0; transform: translateY(14px); transition: opacity 0.5s ease, transform 0.5s ease; }
+  .lp-pricing-big {
+    font-family: var(--lp-display);
+    font-size: clamp(84px, 12vw, 184px);
+    line-height: .88;
+    text-transform: uppercase;
+    color: var(--lp-black);
+  }
+  .lp-pricing-big .o { color: var(--lp-accent); display: block; }
+
+  .lp-pricing-right { padding-top: 16px; }
+
+  .lp-pricing-right > p {
+    font-size: 17px;
+    line-height: 1.72;
+    color: #6E6E72;
+    margin-bottom: 40px;
+    max-width: 400px;
+  }
+
+  .lp-check-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 48px;
+  }
+
+  .lp-check-list li {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--lp-black);
+  }
+
+  .lp-check-list li::before {
+    content: '';
+    flex-shrink: 0;
+    width: 18px; height: 18px;
+    background: var(--lp-accent);
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  }
+
+  /* ── FAQ ─────────────────────────────────── */
+  .lp-faq {
+    background: #EDEDEA;
+    color: var(--lp-black);
+    padding: 120px 0;
+  }
+
+  .lp-faq-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 80px;
+    align-items: start;
+  }
+
+  .lp-faq-sticky {
+    position: sticky;
+    top: 96px;
+  }
+
+  .lp-faq-sticky .lp-s-title { color: var(--lp-black); margin-bottom: 0; }
+
+  .lp-faq-list { display: flex; flex-direction: column; }
+
+  .lp-faq-item { border-top: 1px solid rgba(10,10,10,.14); }
+  .lp-faq-item:last-child { border-bottom: 1px solid rgba(10,10,10,.14); }
+
+  .lp-faq-q {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 26px 0;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--lp-black);
+    user-select: none;
+  }
+
+  .lp-faq-toggle {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    background: var(--lp-black);
+    color: var(--lp-white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 300;
+    line-height: 1;
+    transition: background .2s, transform .25s;
+  }
+
+  .lp-faq-item.open .lp-faq-toggle { background: var(--lp-accent); transform: rotate(45deg); }
+
+  .lp-faq-a {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .38s ease;
+    font-size: 15px;
+    line-height: 1.8;
+    color: #5A5A5E;
+  }
+
+  .lp-faq-a p { padding-bottom: 28px; }
+  .lp-faq-item.open .lp-faq-a { max-height: 300px; }
+
+  /* ── FOOTER ──────────────────────────────── */
+  .lp-footer {
+    background: var(--lp-black);
+    padding: 72px 0 44px;
+    border-top: 1px solid rgba(255,255,255,.07);
+  }
+
+  .lp-footer-top {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    margin-bottom: 60px;
+    align-items: end;
+  }
+
+  .lp-footer-brand-desc {
+    font-size: 14px;
+    line-height: 1.78;
+    color: rgba(249,249,246,.28);
+    max-width: 300px;
+    margin-top: 20px;
+  }
+
+  .lp-footer-cta-title {
+    font-family: var(--lp-display);
+    font-size: clamp(40px, 4.5vw, 64px);
+    line-height: .94;
+    text-transform: uppercase;
+    color: var(--lp-white);
+    margin-bottom: 28px;
+  }
+  .lp-footer-cta-title .o { color: var(--lp-accent); }
+
+  .lp-footer-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 28px;
+    border-top: 1px solid rgba(255,255,255,.07);
+    font-size: 12px;
+    color: rgba(249,249,246,.18);
+  }
+
+  /* ── ANIMATION ───────────────────────────── */
+  @keyframes lpFadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  [data-rv] { opacity: 0; transform: translateY(14px); transition: opacity .5s ease, transform .5s ease; }
   [data-rv].vis { opacity: 1; transform: none; }
-  [data-rv].d1 { transition-delay: 0.08s; }
-  [data-rv].d2 { transition-delay: 0.16s; }
 
-  /* ── Hero load anim ───────────────── */
-  @keyframes fu { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
-  .f0 { animation: fu 0.5s cubic-bezier(0.16,1,0.3,1) both; }
-  .f1 { animation: fu 0.5s 0.1s cubic-bezier(0.16,1,0.3,1) both; }
-  .f2 { animation: fu 0.5s 0.2s cubic-bezier(0.16,1,0.3,1) both; }
-  .f3 { animation: fu 0.5s 0.3s cubic-bezier(0.16,1,0.3,1) both; }
-
-  /* ── Mobile ───────────────────────── */
-  @media (max-width: 800px) {
-    .hero { grid-template-columns: 1fr; gap: 44px; padding: 56px 0; }
-    .hero-sub { max-width: none; }
-    .mock-slots { grid-template-columns: repeat(4, 1fr); }
+  /* ── RESPONSIVE ──────────────────────────── */
+  @media (max-width: 1024px) {
+    .lp-wrap { padding: 0 40px; }
+    .lp-nav-inner { padding: 0 40px; }
+    .lp-hero { padding: 130px 40px 72px; }
   }
-  @media (max-width: 560px) {
-    .stats-grid { grid-template-columns: 1fr 1fr; }
-    .stats-grid .stat:nth-child(2) { border-right: none; }
-    .stats-grid .stat:nth-child(3) { grid-column: 1 / -1; border-top: 1px solid #e5e5e5; border-right: none; }
-    .hero-btns { flex-direction: column; }
-    .hero-btns a { text-align: center; }
-    .feat-grid { grid-template-columns: 1fr; }
-    .feat-item:nth-child(even) { border-right: none; }
-    .feat-item:nth-last-child(-n+2) { border-bottom: 1px solid #e5e5e5; }
-    .feat-item:last-child { border-bottom: none; }
-    .cta-box { padding: 40px 20px; }
-    .lp-foot { flex-direction: column; align-items: flex-start; }
+
+  @media (max-width: 768px) {
+    .lp-wrap { padding: 0 24px; }
+    .lp-nav-inner { padding: 0 24px; }
+    .lp-nav-link { display: none; }
+
+    .lp-hero { padding: 110px 24px 56px; }
+    .lp-hero-h1 { font-size: clamp(64px, 16vw, 120px); }
+    .lp-hero-sub { font-size: 16px; }
+    .lp-hero-stats { flex-wrap: wrap; margin-top: 48px; }
+    .lp-hero-stat { flex: 0 0 50%; margin-bottom: 24px; }
+    .lp-hero-stat:nth-child(even) { border-right: none; margin-right: 0; }
+
+    .lp-features { padding: 80px 0; }
+    .lp-feat-grid { grid-template-columns: 1fr; }
+    .lp-feat-card { padding: 40px; }
+
+    .lp-hiw { padding: 80px 0; }
+    .lp-hiw-steps { grid-template-columns: 1fr; }
+    .lp-step { border-right: none; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .lp-step:last-child { border-bottom: none; }
+
+    .lp-pricing { padding: 80px 0; }
+    .lp-pricing-inner { grid-template-columns: 1fr; gap: 40px; }
+
+    .lp-faq { padding: 80px 0; }
+    .lp-faq-layout { grid-template-columns: 1fr; gap: 40px; }
+    .lp-faq-sticky { position: static; }
+
+    .lp-footer { padding: 56px 0 36px; }
+    .lp-footer-top { grid-template-columns: 1fr; gap: 48px; }
+    .lp-footer-bottom { flex-direction: column; gap: 8px; text-align: center; }
+
+    .lp-s-title { margin-bottom: 40px; }
   }
 `;
 
-const FEATURES = [
-  { icon: '📅', title: 'Online Randevu',  desc: 'Müşterilerin 7/24 randevu alabilir. Dolu saatler görünmez.' },
-  { icon: '👥', title: 'Ekip Yönetimi',   desc: 'Her ustaya ayrı ajanda. Kimin ne zaman boş olduğunu görürsün.' },
-  { icon: '💰', title: 'Kazanç Takibi',   desc: 'Aylık ve haftalık raporlar. Komisyon hesaplaması dahil.' },
-  { icon: '🔗', title: 'Kişisel Link',    desc: "Her ustanın kendi randevu linki. Instagram'a at, gelsin." },
-  { icon: '📱', title: 'Mobil Uygulama',  desc: 'iOS ve Android. Her yerden yönet.' },
-  { icon: '🚫', title: 'İzin & Tatil',    desc: 'Tatil günlerini ve öğle aralarını tek tıkla kapat.' },
-];
+const LOGO_SVG = (
+  <svg width="32" height="32" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect width="64" height="64" rx="14" fill="#FFFFFF" />
+    <path d="M23 16 L41 32 L23 48" fill="none" stroke="#0B1220" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="46" cy="48" r="2.8" fill="#1E3A8A" />
+  </svg>
+);
 
 export default function LandingPage() {
   return (
     <>
-      <style>{CSS}</style>
+      <style>{LP_CSS}</style>
 
       <div className="lp">
 
-        {/* ── Nav ── */}
-        <nav className="lp-nav">
-          <div className="wrap">
-            <Link href="/" className="lp-logo">Sıradaki</Link>
-            <div className="nav-actions">
-              <Link href="/giris" className="nav-link">Giriş</Link>
-              <Link href="/kayit" className="nav-cta">Ücretsiz Dene</Link>
+        {/* ── NAV ── */}
+        <nav className="lp-nav" id="lp-nav">
+          <div className="lp-nav-inner">
+            <Link href="/" className="lp-logo" aria-label="Sıradaki — Ana Sayfa">
+              {LOGO_SVG}
+              <span className="lp-wordmark">Sıradaki</span>
+            </Link>
+            <div className="lp-nav-actions">
+              <Link href="/giris" className="lp-nav-link">Giriş Yap</Link>
+              <Link href="/kayit" className="lp-nav-cta">Ücretsiz Başla <span className="arr">→</span></Link>
             </div>
           </div>
         </nav>
 
-        {/* ── Hero ── */}
-        <div className="wrap">
-          <section className="hero">
-
-            {/* Left */}
-            <div>
-              <p className="hero-eyebrow f0">Berber · Kuaför · Barber</p>
-              <h1 className="hero-h1 f1">
-                Randevun,<br />
-                <span>sana ait.</span>
-              </h1>
-              <p className="hero-sub f2">
-                Instagram&apos;a linkini at. Müşterilerin 7/24 randevusunu kendisi
-                alsın. Ekibini yönet, kazancını takip et.
-              </p>
-              <div className="hero-btns f3">
-                <Link href="/kayit" className="btn-p">Ücretsiz Başla</Link>
-                <a href="#nasil-calisir" className="btn-g">Nasıl çalışır?</a>
-              </div>
+        {/* ── HERO ── */}
+        <section className="lp-hero">
+          <div className="lp-hero-ghost" aria-hidden="true">›</div>
+          <p className="lp-hero-overline">Berber Randevu &amp; Ekip Yönetimi</p>
+          <h1 className="lp-hero-h1">
+            SIRADAKI<br />
+            RANDEVUN<br />
+            <span className="o">HAZIR.</span>
+          </h1>
+          <div className="lp-hero-divider" />
+          <p className="lp-hero-sub">
+            Berber dükkanın için randevu defteri, ekip takvimi ve online randevu — hepsi tek uygulamada. Üstelik şu an tamamen ücretsiz.
+          </p>
+          <div className="lp-hero-actions">
+            <Link href="/kayit" className="lp-btn-primary">Ücretsiz Başla <span className="arr">→</span></Link>
+            <a href="#hiw" className="lp-btn-ghost">Nasıl çalışır?</a>
+          </div>
+          <div className="lp-hero-stats">
+            <div className="lp-hero-stat">
+              <div className="lp-stat-num">2 dk</div>
+              <div className="lp-stat-lbl">Kurulum süresi</div>
             </div>
-
-            {/* Right — booking preview */}
-            <div className="f2">
-              <div className="mock">
-                <div className="mock-bar">
-                  <div className="mock-dots">
-                    <span /><span /><span />
-                  </div>
-                  <div className="mock-url">
-                    siradaki.app/<b>ahmet</b>
-                  </div>
-                </div>
-                <div className="mock-body">
-                  <div className="mock-berber-row">
-                    <div className="mock-ava">A</div>
-                    <div>
-                      <div className="mock-name">Ahmet Koçoğlu</div>
-                      <div className="mock-meta">Beşiktaş, İstanbul · ⭐ 4.9</div>
-                    </div>
-                  </div>
-                  <div className="mock-services">
-                    <div className="mock-svc">
-                      <span className="mock-svc-n">Saç Kesimi</span>
-                      <span className="mock-svc-p">120 ₺</span>
-                    </div>
-                    <div className="mock-svc sel">
-                      <span className="mock-svc-n">Sakal Tıraşı</span>
-                      <span className="mock-svc-p">60 ₺</span>
-                    </div>
-                  </div>
-                  <p className="mock-lbl">Uygun saatler</p>
-                  <div className="mock-slots">
-                    {[
-                      { t: '10:00', s: 'off' }, { t: '11:00', s: 'on' },
-                      { t: '12:30', s: 'off' }, { t: '14:00', s: 'pick' },
-                      { t: '15:00', s: 'on' },  { t: '16:30', s: 'on' },
-                      { t: '17:00', s: 'on' },  { t: '18:00', s: 'off' },
-                    ].map(sl => (
-                      <div key={sl.t} className={`mock-slot ${sl.s}`}>{sl.t}</div>
-                    ))}
-                  </div>
-                  <button className="mock-cta-btn">Randevu Al →</button>
-                </div>
-              </div>
+            <div className="lp-hero-stat">
+              <div className="lp-stat-num">₺0</div>
+              <div className="lp-stat-lbl">Beta döneminde</div>
             </div>
+            <div className="lp-hero-stat">
+              <div className="lp-stat-num">7/24</div>
+              <div className="lp-stat-lbl">Online randevu</div>
+            </div>
+          </div>
+        </section>
 
-          </section>
-        </div>
-
-        {/* ── Stats ── */}
-        <div className="stats-strip">
-          <div className="wrap">
-            <div className="stats-grid">
+        {/* ── FEATURES ── */}
+        <section className="lp-features" id="features" data-rv>
+          <div className="lp-wrap">
+            <p className="lp-s-over">Özellikler</p>
+            <h2 className="lp-s-title" style={{ color: 'var(--lp-black)' }}>HER ŞEY<br />BİR ARADA.</h2>
+            <div className="lp-feat-grid">
               {[
-                { n: '5 dk', l: 'Kurulum süresi' },
-                { n: '7/24', l: 'Randevu alınabilir' },
-                { n: '0 ₺',  l: 'Başlangıç ücreti' },
-              ].map(s => (
-                <div key={s.n} className="stat">
-                  <span className="stat-n">{s.n}</span>
-                  <span className="stat-l">{s.l}</span>
+                { n: '01', title: 'Randevu Yönetimi', desc: 'Günlük ve haftalık görünüm. Çakışma uyarısı, tek dokunuşla onay, anlık hatırlatma. Hiçbir randevu gözden kaçmaz.' },
+                { n: '02', title: 'Ekip Takvimi',     desc: 'Her ustanın takvimi ayrı. Randevuları sürükle-bırak ile yeniden ata. Tüm ekibi tek ekranda gör.' },
+                { n: '03', title: 'Kazanç Takibi',    desc: 'Günlük gelir ve komisyon hesabı. Haftalık özet, tek bakışta. Rakamları bil, kararını ver.' },
+                { n: '04', title: 'Online Randevu',   desc: 'Müşteriler 7/24 kendi randevusunu alır. Sen onaylarsın, işine bakarsın. Telefon trafiği sıfıra iner.' },
+              ].map(f => (
+                <div key={f.n} className="lp-feat-card">
+                  <span className="lp-feat-n">{f.n}</span>
+                  <div className="lp-feat-rule" />
+                  <div className="lp-feat-title">{f.title}</div>
+                  <p className="lp-feat-desc">{f.desc}</p>
                 </div>
               ))}
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* ── How it works ── */}
-        <div className="wrap">
-          <section id="nasil-calisir" className="sec" data-rv>
-            <div className="sec-hdr">
-              <span className="sec-num">01</span>
-              <div className="sec-rule" />
-            </div>
-            <h2 className="sec-title">5 dakikada dükkanını kur</h2>
-            <p className="sec-lead">
-              Teknik bilgi gerekmez. Adını ve şehrini gir, hizmetlerini ekle, linki paylaş.
-            </p>
-            <div className="steps">
+        {/* ── HOW IT WORKS ── */}
+        <section className="lp-hiw" id="hiw" data-rv>
+          <div className="lp-wrap">
+            <p className="lp-s-over">Nasıl çalışır</p>
+            <h2 className="lp-s-title">3 ADIMDA<br />HAZIR.</h2>
+            <div className="lp-hiw-steps">
               {[
-                { n: '01', title: 'Dükkanını tanıt',   desc: 'Adını ve şehrini gir. Randevu linkin hazır.' },
-                { n: '02', title: 'Hizmetlerini ekle', desc: 'Saç kesimi, sakal tıraşı... fiyat ve süreyle birlikte.' },
-                { n: '03', title: 'Linki paylaş',      desc: "Instagram veya WhatsApp'a at. Randevular akmaya başlar." },
+                { n: '1', title: 'Hesabını Aç',  desc: '2 dakikada kurulum. Ödeme bilgisi istemiyoruz. Telefon numaranla kayıt ol, hemen başla.' },
+                { n: '2', title: 'Ekibini Ekle', desc: 'Ustalarını ekle, çalışma saatlerini ayarla. Her personel kendi telefonundan günlük takibini yapar.' },
+                { n: '3', title: 'Linki Paylaş', desc: "Müşterilerine randevu linkini gönder. WhatsApp'ta, Instagram'da, her yerde çalışır. Randevular gelsin." },
               ].map(s => (
-                <div key={s.n} className="step">
-                  <span className="step-n">{s.n}</span>
-                  <div>
-                    <div className="step-title">{s.title}</div>
-                    <div className="step-desc">{s.desc}</div>
-                  </div>
+                <div key={s.n} className="lp-step" data-n={s.n}>
+                  <div className="lp-step-badge">{s.n}</div>
+                  <div className="lp-step-title">{s.title}</div>
+                  <p className="lp-step-desc">{s.desc}</p>
                 </div>
               ))}
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
 
-        {/* ── Features ── */}
-        <div className="wrap">
-          <section className="sec" data-rv>
-            <div className="sec-hdr">
-              <span className="sec-num">02</span>
-              <div className="sec-rule" />
-            </div>
-            <h2 className="sec-title">İhtiyacın olan her şey</h2>
-            <div className="feat-grid">
-              {FEATURES.map(f => (
-                <div key={f.title} className="feat-item">
-                  <div className="feat-icon">{f.icon}</div>
-                  <div className="feat-name">{f.title}</div>
-                  <div className="feat-desc">{f.desc}</div>
+        {/* ── PRICING ── */}
+        <section className="lp-pricing" id="pricing" data-rv>
+          <div className="lp-pricing-ghost" aria-hidden="true">₺0</div>
+          <div className="lp-wrap">
+            <span className="lp-pricing-tag">Beta Dönemi</span>
+            <div className="lp-pricing-inner">
+              <div>
+                <div className="lp-pricing-big">
+                  ŞU AN
+                  <span className="o">ÜCRETSİZ.</span>
                 </div>
-              ))}
-            </div>
-          </section>
-        </div>
-
-        {/* ── CTA ── */}
-        <div className="wrap">
-          <section className="cta-sec" data-rv>
-            <div className="cta-box">
-              <h2 className="cta-title">Bugün başla, yarın hazırsın.</h2>
-              <p className="cta-sub">Kurulum ücreti yok. Kredi kartı gerekmez.</p>
-              <Link href="/kayit" className="btn-p" style={{ padding: '14px 44px', fontSize: '15px' }}>
-                Ücretsiz Başla →
-              </Link>
-              <div className="cta-badges">
-                <span className="cta-badge">5 dk kurulum</span>
-                <span className="cta-sep" />
-                <span className="cta-badge">Kredi kartı yok</span>
-                <span className="cta-sep" />
-                <span className="cta-badge">İstediğin zaman iptal</span>
+              </div>
+              <div className="lp-pricing-right">
+                <p>Beta döneminde tüm özellikler sınırsız ve ücretsiz. Hesabını şimdi aç, erken kullanıcı avantajını kaçırma.</p>
+                <ul className="lp-check-list">
+                  <li>Sınırsız randevu</li>
+                  <li>Sınırsız personel</li>
+                  <li>Müşteri randevu linki</li>
+                  <li>Kazanç &amp; komisyon takibi</li>
+                  <li>Ekip takvimi &amp; yeniden atama</li>
+                  <li>Anlık bildirimler</li>
+                </ul>
+                <Link href="/kayit" className="lp-btn-primary">Hemen Başla — Ücretsiz <span className="arr">→</span></Link>
               </div>
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
 
-        {/* ── Footer ── */}
-        <div className="wrap">
-          <footer className="lp-foot">
-            <span className="foot-brand">Sıradaki</span>
-            <div className="foot-links">
-              <Link href="/gizlilik-politikasi">Gizlilik Politikası</Link>
-              <Link href="/kullanim-kosullari">Kullanım Koşulları</Link>
-              <Link href="/cerez-politikasi">Çerez Politikası</Link>
-              <a href="mailto:destek@siradaki.app">İletişim</a>
+        {/* ── FAQ ── */}
+        <section className="lp-faq" id="faq" data-rv>
+          <div className="lp-wrap">
+            <div className="lp-faq-layout">
+              <div className="lp-faq-sticky">
+                <p className="lp-s-over">Sıkça sorulanlar</p>
+                <h2 className="lp-s-title">AKLINDA<br />SORU MU?</h2>
+              </div>
+              <div className="lp-faq-list">
+                {[
+                  { q: 'Uygulama gerçekten ücretsiz mi?', a: 'Evet. Beta döneminde tüm özellikler tamamen ücretsiz. İleride farklı planlar gelecek ama mevcut kullanıcılara özel geçiş koşulları sunulacak.' },
+                  { q: 'Kaç personel ekleyebilirim?', a: 'Beta süresince sınırsız. Tek kişilik dükkanlar da büyük ekipler de rahatlıkla kullanabilir.' },
+                  { q: 'Müşteriler nasıl randevu alıyor?', a: 'Sana özel bir randevu linki oluşturulur. Müşterilerin bu adrese girip hizmet, usta, tarih ve saat seçerek randevu alır. Telefon açmalarına gerek kalmaz.' },
+                  { q: 'Uygulama telefonda mı çalışıyor?', a: 'Evet. iOS ve Android için uygulamamız var. Hem sen hem de personelin kendi telefonundan kullanır.' },
+                  { q: 'Ücretli plan ne zaman geliyor?', a: 'Beta bittikten sonra. Tam tarihi henüz belli değil ama erken kullanıcıları geçişte ayrıca bilgilendirip özel fiyat sunacağız.' },
+                ].map((item, i) => (
+                  <div key={i} className="lp-faq-item">
+                    <div className="lp-faq-q">
+                      <span>{item.q}</span>
+                      <span className="lp-faq-toggle">+</span>
+                    </div>
+                    <div className="lp-faq-a"><p>{item.a}</p></div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <p className="foot-copy">© {new Date().getFullYear()} Sıradaki. Tüm hakları saklıdır.</p>
-          </footer>
-        </div>
+          </div>
+        </section>
+
+        {/* ── FOOTER ── */}
+        <footer className="lp-footer">
+          <div className="lp-wrap">
+            <div className="lp-footer-top">
+              <div>
+                <Link href="/" className="lp-logo" aria-label="Sıradaki">
+                  <svg width="34" height="34" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <rect width="64" height="64" rx="14" fill="#FFFFFF" />
+                    <path d="M23 16 L41 32 L23 48" fill="none" stroke="#0B1220" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+                    <circle cx="46" cy="48" r="2.8" fill="#1E3A8A" />
+                  </svg>
+                  <span className="lp-wordmark" style={{ fontSize: '22px' }}>Sıradaki</span>
+                </Link>
+                <p className="lp-footer-brand-desc">Berber dükkanın için randevu ve ekip yönetimi. Sıradaki müşteri her zaman hazır.</p>
+              </div>
+              <div>
+                <div className="lp-footer-cta-title">
+                  HÂLÂ<br />
+                  <span className="o">BEKLİYOR</span><br />
+                  MUSUN?
+                </div>
+                <Link href="/kayit" className="lp-btn-primary">Ücretsiz Başla <span className="arr">→</span></Link>
+              </div>
+            </div>
+            <div className="lp-footer-bottom">
+              <span>© {new Date().getFullYear()} Sıradaki. Tüm hakları saklıdır.</span>
+              <span>Türkiye&apos;de yapıldı ›</span>
+            </div>
+          </div>
+        </footer>
 
       </div>
 
-      {/* Scroll reveal */}
       <script dangerouslySetInnerHTML={{ __html: `
         (function(){
-          var o = new IntersectionObserver(function(es){
-            es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('vis'); o.unobserve(e.target); }});
-          }, { threshold: 0.12 });
-          document.querySelectorAll('[data-rv]').forEach(function(el){ o.observe(el); });
+          // Nav scroll
+          var nav = document.getElementById('lp-nav');
+          window.addEventListener('scroll', function(){ nav.classList.toggle('scrolled', window.scrollY > 40); }, { passive: true });
+
+          // FAQ accordion
+          document.querySelectorAll('.lp-faq-q').forEach(function(btn){
+            btn.addEventListener('click', function(){
+              var item = btn.closest('.lp-faq-item');
+              var isOpen = item.classList.contains('open');
+              document.querySelectorAll('.lp-faq-item.open').forEach(function(i){ i.classList.remove('open'); });
+              if (!isOpen) item.classList.add('open');
+            });
+          });
+
+          // Scroll reveal
+          var io = new IntersectionObserver(function(es){
+            es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('vis'); io.unobserve(e.target); }});
+          }, { threshold: 0.1 });
+          document.querySelectorAll('[data-rv]').forEach(function(el){ io.observe(el); });
         })();
       `}} />
     </>

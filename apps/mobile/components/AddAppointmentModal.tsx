@@ -104,7 +104,7 @@ function InlineDayPicker({
   const today = new Date();
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
-    d.setDate(today.getDate() - 2 + i);
+    d.setDate(today.getDate() + i);
     return d;
   });
 
@@ -171,7 +171,7 @@ export function AddAppointmentModal({
   const [phone,          setPhone]          = useState('');
   const [notes,          setNotes]          = useState('');
   const [svc,            setSvc]            = useState<string | null>(() => getInitialAppointmentServiceId(services));
-  const [dayIdx,         setDayIdx]         = useState(2);              // index 2 = today
+  const [dayIdx,         setDayIdx]         = useState(0);              // index 0 = today
   const [slot,           setSlot]           = useState('');
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(initialStaffId ?? null);
 
@@ -199,7 +199,7 @@ export function AddAppointmentModal({
     const today = new Date();
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(today);
-      d.setDate(today.getDate() - 2 + i);
+      d.setDate(today.getDate() + i);
       return d;
     });
   }, []); // days array is always relative to today at mount — stable within modal session

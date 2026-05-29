@@ -45,7 +45,7 @@ export function DayPicker({ selected, onSelect, dayCount = 7 }: DayPickerProps) 
    */
   const days: Date[] = Array.from({ length: dayCount }, (_, i) => {
     const d = new Date(today);
-    d.setDate(today.getDate() - 2 + i);
+    d.setDate(today.getDate() + i);
     return d;
   });
 

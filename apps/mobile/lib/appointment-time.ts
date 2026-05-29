@@ -68,12 +68,24 @@ export function generateAppointmentTimesForDate(
   const day = workingHours?.[key];
   if (day?.enabled === false) return [];
 
-  return generateAppointmentTimes({
+  const slots = generateAppointmentTimes({
     open: day?.open ?? '09:00',
     close: day?.close ?? '23:59',
     stepMinutes: 30,
     durationMinutes,
   });
+
+  // Bugün için geçmiş saatleri filtrele
+  const now = new Date();
+  const isToday =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+
+  if (!isToday) return slots;
+
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  return slots.filter(t => toMinutes(t) > nowMinutes);
 }
 
 export function buildLocalAppointmentTimestamp(date: string, time: string): string {

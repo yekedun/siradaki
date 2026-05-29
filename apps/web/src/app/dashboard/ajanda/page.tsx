@@ -94,7 +94,11 @@ export default function AjandaPage() {
       </div>
 
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => setDate(d => addDays(d, -1))} className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+        <button
+          onClick={() => setDate(d => addDays(d, -1))}
+          disabled={isToday}
+          className={`p-2 rounded-lg border border-gray-200 transition-colors ${isToday ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-50'}`}
+        >
           <ChevronLeft size={16} />
         </button>
         <div className="flex-1 text-center">

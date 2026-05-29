@@ -18,6 +18,20 @@
       "runtimeExecutable": "supabase",
       "runtimeArgs": ["start"],
       "port": 54321
+    },
+    {
+      "name": "skillui",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "3101"],
+      "cwd": "C:\\Users\\Emre\\skillui-ref",
+      "port": 3101
+    },
+    {
+      "name": "impeccable",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["astro", "dev", "--port", "3102"],
+      "cwd": "C:\\Users\\Emre\\impeccable-ref",
+      "port": 3102
     }
   ]
 }
