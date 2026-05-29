@@ -3,11 +3,6 @@ import * as Sentry from '@sentry/react-native';
 
 let initialized = false;
 
-/* c8 ignore next 4 */
-export function __resetSentryForTest() {
-  initialized = false;
-}
-
 export function initSentry(dsn = process.env.EXPO_PUBLIC_SENTRY_DSN) {
   if (initialized) return;
   if (!dsn) return;
