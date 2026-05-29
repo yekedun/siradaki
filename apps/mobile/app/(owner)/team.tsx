@@ -21,17 +21,16 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
-  Linking,
   Modal,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
 import { colors, radius } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { buildOwnerRoleFilter, isMissingColumnError } from '../../lib/supabase-role';
@@ -561,7 +560,6 @@ export default function TeamScreen() {
   const [inviteLoading,  setInviteLoading]  = useState(false);
   const [editStaff,      setEditStaff]      = useState<EditableStaffMember | null>(null);
   const [editVisible,    setEditVisible]    = useState(false);
-  const [inviteLink,     setInviteLink]     = useState<string | null>(null);
 
   const selected = staff.find((s) => s.id === selectedId);
 
@@ -751,21 +749,15 @@ export default function TeamScreen() {
       const { invite_link } = await res.json();
       if (!invite_link) { Alert.alert('Hata', 'Davet linki alınamadı'); return; }
 
-      setInviteLink(invite_link);
-
-      const msg = encodeURIComponent(
-        `Sıradaki randevu uygulamasına berber olarak katılman için davet linki:\n${invite_link}`
-      );
-      const waUrl = `whatsapp://send?text=${msg}`;
-      const canOpen = await Linking.canOpenURL(waUrl);
-      if (canOpen) {
-        await Linking.openURL(waUrl);
-      } else {
-        await Clipboard.setStringAsync(invite_link);
-        Alert.alert('Link Kopyalandı', 'Davet linki panoya kopyalandı.');
+      await Share.share({
+        message: `Sıradaki uygulamasına berber olarak katılmak için:\n${invite_link}`,
+        url: invite_link, // iOS'ta ayrıca URL olarak gösterilir
+      });
+    } catch (e: any) {
+      // Kullanıcı share sheet'i kapattıysa hata verme
+      if (e?.name !== 'AbortError') {
+        Alert.alert('Hata', 'Beklenmeyen bir hata oluştu.');
       }
-    } catch (e) {
-      Alert.alert('Hata', 'Beklenmeyen bir hata oluştu.');
     } finally {
       setInviteLoading(false);
     }
@@ -834,11 +826,6 @@ export default function TeamScreen() {
           </Text>
         </TouchableOpacity>
 
-        {inviteLink ? (
-          <View style={styles.inviteBox}>
-            <Text style={styles.inviteText}>{inviteLink}</Text>
-          </View>
-        ) : null}
       </ScrollView>
 
       {/* Add staff sheet */}

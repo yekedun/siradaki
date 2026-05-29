@@ -96,6 +96,12 @@ const SHOP_UI_TO_WORKING_HOURS_KEY: Record<string, keyof typeof DEFAULT_WORKING_
 
 export type ShopWorkingHours = typeof DEFAULT_WORKING_HOURS;
 type WorkingHoursKey = keyof ShopWorkingHours;
+type WorkingHoursDay = {
+  open?: string | null;
+  close?: string | null;
+  enabled?: boolean;
+};
+
 const SHOP_HOURS_UI_DAYS: Array<{ id: string; label: string; key: WorkingHoursKey }> = [
   { id: 'pzt', label: 'Pzt', key: 'mon' },
   { id: 'sal', label: 'Sal', key: 'tue' },
@@ -106,18 +112,22 @@ const SHOP_HOURS_UI_DAYS: Array<{ id: string; label: string; key: WorkingHoursKe
   { id: 'paz', label: 'Paz', key: 'sun' },
 ];
 
+function workingHourTime(value: string | null | undefined, fallback: string | null | undefined, defaultValue: string) {
+  return value || fallback || defaultValue;
+}
+
 export function shopHoursScheduleToWorkingHours(
   schedule: UiShopHoursDay[],
 ): ShopWorkingHours {
-  const next: Record<string, { open: string; close: string; enabled: boolean }> = {};
+  const next: Partial<Record<WorkingHoursKey, { open: string; close: string; enabled: boolean }>> = {};
 
   schedule.forEach((day) => {
     const key = SHOP_UI_TO_WORKING_HOURS_KEY[day.id];
     if (!key) return;
     const fallback = DEFAULT_WORKING_HOURS[key];
     next[key] = {
-      open: day.start || fallback.open,
-      close: day.end || fallback.close,
+      open: workingHourTime(day.start, fallback.open, '09:00'),
+      close: workingHourTime(day.end, fallback.close, '19:00'),
       enabled: day.open,
     };
   });
@@ -129,7 +139,7 @@ export function shopHoursScheduleToWorkingHours(
 }
 
 export function shopHoursScheduleFromWorkingHours(
-  workingHours: Partial<Record<WorkingHoursKey, { open?: string; close?: string; enabled?: boolean }>> | null | undefined,
+  workingHours: Partial<Record<WorkingHoursKey, WorkingHoursDay>> | null | undefined,
 ): UiShopHoursDay[] {
   return SHOP_HOURS_UI_DAYS.map(({ id, label, key }) => {
     const fallback = DEFAULT_WORKING_HOURS[key];
@@ -138,8 +148,8 @@ export function shopHoursScheduleFromWorkingHours(
       id,
       label,
       open: value.enabled ?? fallback.enabled,
-      start: value.open ?? fallback.open,
-      end: value.close ?? fallback.close,
+      start: workingHourTime(value.open, fallback.open, '09:00'),
+      end: workingHourTime(value.close, fallback.close, '19:00'),
       brk: '',
     };
   });

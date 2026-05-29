@@ -55,10 +55,38 @@ export function generateAppointmentTimes({
   return slots;
 }
 
+// Istanbul timezone'unda bir Date'in HH:MM değerini dakika cinsinden döndürür.
+// Cihaz timezone ayarından bağımsızdır.
+function getMinutesInIstanbul(date: Date): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Istanbul',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  const h = Number(parts.find(p => p.type === 'hour')?.value ?? '0') % 24;
+  const m = Number(parts.find(p => p.type === 'minute')?.value ?? '0');
+  return h * 60 + m;
+}
+
+// İki Date'in Istanbul takviminde aynı gün olup olmadığını kontrol eder.
+function isSameDayIstanbul(a: Date, b: Date): boolean {
+  const fmt = (d: Date) =>
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Istanbul',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(d); // "YYYY-MM-DD"
+  return fmt(a) === fmt(b);
+}
+
 export function generateAppointmentTimesForDate(
   date: Date,
   workingHours: AppointmentWorkingHours | null | undefined,
   durationMinutes = 30,
+  /** Sunucu zamanı (ms). Verilirse cihaz saati yerine bu kullanılır. */
+  nowMs?: number,
 ): string[] {
   if (isNaN(date.getTime())) {
     console.warn('[appointment-time] Invalid date passed to generateAppointmentTimesForDate');
@@ -75,16 +103,12 @@ export function generateAppointmentTimesForDate(
     durationMinutes,
   });
 
-  // Bugün için geçmiş saatleri filtrele
-  const now = new Date();
-  const isToday =
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate();
+  // Bugün için geçmiş saatleri filtrele.
+  // nowMs sunucudan geliyorsa cihaz saati manipülasyonuna karşı koruma sağlar.
+  const now = new Date(nowMs ?? Date.now());
+  if (!isSameDayIstanbul(date, now)) return slots;
 
-  if (!isToday) return slots;
-
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const nowMinutes = getMinutesInIstanbul(now);
   return slots.filter(t => toMinutes(t) > nowMinutes);
 }
 
