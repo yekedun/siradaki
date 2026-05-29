@@ -47,8 +47,9 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
-  // Track app lifecycle: foreground/background transitions
+  // Track app lifecycle: cold launch + foreground/background transitions
   useEffect(() => {
+    trackEvent('app_open');
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'background') trackEvent('app_background');
       if (state === 'active') trackEvent('app_open');

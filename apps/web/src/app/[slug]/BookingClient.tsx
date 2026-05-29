@@ -46,6 +46,11 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
   const [isClosed,   setIsClosed]   = useState(false);
   const [modalOpen,  setModalOpen]  = useState(false);
 
+  function handleBookingStart() {
+    trackWebEvent('web_booking_started', { shop_slug: shop.slug, ...(selService ? { service_id: selService } : {}) });
+    setModalOpen(true);
+  }
+
   const fetchSlots = useCallback(async () => {
     if (!selService) return;
     abortRef.current?.abort();
@@ -201,7 +206,7 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
         >
           <div className="max-w-[480px] mx-auto">
             <button
-              onClick={() => { trackWebEvent('web_booking_started', { shop_slug: shop.slug, service_id: selService ?? undefined }); setModalOpen(true); }}
+              onClick={handleBookingStart}
               className="w-full h-14 rounded-md bg-brand-600 text-white font-bold text-[15px] tracking-tight cursor-pointer border-0 font-sans hover:bg-brand-700 transition-colors duration-150"
             >
               Randevu Al — {selSlot}
@@ -222,7 +227,7 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
         serviceId={selService ?? ''}
         startsAt={selISO}
         onSuccess={() => {
-          trackWebEvent('web_booking_completed', { shop_slug: shop.slug, service_id: selService ?? undefined });
+          trackWebEvent('web_booking_completed', { shop_slug: shop.slug, ...(selService ? { service_id: selService } : {}) });
           const next = nextBookingSuccessState({ modalOpen, selectedSlot: selSlot });
           setModalOpen(next.modalOpen);
           setSelSlot(next.selectedSlot);

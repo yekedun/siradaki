@@ -1,22 +1,20 @@
 'use client';
 
-import type PostHog from 'posthog-js';
+import posthog from 'posthog-js';
 
-let _posthog: typeof PostHog | null = null;
+let initialized = false;
 
-function getClient(): typeof PostHog | null {
+function getClient(): typeof posthog | null {
   if (typeof window === 'undefined') return null;
-  if (_posthog) return _posthog;
+  if (initialized) return posthog;
 
   const key  = process.env.NEXT_PUBLIC_POSTHOG_KEY;
   const host = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://eu.posthog.com';
   if (!key) return null;
 
-  // Lazy import so the module is only loaded client-side
-  const { default: posthog } = require('posthog-js') as { default: typeof PostHog };
   posthog.init(key, { api_host: host, person_profiles: 'identified_only' });
-  _posthog = posthog;
-  return _posthog;
+  initialized = true;
+  return posthog;
 }
 
 export function trackWebEvent(event: string, properties?: Record<string, unknown>) {
