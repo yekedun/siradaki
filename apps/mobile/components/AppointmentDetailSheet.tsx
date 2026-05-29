@@ -32,7 +32,7 @@ import { supabase } from '../lib/supabase';
 function toWAPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   if (digits.startsWith('90') && digits.length === 12) return digits;
-  if (digits.startsWith('0') && digits.length === 11) return '9' + digits.slice(1);
+  if (digits.startsWith('0') && digits.length === 11) return '90' + digits.slice(1);
   if (digits.length === 10) return '90' + digits;
   return digits;
 }
@@ -151,7 +151,7 @@ export function AppointmentDetailSheet({
             onPress={busy ? undefined : handleCancel}
             activeOpacity={0.8}
           >
-            <Text style={styles.dangerBtnText}>İptal Et</Text>
+            <Text style={styles.dangerBtnText}>{hasPhone ? 'WhatsApp İptal' : 'İptal Et'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.footerBtn, styles.accentBtn, busy && styles.footerDisabled]}
