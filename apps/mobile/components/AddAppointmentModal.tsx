@@ -155,6 +155,8 @@ export interface AddAppointmentModalProps {
   staffList?: StaffOption[];
   initialStaffId?: string | null;
   workingHours?: AppointmentWorkingHours | null;
+  /** Sunucu zamanı (ms). Geçmiş slot filtrelemesinde cihaz saati yerine kullanılır. */
+  serverNowMs?: number;
 }
 
 /* ── MODAL ──────────────────────────────────────────────────────── */
@@ -166,6 +168,7 @@ export function AddAppointmentModal({
   staffList,
   initialStaffId,
   workingHours,
+  serverNowMs,
 }: AddAppointmentModalProps) {
   const [name,           setName]           = useState('');
   const [phone,          setPhone]          = useState('');
@@ -217,8 +220,8 @@ export function AddAppointmentModal({
   );
 
   const timeSlots = useMemo(
-    () => generateAppointmentTimesForDate(selDate, workingHours, curSvc?.dur ?? 30),
-    [selDate, workingHours, curSvc],
+    () => generateAppointmentTimesForDate(selDate, workingHours, curSvc?.dur ?? 30, serverNowMs),
+    [selDate, workingHours, curSvc, serverNowMs],
   );
 
   function handleSave() {

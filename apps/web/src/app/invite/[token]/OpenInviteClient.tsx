@@ -1,22 +1,38 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect } from 'react';
+import {
+  getInviteOpenUrl,
+  ATTEMPT_KEY_PREFIX,
+  shouldAutoOpen,
+} from './invite-linking';
 
 interface Props {
   token: string;
 }
 
 export default function OpenInviteClient({ token }: Props) {
-  const [copied, setCopied] = useState(false);
-  const deepLink = useMemo(() => `siradaki://invite/${token}`, [token]);
-
   useEffect(() => {
-    window.location.href = deepLink;
-  }, [deepLink]);
+    if (!shouldAutoOpen(sessionStorage, token)) {
+      return;
+    }
 
-  async function copyLink() {
-    await navigator.clipboard.writeText(deepLink);
-    setCopied(true);
+    const key = `${ATTEMPT_KEY_PREFIX}${token}`;
+
+    const timer = setTimeout(() => {
+      sessionStorage.setItem(key, '1');
+      const fallbackUrl = window.location.href;
+      const openUrl = getInviteOpenUrl(token, navigator.userAgent, fallbackUrl);
+      window.location.assign(openUrl);
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [token]);
+
+  function handleOpenApp() {
+    const fallbackUrl = window.location.href;
+    const openUrl = getInviteOpenUrl(token, navigator.userAgent, fallbackUrl);
+    window.location.assign(openUrl);
   }
 
   return (
@@ -29,23 +45,18 @@ export default function OpenInviteClient({ token }: Props) {
           Sıradaki Davet
         </p>
         <h1 className="mb-4 text-3xl font-bold tracking-tight">
-          Uygulama Açılıyor
+          Berber Olarak Katıl
         </h1>
         <p className="mb-8 text-base leading-7 text-slate-600">
-          Daveti kabul etmek için Sıradaki uygulaması açılacak. Açılmazsa aşağıdaki butonla tekrar deneyebilirsin.
+          Sıradaki uygulaması telefonunda kuruluysa otomatik açılır. Açılmazsa
+          aşağıdaki butona dokun.
         </p>
-        <a
-          href={deepLink}
-          className="mb-3 w-full rounded-xl bg-ink-900 px-5 py-4 text-center text-sm font-bold text-white no-underline"
-        >
-          Uygulamada Aç
-        </a>
         <button
           type="button"
-          onClick={copyLink}
-          className="w-full rounded-xl border border-slate-300 bg-white px-5 py-4 text-sm font-bold text-ink-900"
+          onClick={handleOpenApp}
+          className="w-full rounded-xl bg-ink-900 px-5 py-4 text-center text-sm font-bold text-white"
         >
-          {copied ? 'Kopyalandı' : 'Deep Linki Kopyala'}
+          Uygulamada Aç
         </button>
       </section>
     </main>

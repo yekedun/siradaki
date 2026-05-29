@@ -117,6 +117,7 @@ export default function AgendaScreen() {
   const [cols, setCols] = useState<StaffCol[]>(INIT_COLS);
   const [showAdd, setShowAdd] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
+  const [serverNowMs, setServerNowMs] = useState<number | undefined>(undefined);
   const [selectedAppt, setSelectedAppt] = useState<AppointmentDetail | null>(null);
 
   const isMountedRef = useRef(true);
@@ -215,6 +216,10 @@ export default function AgendaScreen() {
   }, [barberList, selectedDate, loadAgenda]);
 
   function handleAddAppointment() {
+    // Sunucu zamanını çek — cihaz saati manipülasyonuna karşı koruma
+    supabase.rpc('get_server_time').then(({ data }) => {
+      if (data) setServerNowMs(new Date(data as string).getTime());
+    });
     setShowAdd(true);
   }
 
@@ -349,6 +354,7 @@ export default function AgendaScreen() {
         services={services}
         staffList={barberList}
         workingHours={shopWorkingHours}
+        serverNowMs={serverNowMs}
         onSave={async (data) => {
           if (!shopSlug) {
             Alert.alert('Hata', 'Dükkan bilgisi yüklenmedi. Sayfayı yenileyin.');

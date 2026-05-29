@@ -150,6 +150,11 @@ serve(async (req) => {
   const slotDate = new Date(starts_at);
   if (isNaN(slotDate.getTime())) return error("Geçersiz starts_at");
 
+  // Sunucu saatine göre geçmiş slot kontrolü — cihaz saatinden bağımsız
+  if (slotDate.getTime() < Date.now() - 5 * 60_000) {
+    return error("Geçmiş bir saate randevu oluşturulamaz", 400);
+  }
+
   const supabase = createAdminClient();
 
   const { data, error: rpcError } = await supabase.rpc("create_appointment_atomic" as never, {
