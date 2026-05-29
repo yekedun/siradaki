@@ -4,7 +4,7 @@ import { withGradleProperties } from '@expo/config-plugins';
 const baseConfig = ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Sıradaki',
-  slug: 'siradaki',
+  slug: 'berber-randevu',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
