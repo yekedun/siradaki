@@ -8,6 +8,41 @@ import { useState, useRef } from 'react';
 type ModalState = 'form' | 'loading' | 'success' | 'error';
 type ErrorType  = 'conflict' | 'generic';
 
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '';
+
+function urlBase64ToUint8Array(b64: string): Uint8Array {
+  const pad = '='.repeat((4 - (b64.length % 4)) % 4);
+  const raw = atob(b64.replace(/-/g, '+').replace(/_/g, '/') + pad);
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
+
+async function subscribeAndSave(appointmentId: string): Promise<void> {
+  if (!VAPID_PUBLIC_KEY) return;
+  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') return;
+
+  const reg = await navigator.serviceWorker.ready;
+  const existing = await reg.pushManager.getSubscription();
+  const sub = existing ?? await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+  });
+
+  const s = sub.toJSON();
+  if (!s.endpoint || !s.keys?.p256dh || !s.keys?.auth) return;
+
+  await fetch(`${FN_BASE}/save-push-subscription`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      appointment_id: appointmentId,
+      subscription: { endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth } },
+    }),
+  }).catch(() => {});
+}
+
 interface BookingModalProps {
   open: boolean;
   onClose: () => void;
@@ -135,10 +170,23 @@ function ModalLoading() {
 }
 
 function ModalSuccess({
-  summary, onClose, staffPhone,
+  summary, onClose, staffPhone, appointmentId,
 }: {
-  summary: string; onClose: () => void; staffPhone?: string | null;
+  summary: string; onClose: () => void; staffPhone?: string | null; appointmentId: string;
 }) {
+  const [notifState, setNotifState] = useState<'idle' | 'subscribed' | 'denied' | 'unsupported'>(() => {
+    if (typeof window === 'undefined') return 'unsupported';
+    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window) || !VAPID_PUBLIC_KEY) return 'unsupported';
+    if (Notification.permission === 'denied') return 'denied';
+    if (Notification.permission === 'granted') return 'subscribed';
+    return 'idle';
+  });
+
+  async function handleNotifRequest() {
+    setNotifState('subscribed');
+    await subscribeAndSave(appointmentId).catch(() => {});
+  }
+
   return (
     <div className="p-7 pb-6">
       <div className="flex items-center gap-2.5">
@@ -153,9 +201,20 @@ function ModalSuccess({
       <div className="text-sm text-slate-500 mt-2 leading-relaxed">
         {summary}
       </div>
-      <div className="bg-slate-50 rounded-md px-3.5 py-3 mt-4 text-sm text-slate-600 leading-relaxed">
-        Randevunuzu onaylayan bir mesaj telefonunuza iletilecek.
-      </div>
+
+      {notifState === 'idle' && (
+        <button
+          onClick={handleNotifRequest}
+          className="w-full mt-4 h-12 rounded-md border border-brand-200 bg-brand-50 text-brand-700 font-sans font-semibold text-sm cursor-pointer hover:bg-brand-100 transition-colors duration-150"
+        >
+          🔔 Hatırlatma Al
+        </button>
+      )}
+      {notifState === 'subscribed' && (
+        <div className="mt-4 bg-mint-50 border border-mint-200 rounded-md px-3.5 py-3 text-sm text-mint-700 font-semibold">
+          ✓ Randevunuzdan önce hatırlatma gönderilecek
+        </div>
+      )}
 
       <div className="flex gap-2.5 mt-4">
         <button
@@ -220,8 +279,9 @@ export function BookingModal({
   open, onClose, summary,
   shopId, shopSlug, staffId, staffPhone, serviceId, startsAt, onSuccess,
 }: BookingModalProps) {
-  const [state,     setState]     = useState<ModalState>('form');
-  const [errorType, setErrorType] = useState<ErrorType>('conflict');
+  const [state,          setState]         = useState<ModalState>('form');
+  const [errorType,      setErrorType]     = useState<ErrorType>('conflict');
+  const [appointmentId,  setAppointmentId] = useState('');
   const submittingRef = useRef(false);
 
   if (!open) return null;
@@ -248,6 +308,8 @@ export function BookingModal({
       if (res.status === 409) { setErrorType('conflict'); setState('error'); return; }
       if (res.status === 429) { setErrorType('generic');  setState('error'); return; }
       if (!res.ok)            { setErrorType('generic');  setState('error'); return; }
+      const data = await res.json().catch(() => ({}));
+      setAppointmentId(data?.appointment_id ?? '');
       setState('success');
       onSuccess();
     } catch {
@@ -277,7 +339,7 @@ export function BookingModal({
       >
         {state === 'form'    && <ModalForm    summary={summary} onClose={handleClose} onConfirm={handleConfirm} />}
         {state === 'loading' && <ModalLoading />}
-        {state === 'success' && <ModalSuccess summary={summary} onClose={handleClose} staffPhone={staffPhone} />}
+        {state === 'success' && <ModalSuccess summary={summary} onClose={handleClose} staffPhone={staffPhone} appointmentId={appointmentId} />}
         {state === 'error'   && <ModalError   errorType={errorType} onClose={handleClose} />}
       </div>
     </div>

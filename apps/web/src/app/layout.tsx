@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { ServiceWorkerRegistrar } from '../components/ServiceWorkerRegistrar';
 
 export const metadata: Metadata = {
   title: 'Sıradaki — Berber Randevu & Ekip Yönetimi',
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="bg-slate-50 font-sans text-ink-900 antialiased">
+        <ServiceWorkerRegistrar />
         {children}
       </body>
     </html>
