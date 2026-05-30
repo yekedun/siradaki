@@ -38,6 +38,13 @@ supabase/.temp/
 .agent/*.log
 .codebase-map.txt
 .superpowers/
+.ai/
+
+# Generated / ephemeral docs — auto-generated plans, specs, audit snapshots
+docs/superpowers/
+docs/audit/gaps.md
+docs/audit/probe-summary.md
+docs/audit/integration-map.md
 
 # OS
 .DS_Store
