@@ -5,10 +5,11 @@ import { ServiceSelector, type Service } from '../../components/ServiceSelector'
 import { SlotGrid } from '../../components/SlotGrid';
 import { BookingModal } from '../../components/BookingModal';
 import { nextBookingSuccessState } from './booking-flow-state';
+import { toTimeLabel } from './booking-time';
 import { trackWebEvent } from '../../lib/analytics';
 
 interface StaffMember { id: string; name: string; phone: string | null; }
-interface Shop { id: string; name: string; address: string | null; slug: string; }
+interface Shop { id: string; name: string; address: string | null; slug: string; timezone: string; }
 interface Props { shop: Shop; services: Service[]; staff: StaffMember[]; preselectedStaffId?: string | null; }
 interface RawSlot { starts_at: string; available: boolean; }
 
@@ -17,11 +18,6 @@ const TR_MON  = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','
 
 function toDateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-function toTimeLabel(iso: string) {
-  return new Date(iso).toLocaleTimeString('tr-TR', {
-    hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul',
-  });
 }
 function buildDays(n: number): Date[] {
   const today = new Date(); today.setHours(0,0,0,0);
@@ -93,9 +89,9 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
     };
   }, [fetchSlots]);
 
-  const slotItems = rawSlots.map(s => ({ time: toTimeLabel(s.starts_at), available: s.available }));
+  const slotItems = rawSlots.map(s => ({ time: toTimeLabel(s.starts_at, shop.timezone), available: s.available }));
   const isAllFull = !isClosed && !slotsLoad && rawSlots.length > 0 && rawSlots.every(s => !s.available);
-  const selRaw    = rawSlots.find(s => toTimeLabel(s.starts_at) === selSlot);
+  const selRaw    = rawSlots.find(s => toTimeLabel(s.starts_at, shop.timezone) === selSlot);
   const selISO    = selRaw?.starts_at ?? '';
   const svc       = services.find(s => s.id === selService);
   const selectedStaff = staff.find(s => s.id === selStaff) ?? null;
