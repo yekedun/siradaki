@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createAdminClient, sha256 } from "../_shared/supabase-admin.ts";
-import { corsOptions, error, json } from "../_shared/cors.ts";
+import { corsOptions, error, json, bodyGuard } from "../_shared/cors.ts";
 
 type LegacyBlockWalkinRequest = {
   staff_id?: string;
@@ -12,6 +12,9 @@ type LegacyBlockWalkinRequest = {
 serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions();
   if (req.method !== "POST") return error("Method not allowed", 405);
+
+  const guard = bodyGuard(req);
+  if (guard) return guard;
 
   const authHeader = req.headers.get("Authorization");
   const rawToken = authHeader?.replace("Bearer ", "").trim();

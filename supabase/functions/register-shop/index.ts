@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createAdminClient } from "../_shared/supabase-admin.ts";
 import { corsOptions, error, json } from "../_shared/cors.ts";
+import { isValidPhone } from "@berber/shared/phone-utils";
 
 function toSlug(name: string): string {
   return name
@@ -18,11 +19,6 @@ function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#x27;");
-}
-
-function isValidPhone(phone: string): boolean {
-  const digits = phone.replace(/[\s\-\(\)]/g, "");
-  return /^(\+90|0)?[5][0-9]{9}$/.test(digits) || /^[0-9]{10,15}$/.test(digits);
 }
 
 serve(async (req) => {

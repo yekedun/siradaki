@@ -74,6 +74,7 @@ serve(async (req) => {
     .from("shops")
     .select("id, timezone, working_hours")
     .eq("slug", shopSlug)
+    .eq("status", "active")
     .single();
 
   if (!shop) return error("Dükkan bulunamadı", 404);
