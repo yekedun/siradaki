@@ -1,484 +1,395 @@
-/**
- * M31 · Kayıt Ekranı
- * Source: screen-31-register.html — RegisterScreen()
- *
- * Container: height:'100%' flex col padding:'16px 20px 24px' bg:#fff overflowY:auto
- *
- * Top — marginTop:8:
- *   mark.svg 40×40 marginBottom:24
- *   overline "Berber · Dükkan Paneli" 10px bold 0.16em uppercase slate-500
- *   H1 "Hesap Oluştur" 30px bold -0.02em margin:'12px 0 8px' lineHeight:1.05
- *   p  "Dükkanını Sıradaki'ye ekle, randevularını online al." 14px 1.55 fg-2
- *
- * Fields — marginTop:24, gap:14:
- *   Dükkan Adı  placeholder="örn. Keskin Berber"      hint="Müşteriler bu ismi görecek"
- *   E-posta     placeholder="berber@dukkan.com"         emailError
- *   Şifre       placeholder="En az 8 karakter"  secure  passError + PasswordStrength
- *   Şifre Tekrar placeholder="Şifreni tekrar gir" secure confError
- *
- * Fine print — marginTop:16 11px slate-400:
- *   "Kayıt olarak Kullanım Koşulları'nı ve Gizlilik Politikası'nı kabul etmiş olursun."
- *   (links in brand-600 semiBold)
- *
- * CTA — marginTop:auto paddingTop:20 gap:12 alignItems:'center':
- *   Button "Hesap Oluştur" primary lg full disabled={!canRegister}
- *   footer "Hesabın var mı? Giriş yap"
- *
- * Validation (source):
- *   canRegister = shopName.trim()>=2 && email.includes('@') && pass>=8 && pass===passConf
- *   passError   = pass.length>0 && pass.length<8  → 'En az 8 karakter gerekli'
- *   confError   = passConf && pass!==passConf       → 'Şifreler eşleşmiyor'
- *   emailError  = email && !email.includes('@')     → 'Geçerli bir e-posta gir'
- *
- * PasswordStrength: 3 bars
- *   score 1 (<8 chars)   = 'Zayıf'  coral-600
- *   score 2 (8–11 chars) = 'Orta'   umber-600
- *   score 3 (≥12 chars)  = 'Güçlü'  mint-600
- */
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ChevronRight, Lock, Mail, Store } from 'lucide-react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { router } from 'expo-router';
-import { colors } from '../../lib/theme';
-import { Button } from '../../components/ds/Button';
 import { supabase } from '../../lib/supabase';
 import { trackEvent } from '../../lib/analytics';
+import { v2Colors, v2Fonts } from '../../lib/v2-tokens';
 
 const FN_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1';
 
-/* ── PasswordStrength ─────────────────────────────────────────── */
 function PasswordStrength({ value }: { value: string }) {
   if (!value) return null;
-  const score      = value.length >= 12 ? 3 : value.length >= 8 ? 2 : 1;
-  const labels     = ['Zayıf', 'Orta', 'Güçlü'] as const;
-  const barColors  = [colors.coral[600], colors.umber[600], colors.mint[600]];
-  const activeCol  = barColors[score - 1]!;
+  const score = value.length >= 12 ? 3 : value.length >= 8 ? 2 : 1;
+  const labels = ['ZAYIF', 'ORTA', 'GÜÇLÜ'] as const;
+  const barColors = [v2Colors.brick, v2Colors.brass, v2Colors.spruce];
+  const activeColor = barColors[score - 1]!;
   return (
     <View style={ps.wrap}>
       <View style={ps.bars}>
         {[1, 2, 3].map(i => (
           <View
             key={i}
-            style={[ps.bar, { backgroundColor: i <= score ? activeCol : colors.slate[200] }]}
+            style={[ps.bar, { backgroundColor: i <= score ? activeColor : v2Colors.line }]}
           />
         ))}
       </View>
-      <Text style={[ps.label, { color: activeCol }]}>{labels[score - 1]}</Text>
+      <Text style={[ps.label, { color: activeColor }]}>{labels[score - 1]}</Text>
     </View>
   );
 }
 
 const ps = StyleSheet.create({
-  wrap:  { marginTop: -4 },
-  bars:  { flexDirection: 'row', gap: 4, marginBottom: 4 },
-  bar:   { flex: 1, height: 3, borderRadius: 2 },
-  label: { fontSize: 10, fontFamily: 'Montserrat-SemiBold' },
+  wrap: { alignItems: 'center', flexDirection: 'row', gap: 8, marginTop: 6 },
+  bars: { flexDirection: 'row', gap: 4 },
+  bar: { borderRadius: 2, height: 4, width: 28 },
+  label: { fontFamily: v2Fonts.bodyBold, fontSize: 10, letterSpacing: 1.4 },
 });
 
-/* ── Field ─────────────────────────────────────────────────────── */
-interface FieldProps {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder: string;
-  secureTextEntry?: boolean;
-  keyboardType?: 'default' | 'email-address';
-  error?: string | null;
-  hint?: string;
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-  secureTextEntry = false,
-  keyboardType = 'default',
-  error,
-  hint,
-}: FieldProps) {
-  const [focused, setFocused] = useState(false);
-
-  const borderColor = error
-    ? colors.coral[600]
-    : focused
-    ? colors.ink[900]
-    : colors.slate[200];
-
-  return (
-    <View style={f.wrap}>
-      {/* Label — 10px bold 0.16em uppercase; coral when error */}
-      <Text style={[f.label, error ? f.labelError : null]}>{label}</Text>
-
-      <TextInput
-        value={value}
-        onChangeText={onChange}
-        placeholder={placeholder}
-        placeholderTextColor={colors.slate[300]}
-        secureTextEntry={secureTextEntry}
-        keyboardType={keyboardType}
-        autoCapitalize={keyboardType === 'email-address' ? 'none' : 'words'}
-        autoCorrect={false}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        style={[f.input, { borderColor }]}
-      />
-
-      {/* Error — 11px semiBold coral-600 with inline icon */}
-      {error ? (
-        <View style={f.errorRow}>
-          <Text style={f.errorIcon}>●</Text>
-          <Text style={f.errorMsg}>{error}</Text>
-        </View>
-      ) : hint ? (
-        <Text style={f.hint}>{hint}</Text>
-      ) : null}
-    </View>
-  );
-}
-
-const f = StyleSheet.create({
-  wrap: { gap: 6 },
-  label: {
-    fontSize: 10,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: 1.6,            // 0.16em × 10
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-  },
-  labelError: { color: colors.coral[600] },
-  input: {
-    fontSize: 15,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.ink[900],
-    backgroundColor: colors.slate[0],
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  errorIcon: { fontSize: 7, color: colors.coral[600] },
-  errorMsg: {
-    fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.coral[600],
-  },
-  hint: {
-    fontSize: 11,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[400],
-    lineHeight: 16,                // 11 × 1.45
-  },
-});
-
-/* ── RegisterScreen ─────────────────────────────────────────────── */
 export default function RegisterScreen() {
   const [shopName, setShopName] = useState('');
-  const [email,    setEmail]    = useState('');
-  const [pass,     setPass]     = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [passConf, setPassConf] = useState('');
-  const [touched,  setTouched]  = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  /* Validation — shown once user attempts submit */
-  const passError  = touched && pass.length > 0 && pass.length < 8
-    ? 'En az 8 karakter gerekli'
-    : null;
-  const confError  = touched && passConf.length > 0 && pass !== passConf
-    ? 'Şifreler eşleşmiyor'
-    : null;
-  const emailError = touched && email.length > 0 && !email.includes('@')
-    ? 'Geçerli bir e-posta gir'
-    : null;
+  const emailError = email.length > 0 && !email.includes('@') ? 'Geçerli bir e-posta gir' : null;
+  const passError = password.length > 0 && password.length < 8 ? 'En az 8 karakter gerekli' : null;
+  const confError = passConf.length > 0 && password !== passConf ? 'Şifreler eşleşmiyor' : null;
+  const canRegister = shopName.trim().length >= 2 && email.includes('@') && password.length >= 8 && password === passConf;
 
-  const canRegister =
-    shopName.trim().length >= 2 &&
-    email.includes('@') &&
-    pass.length >= 8 &&
-    pass === passConf;
-
-  async function handleSubmit() {
-    setTouched(true);
+  async function handleRegister() {
     if (!canRegister || loading) return;
     setLoading(true);
     setError(null);
     try {
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      const { data: authData, error: authErr } = await supabase.auth.signUp({
         email: email.trim(),
-        password: pass,
-        options: { data: { shop_name: shopName.trim() } },
+        password,
       });
-      if (signUpError || !authData.user || !authData.session) {
-        setError(signUpError?.message ?? 'Kayıt başarısız.');
-        return;
-      }
+      if (authErr) { setError(authErr.message); return; }
+      const userId = authData.user?.id;
+      if (!userId) { setError('Kayıt başarısız, tekrar dene.'); return; }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) { setError('Oturum alınamadı.'); return; }
 
       const res = await fetch(`${FN_BASE}/register-shop`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authData.session.access_token}`,
-        },
-        body: JSON.stringify({ shop_name: shopName.trim() }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ display_name: shopName.trim(), phone: '' }),
       });
       if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        setError(d.error ?? 'Dükkan oluşturulamadı');
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? 'Dükkan oluşturulamadı.');
         return;
       }
-
       trackEvent('register_success');
-      router.replace('/(auth)/pending' as any);
+      router.replace('/(auth)/pending');
+    } catch (e: any) {
+      setError(e?.message ?? 'Bir hata oluştu.');
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.kav}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-      <ScrollView
-        style={styles.screen}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        bounces={false}
-      >
-        {/* Top — marginTop:8 */}
-        <View style={styles.top}>
-          {/* Brand mark — 40×40 ink-900 circle with "S", marginBottom:24 */}
-          <View style={styles.mark}>
-            <Text style={styles.markLetter}>S</Text>
+    <SafeAreaView style={styles.safe}>
+      <KeyboardAvoidingView style={styles.kav} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Watermark */}
+          <ChevronRight color={v2Colors.spruce} size={260} strokeWidth={5} style={styles.watermark} />
+
+          {/* Brand */}
+          <View style={styles.brandRow}>
+            <View style={styles.logoMark}>
+              <Text style={styles.logoChevron}>›</Text>
+              <View style={styles.logoDot} />
+            </View>
+            <Text style={styles.brandName}>Sıradaki</Text>
           </View>
 
-          {/* Overline — 10px bold 0.16em uppercase slate-500 */}
-          <Text style={styles.overline}>Berber · Dükkan Paneli</Text>
+          {/* Hero */}
+          <View style={styles.hero}>
+            <Text style={styles.overline}>Berber · Dükkan Paneli</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>Hesap </Text>
+              <Text style={styles.titleItalic}>oluştur.</Text>
+            </View>
+            <Text style={styles.lead}>
+              Dükkanını Sıradaki'ye ekle, randevularını online al.
+            </Text>
+          </View>
 
-          {/* H1 — 30px bold -0.02em margin:'12px 0 8px' lineHeight:1.05 */}
-          <Text style={styles.title}>Hesap Oluştur</Text>
-
-          {/* Lead — 14px Regular 1.55 fg-2 margin:0 */}
-          <Text style={styles.lead}>
-            Dükkanını Sıradaki&apos;ye ekle, randevularını online al.
-          </Text>
-        </View>
-
-        {/* Fields — marginTop:24 gap:14 */}
-        <View style={styles.fields}>
-          <Field
-            label="Dükkan Adı"
-            value={shopName}
-            onChange={setShopName}
-            placeholder="örn. Keskin Berber"
-            hint="Müşteriler bu ismi görecek"
-          />
-          <Field
-            label="E-posta"
-            value={email}
-            onChange={setEmail}
-            placeholder="berber@dukkan.com"
-            keyboardType="email-address"
-            error={emailError}
-          />
-
-          {/* Şifre + PasswordStrength — wrapped in a View */}
-          <View>
-            <Field
-              label="Şifre"
-              value={pass}
-              onChange={setPass}
-              placeholder="En az 8 karakter"
-              secureTextEntry
-              error={passError}
-            />
-            {!passError && (
-              <View style={styles.strengthWrap}>
-                <PasswordStrength value={pass} />
+          {/* Fields */}
+          <View style={styles.fields}>
+            {/* Dükkan Adı */}
+            <View style={styles.field}>
+              <View style={styles.fieldLabelRow}>
+                <Text style={styles.fieldLabel}>Dükkan Adı</Text>
+                <Text style={styles.fieldHint}>Müşteriler bu ismi görecek</Text>
               </View>
-            )}
+              <View style={styles.inputRow}>
+                <Store size={16} color={v2Colors.ink3} />
+                <TextInput
+                  value={shopName}
+                  onChangeText={setShopName}
+                  placeholder="örn. Keskin Berber"
+                  placeholderTextColor={v2Colors.ink3}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  style={styles.input}
+                />
+              </View>
+              <View style={styles.inputUnderline} />
+            </View>
+
+            {/* E-posta */}
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>E-posta</Text>
+              <View style={styles.inputRow}>
+                <Mail size={16} color={v2Colors.ink3} />
+                <TextInput
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="berber@dukkan.com"
+                  placeholderTextColor={v2Colors.ink3}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={styles.input}
+                />
+              </View>
+              <View style={[styles.inputUnderline, emailError ? { backgroundColor: v2Colors.brick } : null]} />
+              {emailError ? <Text style={styles.fieldError}>{emailError}</Text> : null}
+            </View>
+
+            {/* Şifre */}
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Şifre</Text>
+              <View style={styles.inputRow}>
+                <Lock size={16} color={v2Colors.ink3} />
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="En az 8 karakter"
+                  placeholderTextColor={v2Colors.ink3}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={styles.input}
+                />
+              </View>
+              <View style={[styles.inputUnderline, passError ? { backgroundColor: v2Colors.brick } : null]} />
+              {passError ? (
+                <Text style={styles.fieldError}>{passError}</Text>
+              ) : (
+                <PasswordStrength value={password} />
+              )}
+            </View>
+
+            {/* Şifre Tekrar */}
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Şifre Tekrar</Text>
+              <View style={styles.inputRow}>
+                <Lock size={16} color={v2Colors.ink3} />
+                <TextInput
+                  value={passConf}
+                  onChangeText={setPassConf}
+                  placeholder="Şifreni tekrar gir"
+                  placeholderTextColor={v2Colors.ink3}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={styles.input}
+                />
+              </View>
+              <View style={[styles.inputUnderline, confError ? { backgroundColor: v2Colors.brick } : null]} />
+              {confError ? <Text style={styles.fieldError}>{confError}</Text> : null}
+            </View>
           </View>
 
-          <Field
-            label="Şifre Tekrar"
-            value={passConf}
-            onChange={setPassConf}
-            placeholder="Şifreni tekrar gir"
-            secureTextEntry
-            error={confError}
-          />
-        </View>
+          {/* Fine print */}
+          <Text style={styles.finePrint}>
+            {'Kayıt olarak '}
+            <Text
+              style={styles.finePrintLink}
+              onPress={() => WebBrowser.openBrowserAsync('https://siradaki.com/kullanim-kosullari')}
+            >
+              Kullanım Koşulları
+            </Text>
+            {"'nı ve "}
+            <Text
+              style={styles.finePrintLink}
+              onPress={() => WebBrowser.openBrowserAsync('https://siradaki.com/gizlilik')}
+            >
+              Gizlilik Politikası
+            </Text>
+            {"'nı kabul etmiş olursun."}
+          </Text>
 
-        {/* Fine print — marginTop:16 11px slate-400 lineHeight:1.55 */}
-        <Text style={styles.finePrint}>
-          {"Kayıt olarak "}
-          <Text
-            style={styles.finePrintLink}
-            onPress={() => WebBrowser.openBrowserAsync("https://siradaki.app/kullanim-kosullari")}
-          >{"Kullanım Koşulları"}</Text>
-          {"’nı ve "}
-          <Text
-            style={styles.finePrintLink}
-            onPress={() => WebBrowser.openBrowserAsync("https://siradaki.app/gizlilik-politikasi")}
-          >{"Gizlilik Politikası"}</Text>
-          {"’nı kabul etmiş olursun."}
-        </Text>
+          <View style={styles.spacer} />
 
-        {/* Spacer — marginTop:'auto' */}
-        <View style={styles.spacer} />
+          {/* CTA */}
+          <View style={styles.cta}>
+            {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        {/* CTA — paddingTop:20 gap:12 alignItems:'center' */}
-        <View style={styles.cta}>
-          {error ? (
-            <Text style={styles.errorText}>{error}</Text>
-          ) : null}
-          <Button
-            variant="primary"
-            size="lg"
-            full
-            disabled={!canRegister || loading}
-            onPress={handleSubmit}
-          >
-            {loading ? 'Hesap oluşturuluyor…' : 'Hesap Oluştur'}
-          </Button>
-          <View style={styles.footerRow}>
-            <Text style={styles.footerText}>Hesabın var mı? </Text>
-            <TouchableOpacity onPress={() => router.back()}>
-              <Text style={styles.footerLink}>Giriş yap</Text>
+            <TouchableOpacity
+              activeOpacity={!canRegister || loading ? 1 : 0.82}
+              disabled={!canRegister || loading}
+              onPress={handleRegister}
+              style={[styles.primaryBtn, (!canRegister || loading) && styles.primaryBtnDisabled]}
+            >
+              <Text style={styles.primaryText}>
+                {loading ? 'Hesap oluşturuluyor…' : 'Hesap Oluştur →'}
+              </Text>
             </TouchableOpacity>
+
+            <View style={styles.footerRow}>
+              <Text style={styles.footerText}>Hesabın var mı? </Text>
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text style={styles.footerLink}>Giriş yap</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.slate[0],
-  },
-  kav: {
-    flex: 1,
-    backgroundColor: colors.slate[0],
-  },
-  screen: {
-    flex: 1,
-    backgroundColor: colors.slate[0],
-  },
+  safe: { backgroundColor: v2Colors.paper, flex: 1 },
+  kav: { flex: 1 },
+  scroll: { flex: 1 },
   content: {
     flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 24,
+    paddingBottom: 32,
+    paddingHorizontal: 28,
+    paddingTop: 40,
   },
 
-  /* Top — marginTop:40 */
-  top: { marginTop: 40 },
+  watermark: { opacity: 0.055, position: 'absolute', right: -60, top: 80 },
 
-  /* Mark — 40×40 ink-900 borderRadius:999 marginBottom:24 */
-  mark: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
-    backgroundColor: colors.ink[900],
+  brandRow: { alignItems: 'center', flexDirection: 'row', gap: 14, marginBottom: 64 },
+  logoMark: {
     alignItems: 'center',
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 11,
+    height: 44,
     justifyContent: 'center',
-    marginBottom: 24,
+    shadowColor: v2Colors.spruce,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    width: 44,
   },
-  markLetter: {
-    fontSize: 18,
-    fontFamily: 'Montserrat-Bold',
-    color: '#ffffff',
-  },
-
-  /* Overline — 10px bold 0.16em uppercase slate-500 */
-  overline: {
-    fontSize: 10,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: 1.6,            // 0.16em × 10
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-  },
-
-  /* H1 — 30px bold -0.02em margin:'12px 0 8px' lineHeight:1.05 */
-  title: {
+  logoChevron: {
+    color: v2Colors.paper,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 30,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: -0.6,           // -0.02em × 30
-    lineHeight: 32,                // 30 × 1.05 ≈ 32
-    color: colors.ink[900],
-    marginTop: 12,
-    marginBottom: 8,
+    includeFontPadding: false,
+    lineHeight: 34,
+    marginLeft: -2,
+    marginTop: -2,
   },
-
-  /* Lead — 14px Regular 1.55 fg-2=slate-700 margin:0 */
-  lead: {
-    fontSize: 14,
-    fontFamily: 'Montserrat-Regular',
-    lineHeight: 22,                // 14 × 1.55 ≈ 22
-    color: colors.slate[700],
+  logoDot: {
+    backgroundColor: v2Colors.ember,
+    borderRadius: 999,
+    bottom: 8,
+    height: 5,
+    position: 'absolute',
+    right: 8,
+    width: 5,
   },
+  brandName: { color: v2Colors.ink, fontFamily: v2Fonts.display, fontSize: 25, lineHeight: 29 },
 
-  /* Fields — marginTop:24, gap:14 */
-  fields: { marginTop: 24, gap: 14 },
+  hero: {},
+  overline: {
+    color: v2Colors.ember,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 12,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+  },
+  titleRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8, marginTop: 12 },
+  title: { color: v2Colors.ink, fontFamily: v2Fonts.display, fontSize: 36, includeFontPadding: false, lineHeight: 40 },
+  titleItalic: {
+    color: v2Colors.spruce,
+    fontFamily: v2Fonts.display,
+    fontSize: 36,
+    fontStyle: 'italic',
+    includeFontPadding: false,
+    lineHeight: 40,
+  },
+  lead: { color: v2Colors.ink2, fontFamily: v2Fonts.body, fontSize: 15, lineHeight: 23 },
 
-  /* PasswordStrength below Şifre field */
-  strengthWrap: { marginTop: 8 },
-
-  /* Fine print — marginTop:16 */
-  finePrint: {
-    marginTop: 16,
+  fields: { gap: 20, marginTop: 28 },
+  field: { gap: 0 },
+  fieldLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  fieldLabel: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 11,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[400],
-    lineHeight: 17,                // 11 × 1.55
+    letterSpacing: 1.7,
+    textTransform: 'uppercase',
   },
-  finePrintLink: {
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.brand[600],
+  fieldHint: { color: v2Colors.ink3, fontFamily: v2Fonts.body, fontSize: 11 },
+  inputRow: { alignItems: 'center', flexDirection: 'row', gap: 10, paddingBottom: 8 },
+  input: {
+    color: v2Colors.ink,
+    flex: 1,
+    fontFamily: v2Fonts.bodyMedium,
+    fontSize: 16,
+    includeFontPadding: false,
+    padding: 0,
+  },
+  inputUnderline: { backgroundColor: v2Colors.spruce, height: 1 },
+  fieldError: {
+    color: v2Colors.brick,
+    fontFamily: v2Fonts.bodySemiBold,
+    fontSize: 11,
+    marginTop: 5,
   },
 
-  /* Spacer */
-  spacer: { flex: 1, minHeight: 20 },
+  finePrint: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.body,
+    fontSize: 11,
+    lineHeight: 17,
+    marginTop: 16,
+  },
+  finePrintLink: { color: v2Colors.ember, fontFamily: v2Fonts.bodySemiBold },
 
-  /* CTA — paddingTop:20 gap:12 */
-  cta: {
-    paddingTop: 20,
-    gap: 12,
+  spacer: { flex: 1, minHeight: 24 },
+
+  cta: { alignItems: 'center', gap: 12 },
+  error: { color: v2Colors.brick, fontFamily: v2Fonts.bodySemiBold, fontSize: 13, textAlign: 'center' },
+  primaryBtn: {
     alignItems: 'center',
+    alignSelf: 'stretch',
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 14,
+    height: 54,
+    justifyContent: 'center',
+    shadowColor: v2Colors.spruce,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.34,
+    shadowRadius: 18,
   },
+  primaryBtnDisabled: { backgroundColor: v2Colors.line2, shadowOpacity: 0 },
+  primaryText: { color: v2Colors.paper, fontFamily: v2Fonts.bodyBold, fontSize: 16 },
 
-  /* Footer */
-  footerRow: { flexDirection: 'row', justifyContent: 'center' },
-  footerText: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
-  },
-  footerLink: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.brand[600],
-  },
-  errorText: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.coral[600],
-    textAlign: 'center',
-  },
+  footerRow: { alignItems: 'center', flexDirection: 'row' },
+  footerText: { color: v2Colors.ink2, fontFamily: v2Fonts.body, fontSize: 13 },
+  footerLink: { color: v2Colors.spruce, fontFamily: v2Fonts.bodyBold, fontSize: 13 },
 });

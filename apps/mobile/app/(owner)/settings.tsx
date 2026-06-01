@@ -62,8 +62,9 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
-import { colors } from '../../lib/theme';
+import { ChevronRight, Clock, Code2, Copy, Mail, MapPin, Scissors, Store } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
+import { v2Colors, v2Fonts, v2Radii } from '../../lib/v2-tokens';
 import {
   shopHoursScheduleFromWorkingHours,
   shopHoursScheduleToRows,
@@ -104,7 +105,7 @@ function Toggle({ on, onChange }: ToggleProps) {
 
   const bgColor = anim.interpolate({
     inputRange: [0, 1],
-    outputRange: [colors.slate[200], colors.brand[600]],
+    outputRange: [v2Colors.line, v2Colors.spruce],
   });
   const thumbLeft = anim.interpolate({
     inputRange: [0, 1],
@@ -325,7 +326,7 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
                   value={name}
                   onChangeText={setName}
                   placeholder="örn. Keskin Berber"
-                  placeholderTextColor={colors.slate[300]}
+                  placeholderTextColor={v2Colors.ink3}
                   autoCorrect={false}
                   spellCheck={false}
                   style={styles.textInput}
@@ -342,7 +343,7 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
                   value={address}
                   onChangeText={setAddress}
                   placeholder="Mahalle, Sokak No, İl"
-                  placeholderTextColor={colors.slate[300]}
+                  placeholderTextColor={v2Colors.ink3}
                   autoCorrect={false}
                   spellCheck={false}
                   style={styles.textInput}
@@ -356,7 +357,7 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
                   value={phone}
                   onChangeText={setPhone}
                   placeholder="0(2xx) xxx xx xx"
-                  placeholderTextColor={colors.slate[300]}
+                  placeholderTextColor={v2Colors.ink3}
                   keyboardType="phone-pad"
                   style={styles.textInput}
                 />
@@ -372,7 +373,7 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
                   value={bio}
                   onChangeText={setBio}
                   placeholder="Dükkanınız hakkında kısa bir açıklama..."
-                  placeholderTextColor={colors.slate[300]}
+                  placeholderTextColor={v2Colors.ink3}
                   multiline
                   numberOfLines={3}
                   autoCorrect={false}
@@ -511,7 +512,7 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
                           backgroundColor: d.open
                             ? isSel
                               ? 'rgba(255,255,255,0.5)'
-                              : colors.mint[600]
+                              : v2Colors.spruce
                             : 'transparent',
                         },
                       ]}
@@ -546,7 +547,7 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
                         value={day.start}
                         onChangeText={(v) => update('start', v)}
                         placeholder="09:00"
-                        placeholderTextColor={colors.slate[300]}
+                        placeholderTextColor={v2Colors.ink3}
                         style={styles.timeInput}
                       />
                     </View>
@@ -556,7 +557,7 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
                         value={day.end}
                         onChangeText={(v) => update('end', v)}
                         placeholder="19:00"
-                        placeholderTextColor={colors.slate[300]}
+                        placeholderTextColor={v2Colors.ink3}
                         style={styles.timeInput}
                       />
                     </View>
@@ -570,7 +571,7 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
                     value={day.brk}
                     onChangeText={(v) => update('brk', v)}
                     placeholder="örn. 13:00–14:00"
-                    placeholderTextColor={colors.slate[300]}
+                    placeholderTextColor={v2Colors.ink3}
                     style={styles.timeInputFull}
                   />
                   <Text style={styles.molaHint}>
@@ -585,7 +586,7 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
               <Text style={styles.previewRowLabel}>{day.label} önizleme</Text>
               <Text style={[
                 styles.previewRowValue,
-                !day.open && { color: colors.slate[400] },
+                !day.open && { color: v2Colors.ink3 },
               ]}>
                 {day.open ? `${day.start}–${day.end}` : 'Kapalı'}
               </Text>
@@ -626,6 +627,35 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
   );
 }
 
+/* ─── InfoRow ───────────────────────────────────────────────── */
+
+interface InfoRowProps {
+  icon: React.ReactNode;
+  title: string;
+  meta: string;
+  onPress?: () => void;
+  last?: boolean;
+}
+
+function InfoRow({ icon, title, meta, onPress, last }: InfoRowProps) {
+  const content = (
+    <View style={[styles.infoRow, last && styles.infoRowLast]}>
+      <View style={styles.infoIconBox}>{icon}</View>
+      <View style={styles.infoBody}>
+        <Text style={styles.infoTitle}>{title}</Text>
+        <Text style={styles.infoMeta}>{meta}</Text>
+      </View>
+      {onPress ? <ChevronRight size={18} color={v2Colors.ink3} strokeWidth={2} /> : null}
+    </View>
+  );
+  if (!onPress) return content;
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.78}>
+      {content}
+    </TouchableOpacity>
+  );
+}
+
 /* ─── Hours subtitle helpers ────────────────────────────────── */
 
 const TR_DAYS_LABELS: Record<string, string> = { pzt: 'Pzt', sal: 'Sal', car: 'Çar', per: 'Per', cum: 'Cum', cmt: 'Cmt', paz: 'Paz' };
@@ -635,6 +665,26 @@ function buildHoursSubtitle(schedule: { id: string; open: boolean; start: string
   if (!open.length) return 'Kapalı';
   const parts = open.map(d => `${TR_DAYS_LABELS[d.id] ?? d.id} ${d.start}–${d.end}`);
   return parts.join(' · ');
+}
+
+function MiniSwitch({ on }: { on: boolean }) {
+  return (
+    <View style={[styles.miniSwitchTrack, on ? styles.miniSwitchTrackOn : styles.miniSwitchTrackOff]}>
+      <View style={[styles.miniSwitchThumb, on ? styles.miniSwitchThumbOn : styles.miniSwitchThumbOff]} />
+    </View>
+  );
+}
+
+function formatHoursRange(day: ScheduleDay): string {
+  return day.open ? `${day.start} - ${day.end}` : 'Kapalı';
+}
+
+function visibleSettingsDays(schedule: ScheduleDay[] | undefined): ScheduleDay[] {
+  const source = schedule ?? INIT_SCHEDULE;
+  const wanted = ['pzt', 'sal', 'car', 'cmt', 'paz'];
+  return wanted
+    .map((id) => source.find((day) => day.id === id))
+    .filter(Boolean) as ScheduleDay[];
 }
 
 /* ─── Main Screen ───────────────────────────────────────────── */
@@ -688,6 +738,7 @@ export default function SettingsScreen() {
   const [hoursSubtitle,      setHoursSubtitle]      = useState('Pzt–Cum 09:00–19:00 · Cmt 10:00–17:00 · Paz kapalı');
   const [hoursInitialSchedule, setHoursInitialSchedule] = useState<ScheduleDay[] | undefined>(undefined);
   const [prefs,              setPrefs]              = useState<NotificationPrefs>(DEFAULT_NOTIFICATION_PREFS);
+  const [activeServiceCount, setActiveServiceCount] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -746,6 +797,11 @@ export default function SettingsScreen() {
                 shortId: `${t.token_hash.slice(0, 8)}…`,
                 lastUsed: t.last_used_at ? new Date(t.last_used_at).toLocaleDateString('tr-TR') : 'Hiç',
               })));
+            });
+          supabase.from('services').select('id').eq('shop_id', data.id).eq('is_active', true)
+            .then(({ data: services }) => {
+              if (!isMounted) return;
+              setActiveServiceCount(services?.length ?? 0);
             });
         });
     });
@@ -824,6 +880,8 @@ export default function SettingsScreen() {
     }]);
   }
 
+  const settingsDays = visibleSettingsDays(hoursInitialSchedule);
+
   function handleDeleteLink(id: string) {
     Alert.alert(
       'Bağlantı Sil',
@@ -848,168 +906,90 @@ export default function SettingsScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* OverlineHeader */}
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>Dükkan Ayarları</Text>
+          <Text style={styles.eyebrow}>Dükkan & Hesap</Text>
           <Text style={styles.pageTitle}>Ayarlar</Text>
-          <Text style={styles.headerMeta}>
-            Widget bağlantılarını yönet ve hesabından çıkış yap.
-          </Text>
         </View>
 
-        {/* Account info card */}
-        <View style={styles.accountCard}>
-          <Text style={styles.accountOverline}>Dükkan Sahibi</Text>
-          <Text style={styles.accountName}>{shop?.name ?? '—'}</Text>
-          <Text style={styles.accountEmail}>{shop?.email ?? '—'}</Text>
-        </View>
-
-        {/* Profile clickable card */}
-        <TouchableOpacity
-          onPress={() => {
-            if (!shopId) {
-              Alert.alert('Lütfen bekleyin', 'Dükkan bilgileri yükleniyor.');
-              return;
-            }
-            setProfileOpen(true);
-          }}
-          style={styles.profileCard}
-          activeOpacity={0.8}
-        >
-          <View style={styles.profileAvatar}>
-            <Text style={styles.profileAvatarText}>
-              {(shop?.name ?? '').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || '—'}
-            </Text>
-          </View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={styles.profileCardName}>{shop?.name ?? '—'}</Text>
-            <Text style={styles.profileCardMeta}>{shop?.address?.split(',')[0] ?? '—'} · {shop?.slug ?? ''}</Text>
-          </View>
-          <View style={styles.profileEditBadge}>
-            <Text style={styles.profileEditText}>Düzenle</Text>
-            <View style={styles.chevronWrap}>
-              <View style={styles.chevronLine1} />
-              <View style={styles.chevronLine2} />
-            </View>
-          </View>
-        </TouchableOpacity>
-
-        {/* Section: Operasyon */}
-        <Text style={styles.sectionLabel}>Operasyon</Text>
-        <View style={styles.operationCard}>
-          {/* Komisyon takibi */}
-          <View style={styles.opRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.opRowTitle}>Komisyon takibi</Text>
-              <Text style={styles.opRowMeta}>
-                {commEnabled ? 'Kazanç raporu açık.' : 'Randevu akışı değişmez.'}
-              </Text>
-            </View>
-            <Toggle on={commEnabled} onChange={async (v) => {
-              setCommEnabled(v);
-              if (shopId) await supabase.from('shops').update({ commission_enabled: v }).eq('id', shopId);
-            }} />
-          </View>
-
-          {/* Dükkan Saatleri */}
-          <TouchableOpacity
-            onPress={() => setHoursOpen(true)}
-            style={styles.opRow}
-            activeOpacity={0.75}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.opRowTitle}>Dükkan Saatleri</Text>
-              <Text style={styles.opRowMeta}>{hoursSubtitle}</Text>
-            </View>
-            <View style={styles.chevronWrap}>
-              <View style={styles.chevronLine1} />
-              <View style={styles.chevronLine2} />
-            </View>
-          </TouchableOpacity>
-
-          {/* Hizmetler */}
-          <TouchableOpacity
+        {/* Dükkan Bilgileri */}
+        <Text style={styles.sectionLabel}>Dükkan Bilgileri</Text>
+        <View style={styles.infoCard}>
+          <InfoRow
+            icon={<Store size={18} color={v2Colors.spruce} strokeWidth={2.2} />}
+            title="Dükkan Adı"
+            meta={shop?.name ?? '—'}
+            onPress={() => { if (!shopId) return; setProfileOpen(true); }}
+          />
+          <View style={styles.divider} />
+          <InfoRow
+            icon={<MapPin size={18} color={v2Colors.spruce} strokeWidth={2.2} />}
+            title="Adres"
+            meta={shop?.address || 'Adres ekle'}
+            onPress={() => { if (!shopId) return; setProfileOpen(true); }}
+          />
+          <View style={styles.divider} />
+          <InfoRow
+            icon={<Scissors size={18} color={v2Colors.spruce} strokeWidth={2.2} />}
+            title="Hizmetler"
+            meta={`${activeServiceCount} aktif hizmet`}
             onPress={() => router.push('/(owner)/services')}
-            style={[styles.opRow, styles.opRowLast]}
-            activeOpacity={0.75}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.opRowTitle}>Hizmetler</Text>
-              <Text style={styles.opRowMeta}>
-                Sunulan hizmetleri ve fiyatları yönet
-              </Text>
-            </View>
-            <View style={styles.chevronWrap}>
-              <View style={styles.chevronLine1} />
-              <View style={styles.chevronLine2} />
-            </View>
-          </TouchableOpacity>
+          />
+          <View style={styles.divider} />
+          <InfoRow
+            icon={<Clock size={18} color={v2Colors.spruce} strokeWidth={2.2} />}
+            title="Çalışma Saatleri"
+            meta={hoursSubtitle}
+            onPress={() => setHoursOpen(true)}
+            last
+          />
         </View>
 
-        {/* Section: Bildirimler */}
-        <Text style={styles.sectionLabel}>Bildirimler</Text>
-        <View style={styles.operationCard}>
-          <View style={styles.opRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.opRowTitle}>Yeni Randevu</Text>
-              <Text style={styles.opRowMeta}>
-                {prefs.new_appointment
-                  ? 'Randevu alındığında bildirim gelir.'
-                  : 'Yeni randevu bildirimleri kapalı.'}
-              </Text>
-            </View>
-            <Toggle on={prefs.new_appointment} onChange={(v) => updatePref('new_appointment', v)} />
-          </View>
-          <View style={styles.opRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.opRowTitle}>İptal</Text>
-              <Text style={styles.opRowMeta}>
-                {prefs.cancellation
-                  ? 'Müşteri iptal ettiğinde bildirim gelir.'
-                  : 'İptal bildirimleri kapalı.'}
-              </Text>
-            </View>
-            <Toggle on={prefs.cancellation} onChange={(v) => updatePref('cancellation', v)} />
-          </View>
-          <View style={[styles.opRow, styles.opRowLast]}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.opRowTitle}>Günlük Özet</Text>
-              <Text style={styles.opRowMeta}>
-                {prefs.daily_summary
-                  ? 'Açılıştan 15 dakika önce günün özeti.'
-                  : 'Günlük özet bildirimi kapalı.'}
-              </Text>
-            </View>
-            <Toggle on={prefs.daily_summary} onChange={(v) => updatePref('daily_summary', v)} />
-          </View>
-        </View>
-
-        {/* Section: Widget Bağlantıları */}
-        <Text style={styles.sectionLabel}>Widget Bağlantıları</Text>
-        <View style={styles.widgetSection}>
-          {widgetLinks.map((l) => (
-            <View key={l.id} style={styles.widgetLinkCard}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.widgetLinkId}>{l.shortId}</Text>
-                <Text style={styles.widgetLinkMeta}>Son {l.lastUsed}</Text>
+        {/* Widget */}
+        <Text style={styles.sectionLabel}>Widget</Text>
+        <View style={styles.infoCard}>
+          {widgetLinks.length > 0 ? (
+            widgetLinks.map((l, i) => (
+              <View key={l.id}>
+                {i > 0 && <View style={styles.divider} />}
+                <View style={styles.widgetRow}>
+                  <View style={styles.infoIconBox}>
+                    <Code2 size={16} color={v2Colors.spruce} strokeWidth={2} />
+                  </View>
+                  <View style={styles.infoBody}>
+                    <Text style={styles.infoTitle}>Web Sitesi Butonu</Text>
+                    <Text style={styles.widgetToken}>{l.shortId}</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={async () => {
+                      await Clipboard.setStringAsync(l.shortId);
+                      Alert.alert('Kopyalandı', 'Token panoya kopyalandı.');
+                    }}
+                    hitSlop={8}
+                  >
+                    <Copy size={18} color={v2Colors.ink3} strokeWidth={2} />
+                  </TouchableOpacity>
+                </View>
               </View>
-              <TouchableOpacity
-                onPress={() => handleDeleteLink(l.id)}
-                style={styles.deleteLinkBtn}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.deleteLinkBtnText}>Sil</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-
-          <TouchableOpacity
-            onPress={handleCreateLink}
-            style={styles.newLinkBtn}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.newLinkBtnText}>+ Yeni Bağlantı</Text>
+            ))
+          ) : null}
+          {widgetLinks.length > 0 && <View style={styles.divider} />}
+          <TouchableOpacity onPress={handleCreateLink} style={styles.newTokenRow} activeOpacity={0.78}>
+            <Text style={styles.newTokenText}>+ Yeni Token Oluştur</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Hesap */}
+        <Text style={styles.sectionLabel}>Hesap</Text>
+        <View style={styles.infoCard}>
+          <View style={[styles.infoRow, styles.infoRowLast]}>
+            <View style={styles.infoIconBox}>
+              <Mail size={18} color={v2Colors.spruce} strokeWidth={2.2} />
+            </View>
+            <View style={styles.infoBody}>
+              <Text style={styles.infoTitle}>{shop?.email ?? '—'}</Text>
+              <Text style={styles.infoMeta}>Google ile bağlı</Text>
+            </View>
+          </View>
         </View>
 
         {/* Yasal */}
@@ -1074,7 +1054,10 @@ export default function SettingsScreen() {
         shopId={shopId}
         staffId={ownerStaffId}
         initialSchedule={hoursInitialSchedule}
-        onSaved={(s) => setHoursSubtitle(buildHoursSubtitle(s))}
+        onSaved={(s) => {
+          setHoursSubtitle(buildHoursSubtitle(s));
+          setHoursInitialSchedule(s);
+        }}
       />
     </View>
   );
@@ -1085,222 +1068,328 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.slate[50],
+    backgroundColor: v2Colors.paper,
   },
   content: {
-    paddingBottom: 48,
+    paddingHorizontal: 40,
+    paddingTop: 74,
+    paddingBottom: 130,
   },
 
   /* Header */
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
+    paddingBottom: 30,
   },
   eyebrow: {
     fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    letterSpacing: 2.5,
+    lineHeight: 14,
+    fontFamily: v2Fonts.bodyBold,
+    letterSpacing: 2.7,
     textTransform: 'uppercase',
-    color: colors.slate[500],
+    color: v2Colors.ink3,
   },
   pageTitle: {
-    fontSize: 32,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: -0.3,
-    color: colors.ink[900],
-    marginTop: 10,
+    fontSize: 39,
+    lineHeight: 42,
+    fontFamily: v2Fonts.display,
+    color: v2Colors.ink,
+    marginTop: 1,
   },
   headerMeta: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.body,
     fontSize: 13,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
+    lineHeight: 19,
     marginTop: 4,
-    lineHeight: 19.5,
   },
 
-  /* Account card */
   accountCard: {
-    marginHorizontal: 20,
-    backgroundColor: colors.slate[0],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line,
     borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 8,
+    marginHorizontal: 20,
     paddingHorizontal: 16,
     paddingVertical: 16,
-    marginBottom: 8,
   },
   accountOverline: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 10,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: 1.96,
+    letterSpacing: 2,
     textTransform: 'uppercase',
-    color: colors.slate[500],
   },
-  accountName: {
-    fontSize: 17,
-    fontFamily: 'Montserrat-Bold',
-    color: colors.ink[900],
-    marginTop: 6,
-  },
-  accountEmail: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
-    marginTop: 2,
-  },
+  accountName: { color: v2Colors.ink, fontFamily: v2Fonts.bodyBold, fontSize: 17, marginTop: 6 },
+  accountEmail: { color: v2Colors.ink3, fontFamily: v2Fonts.body, fontSize: 13, marginTop: 2 },
 
   /* Profile card */
   profileCard: {
     marginHorizontal: 20,
-    backgroundColor: colors.slate[0],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line,
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
     gap: 14,
     marginBottom: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   profileAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: colors.brand[600],
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 12,
     flexShrink: 0,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
   },
   profileAvatarText: {
+    color: v2Colors.paper,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 16,
-    fontFamily: 'Montserrat-Bold',
-    color: '#ffffff',
   },
   profileCardName: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 16,
-    fontFamily: 'Montserrat-Bold',
-    color: colors.ink[900],
   },
   profileCardMeta: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.body,
     fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
     marginTop: 3,
   },
   profileEditBadge: {
-    flexDirection: 'row',
     alignItems: 'center',
+    flexDirection: 'row',
     gap: 6,
   },
   profileEditText: {
+    color: v2Colors.spruce,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.brand[600],
   },
 
   /* Section label */
   sectionLabel: {
     fontSize: 11,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: 2.5,
+    lineHeight: 14,
+    fontFamily: v2Fonts.bodyBold,
+    letterSpacing: 2.6,
     textTransform: 'uppercase',
-    color: colors.slate[500],
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
+    color: v2Colors.ink3,
+    marginTop: 0,
+    marginBottom: 10,
   },
 
-  /* Operation card */
-  operationCard: {
-    marginHorizontal: 20,
-    backgroundColor: colors.slate[0],
+  hoursCard: {
+    backgroundColor: v2Colors.card,
     borderWidth: 1,
-    borderColor: colors.slate[200],
+    borderColor: v2Colors.line,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 20,
+    shadowColor: '#2F281F',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    elevation: 4,
+  },
+  hoursRow: {
+    height: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: v2Colors.line,
+  },
+  hoursRowLast: {
+    borderBottomWidth: 0,
+  },
+  hoursDay: {
+    width: 48,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: v2Fonts.bodyBold,
+    color: v2Colors.ink,
+  },
+  hoursTime: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 18,
+    fontFamily: v2Fonts.mono,
+    color: v2Colors.ink3,
+  },
+  hoursClosed: {
+    fontFamily: v2Fonts.bodyBold,
+    color: v2Colors.ink3,
+  },
+  miniSwitchTrack: {
+    width: 43,
+    height: 27,
+    borderRadius: 999,
+    justifyContent: 'center',
+  },
+  miniSwitchTrackOn: {
+    backgroundColor: v2Colors.spruce,
+  },
+  miniSwitchTrackOff: {
+    backgroundColor: '#E8DFD0',
+  },
+  miniSwitchThumb: {
+    position: 'absolute',
+    top: 2,
+    width: 23,
+    height: 23,
+    borderRadius: 999,
+    backgroundColor: v2Colors.card,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.16,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  miniSwitchThumbOn: {
+    left: 18,
+  },
+  miniSwitchThumbOff: {
+    left: 2,
+  },
+  infoCard: {
+    backgroundColor: v2Colors.card,
+    borderWidth: 1,
+    borderColor: v2Colors.line,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 20,
+    shadowColor: '#2F281F',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    elevation: 4,
+  },
+  infoRow: {
+    height: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: v2Colors.line,
+    gap: 13,
+  },
+  infoRowLast: {
+    borderBottomWidth: 0,
+  },
+  infoIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 11,
+    backgroundColor: v2Colors.spruceSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoBody: {
+    flex: 1,
+  },
+  infoTitle: {
+    fontSize: 16,
+    lineHeight: 19,
+    fontFamily: v2Fonts.bodyBold,
+    color: v2Colors.ink,
+  },
+  infoMeta: {
+    marginTop: 2,
+    fontSize: 13,
+    lineHeight: 16,
+    fontFamily: v2Fonts.bodySemiBold,
+    color: v2Colors.ink3,
+  },
+
+  operationCard: {
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line,
     borderRadius: 12,
+    borderWidth: 1,
+    marginHorizontal: 20,
     padding: 14,
   },
   opRow: {
-    flexDirection: 'row',
     alignItems: 'center',
+    borderBottomColor: v2Colors.line,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
     gap: 12,
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.slate[100],
   },
-  opRowBorderTop: {
-    borderTopWidth: 1,
-    borderTopColor: colors.slate[100],
-  },
-  opRowLast: {
-    borderBottomWidth: 0,
-  },
-  opRowTitle: {
-    fontSize: 15,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.ink[900],
-  },
-  opRowMeta: {
-    fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
-    marginTop: 2,
-  },
+  opRowBorderTop: { borderTopColor: v2Colors.line, borderTopWidth: 1 },
+  opRowLast: { borderBottomWidth: 0 },
+  opRowTitle: { color: v2Colors.ink, fontFamily: v2Fonts.bodySemiBold, fontSize: 15 },
+  opRowMeta: { color: v2Colors.ink3, fontFamily: v2Fonts.body, fontSize: 12, marginTop: 2 },
 
   /* Widget section */
   widgetSection: {
-    marginHorizontal: 20,
-    gap: 8,
+    gap: 10,
   },
   widgetLinkCard: {
-    backgroundColor: colors.slate[0],
+    backgroundColor: v2Colors.card,
     borderWidth: 1,
-    borderColor: colors.slate[200],
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    borderColor: v2Colors.line,
+    borderRadius: 16,
+    paddingHorizontal: 16,
     paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    shadowColor: '#2F281F',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    elevation: 4,
   },
   widgetLinkId: {
     fontSize: 14,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.ink[900],
+    lineHeight: 18,
+    fontFamily: v2Fonts.bodyBold,
+    color: v2Colors.ink,
   },
   widgetLinkMeta: {
     fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
+    lineHeight: 15,
+    fontFamily: v2Fonts.bodyMedium,
+    color: v2Colors.ink3,
     marginTop: 2,
   },
   deleteLinkBtn: {
     height: 34,
     paddingHorizontal: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.coral[600],
+    borderColor: v2Colors.brick,
     alignItems: 'center',
     justifyContent: 'center',
   },
   deleteLinkBtnText: {
     fontSize: 13,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.coral[600],
+    fontFamily: v2Fonts.bodyBold,
+    color: v2Colors.brick,
   },
   newLinkBtn: {
-    height: 44,
-    borderRadius: 12,
+    height: 76,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.ink[900],
+    borderStyle: 'dashed',
+    borderColor: v2Colors.line2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   newLinkBtnText: {
-    fontSize: 14,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.ink[900],
+    fontSize: 15,
+    lineHeight: 19,
+    fontFamily: v2Fonts.bodyBold,
+    color: v2Colors.spruce,
   },
 
   /* Yasal */
@@ -1310,37 +1399,31 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   legalLink: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.body,
     fontSize: 13,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
     textDecorationLine: 'underline',
   },
 
-  /* Sign out */
   signOutBtn: {
-    marginHorizontal: 20,
-    marginTop: 28,
-    height: 52,
+    alignItems: 'center',
+    borderColor: v2Colors.brick,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.coral[600],
-    alignItems: 'center',
+    height: 52,
     justifyContent: 'center',
+    marginHorizontal: 20,
+    marginTop: 28,
   },
-  signOutBtnText: {
-    fontSize: 15,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.coral[600],
-  },
+  signOutBtnText: { color: v2Colors.brick, fontFamily: v2Fonts.bodySemiBold, fontSize: 15 },
 
-  /* Footer */
   footer: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.body,
     fontSize: 11,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[400],
-    textAlign: 'center',
-    marginTop: 24,
     letterSpacing: 0.88,
+    marginTop: 24,
+    textAlign: 'center',
   },
 
   /* Toggle */
@@ -1375,7 +1458,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 8,
     height: 1.6,
-    backgroundColor: colors.slate[400],
+    backgroundColor: v2Colors.ink3,
     borderRadius: 1,
     transform: [{ rotate: '-45deg' }, { translateY: -3 }],
   },
@@ -1383,7 +1466,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 8,
     height: 1.6,
-    backgroundColor: colors.slate[400],
+    backgroundColor: v2Colors.ink3,
     borderRadius: 1,
     transform: [{ rotate: '45deg' }, { translateY: 3 }],
   },
@@ -1395,44 +1478,43 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheetContainer: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: v2Colors.paper,
+    borderTopLeftRadius: v2Radii.sheet,
+    borderTopRightRadius: v2Radii.sheet,
+    elevation: 16,
     maxHeight: '90%',
     paddingBottom: 32,
-    shadowColor: colors.ink[900],
+    shadowColor: v2Colors.ink,
     shadowOffset: { width: 0, height: -10 },
     shadowOpacity: 0.18,
     shadowRadius: 32,
-    elevation: 16,
   },
   sheetHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: colors.slate[200],
-    borderRadius: 4,
     alignSelf: 'center',
-    marginTop: 12,
+    backgroundColor: v2Colors.line2,
+    borderRadius: 3,
+    height: 5,
+    marginTop: 11,
+    width: 38,
   },
   sheetHeader: {
+    alignItems: 'center',
+    borderBottomColor: v2Colors.line,
+    borderBottomWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.slate[100],
   },
   sheetTitle: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.display,
     fontSize: 20,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: -0.3,
-    color: colors.ink[900],
   },
   sheetCancelBtn: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 14,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.slate[500],
   },
   sheetBody: { flexShrink: 1 },
   sheetBodyContent: {
@@ -1449,377 +1531,286 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   profileSavedCircle: {
-    width: 52,
-    height: 52,
+    alignItems: 'center',
+    backgroundColor: v2Colors.spruceSoft,
+    borderColor: v2Colors.spruce,
     borderRadius: 999,
-    backgroundColor: colors.mint[100],
     borderWidth: 1,
-    borderColor: colors.mint[600],
-    alignItems: 'center',
+    height: 52,
     justifyContent: 'center',
+    width: 52,
   },
-  profileSavedCheck: {
-    fontSize: 22,
-    fontFamily: 'Montserrat-Bold',
-    color: colors.mint[600],
-  },
-  profileSavedTitle: {
-    fontSize: 20,
-    fontFamily: 'Montserrat-Bold',
-    color: colors.ink[900],
-    textAlign: 'center',
-  },
-  profileSavedBody: {
-    fontSize: 14,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
-    lineHeight: 21,
-    textAlign: 'center',
-  },
+  profileSavedCheck: { color: v2Colors.spruce, fontFamily: v2Fonts.bodyBold, fontSize: 22 },
+  profileSavedTitle: { color: v2Colors.ink, fontFamily: v2Fonts.bodyBold, fontSize: 20, textAlign: 'center' },
+  profileSavedBody: { color: v2Colors.ink3, fontFamily: v2Fonts.body, fontSize: 14, lineHeight: 21, textAlign: 'center' },
   profileAvatarCard: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    backgroundColor: colors.slate[50],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
+    backgroundColor: v2Colors.paper2,
+    borderColor: v2Colors.line,
     borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
   profileAvatarName: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 15,
-    fontFamily: 'Montserrat-Bold',
-    color: colors.ink[900],
   },
   profileAvatarCity: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.body,
     fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
     marginTop: 2,
   },
   profilePreviewBadge: {
-    backgroundColor: colors.brand[100],
+    backgroundColor: v2Colors.spruceSoft,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   profilePreviewBadgeText: {
+    color: v2Colors.spruce,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.brand[600],
   },
 
-  /* Toggle row (main screen) */
   toggleRow: {
-    flexDirection: 'row',
     alignItems: 'center',
+    borderBottomColor: v2Colors.line,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.slate[100],
   },
-  toggleRowLast: {
-    borderBottomWidth: 0,
-  },
+  toggleRowLast: { borderBottomWidth: 0 },
 
-  /* Toggle row (in sheet) */
   sheetToggleRow: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.slate[50],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
+    backgroundColor: v2Colors.paper2,
+    borderColor: v2Colors.line,
     borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 13,
   },
   toggleRowTitle: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 14,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.ink[900],
   },
   toggleRowSub: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.body,
     fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
     marginTop: 2,
   },
 
-  /* Slug box */
   slugBox: {
-    backgroundColor: colors.slate[100],
+    backgroundColor: v2Colors.paper2,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   slugLabel: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 10,
-    fontFamily: 'Montserrat-Bold',
     letterSpacing: 1.6,
-    textTransform: 'uppercase',
-    color: colors.slate[400],
     marginBottom: 4,
-  },
-  slugValue: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.brand[600],
-  },
-  slugBtnRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
-  },
-  slugSecondaryBtn: {
-    flex: 1,
-    height: 38,
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: colors.brand[600],
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  slugSecondaryBtnText: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.brand[600],
-  },
-  slugPrimaryBtn: {
-    flex: 1,
-    height: 38,
-    borderRadius: 9,
-    backgroundColor: colors.brand[600],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  slugPrimaryBtnText: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-SemiBold',
-    color: '#ffffff',
-  },
-  slugBtnDisabled: {
-    opacity: 0.4,
-  },
-  slugBtnTextActive: {
-    color: colors.mint[600],
-  },
-
-  /* Form fields */
-  fieldLabel: {
-    fontSize: 10,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: 2.5,
     textTransform: 'uppercase',
-    color: colors.slate[500],
-    marginBottom: 7,
   },
-  fieldHint: {
-    fontSize: 11,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[400],
-    marginTop: 5,
-  },
-  textInput: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 15,
-    color: colors.ink[900],
-    backgroundColor: colors.slate[0],
+  slugValue: { color: v2Colors.spruce, fontFamily: v2Fonts.bodySemiBold, fontSize: 13 },
+  slugBtnRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  slugSecondaryBtn: {
+    alignItems: 'center',
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.spruce,
+    borderRadius: 9,
     borderWidth: 1,
-    borderColor: colors.slate[200],
+    flex: 1,
+    height: 38,
+    justifyContent: 'center',
+  },
+  slugSecondaryBtnText: { color: v2Colors.spruce, fontFamily: v2Fonts.bodySemiBold, fontSize: 13 },
+  slugPrimaryBtn: {
+    alignItems: 'center',
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 9,
+    flex: 1,
+    height: 38,
+    justifyContent: 'center',
+  },
+  slugPrimaryBtnText: { color: v2Colors.paper, fontFamily: v2Fonts.bodySemiBold, fontSize: 13 },
+  slugBtnDisabled: { opacity: 0.4 },
+  slugBtnTextActive: { color: v2Colors.spruce },
+
+  fieldLabel: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 10,
+    letterSpacing: 2.2,
+    marginBottom: 7,
+    textTransform: 'uppercase',
+  },
+  fieldHint: { color: v2Colors.ink3, fontFamily: v2Fonts.body, fontSize: 11, marginTop: 5 },
+  textInput: {
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line2,
     borderRadius: 10,
+    borderWidth: 1,
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodyMedium,
+    fontSize: 15,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
+  textArea: { minHeight: 80, textAlignVertical: 'top' },
 
-  /* Primary button */
   primaryBtn: {
-    height: 52,
-    backgroundColor: colors.ink[900],
-    borderRadius: 12,
     alignItems: 'center',
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 12,
+    height: 52,
     justifyContent: 'center',
+    shadowColor: v2Colors.spruce,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
   },
-  primaryBtnDisabled: {
-    opacity: 0.45,
-  },
-  primaryBtnText: {
-    fontSize: 15,
-    fontFamily: 'Montserrat-SemiBold',
-    color: '#ffffff',
-  },
+  primaryBtnDisabled: { opacity: 0.45 },
+  primaryBtnText: { color: v2Colors.paper, fontFamily: v2Fonts.bodySemiBold, fontSize: 15 },
 
-  /* Hours editor sheet */
   hoursHeaderBlock: {
+    borderBottomColor: v2Colors.line,
     borderBottomWidth: 1,
-    borderBottomColor: colors.slate[100],
-    paddingBottom: 16,
     marginBottom: 4,
+    paddingBottom: 16,
   },
   hoursEyebrow: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 10,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: 2.5,
+    letterSpacing: 2.2,
     textTransform: 'uppercase',
-    color: colors.slate[500],
   },
-  hoursTitle: {
-    fontSize: 22,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: -0.44,
-    color: colors.ink[900],
-    marginTop: 6,
-  },
-  hoursSubtitle: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
-    marginTop: 4,
-  },
+  hoursTitle: { color: v2Colors.ink, fontFamily: v2Fonts.display, fontSize: 22, marginTop: 6 },
+  hoursSubtitle: { color: v2Colors.ink3, fontFamily: v2Fonts.body, fontSize: 13, marginTop: 4 },
 
-  /* Day tabs */
-  dayTabsRow: {
-    flexDirection: 'row',
-    gap: 4,
-  },
+  dayTabsRow: { flexDirection: 'row', gap: 4 },
   dayTab: {
-    flex: 1,
-    height: 52,
-    borderRadius: 10,
     alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    flex: 1,
     gap: 3,
-    borderWidth: 1,
+    height: 52,
+    justifyContent: 'center',
   },
-  dayTabSel: {
-    backgroundColor: colors.ink[900],
-    borderColor: colors.ink[900],
-  },
-  dayTabOpen: {
-    backgroundColor: colors.slate[0],
-    borderColor: colors.slate[200],
-  },
-  dayTabClosed: {
-    backgroundColor: colors.slate[100],
-    borderColor: colors.slate[200],
-  },
-  dayTabText: {
-    fontSize: 9,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: 1.0,
-    textTransform: 'uppercase',
-  },
-  dayTabTextSel: {
-    color: '#ffffff',
-  },
-  dayTabTextOpen: {
-    color: colors.ink[900],
-  },
-  dayTabTextClosed: {
-    color: colors.slate[400],
-  },
-  dayTabDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 999,
-  },
+  dayTabSel: { backgroundColor: v2Colors.ink, borderColor: v2Colors.ink },
+  dayTabOpen: { backgroundColor: v2Colors.card, borderColor: v2Colors.line2 },
+  dayTabClosed: { backgroundColor: v2Colors.paper2, borderColor: v2Colors.line2 },
+  dayTabText: { fontFamily: v2Fonts.bodyBold, fontSize: 9, letterSpacing: 1, textTransform: 'uppercase' },
+  dayTabTextSel: { color: v2Colors.paper },
+  dayTabTextOpen: { color: v2Colors.ink },
+  dayTabTextClosed: { color: v2Colors.ink3 },
+  dayTabDot: { borderRadius: 999, height: 4, width: 4 },
 
-  /* Open toggle card */
   openToggleCard: {
-    backgroundColor: colors.slate[0],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line2,
     borderRadius: 12,
+    borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  openToggleTitle: {
-    fontSize: 15,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.ink[900],
-  },
-  openToggleSub: {
-    fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
-    marginTop: 2,
-  },
+  openToggleTitle: { color: v2Colors.ink, fontFamily: v2Fonts.bodySemiBold, fontSize: 15 },
+  openToggleSub: { color: v2Colors.ink3, fontFamily: v2Fonts.body, fontSize: 12, marginTop: 2 },
 
-  /* Time section */
   timeSectionLabel: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 10,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: 1.96,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
+    letterSpacing: 1.8,
     marginBottom: 8,
-  },
-  timeGrid: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  timeFieldLabel: {
-    fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    letterSpacing: 1.32,
     textTransform: 'uppercase',
-    color: colors.slate[500],
+  },
+  timeGrid: { flexDirection: 'row', gap: 10 },
+  timeFieldLabel: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodySemiBold,
+    fontSize: 11,
+    letterSpacing: 1.3,
     marginBottom: 6,
+    textTransform: 'uppercase',
   },
   timeInput: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 15,
-    color: colors.ink[900],
-    backgroundColor: colors.slate[0],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line2,
     borderRadius: 10,
+    borderWidth: 1,
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodySemiBold,
+    fontSize: 15,
     paddingHorizontal: 13,
     paddingVertical: 11,
   },
   timeInputFull: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 14,
-    color: colors.ink[900],
-    backgroundColor: colors.slate[0],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line2,
     borderRadius: 10,
+    borderWidth: 1,
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodyMedium,
+    fontSize: 14,
     paddingHorizontal: 13,
     paddingVertical: 11,
   },
-  molaHint: {
-    fontSize: 11,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[400],
-    marginTop: 5,
-    lineHeight: 15.4,
-  },
+  molaHint: { color: v2Colors.ink3, fontFamily: v2Fonts.body, fontSize: 11, lineHeight: 15, marginTop: 5 },
 
-  /* Preview row */
   previewRow: {
-    backgroundColor: colors.slate[100],
+    alignItems: 'center',
+    backgroundColor: v2Colors.paper2,
     borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  previewRowLabel: { color: v2Colors.ink3, fontFamily: v2Fonts.bodyBold, fontSize: 12 },
+  previewRowValue: { color: v2Colors.ink, fontFamily: v2Fonts.bodyBold, fontSize: 13 },
+
+  /* Widget */
+  widgetRow: {
     alignItems: 'center',
+    flexDirection: 'row',
+    gap: 13,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  previewRowLabel: {
+  widgetToken: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.mono,
     fontSize: 12,
-    fontFamily: 'Montserrat-Bold',
-    color: colors.slate[500],
+    marginTop: 2,
   },
-  previewRowValue: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-Bold',
-    color: colors.ink[900],
+  newTokenRow: {
+    alignItems: 'center',
+    height: 48,
+    justifyContent: 'center',
+  },
+  newTokenText: {
+    color: v2Colors.spruce,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 14,
+  },
+  divider: {
+    backgroundColor: v2Colors.line,
+    height: 1,
+    marginLeft: 16,
   },
 });

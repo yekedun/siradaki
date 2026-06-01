@@ -1,42 +1,3 @@
-/**
- * M4 · Ajanda Ekranı (Owner)
- * Source: screens.jsx — AjandaScreen() + screen-20-ajanda-v2.html — AjandaDrag()
- *
- * OverlineHeader: eyebrow="Berber · Dükkan Paneli" title="Ajanda"
- * DayPicker: selected index 2 (today = 7 Mayıs 2026, Çarşamba)
- *
- * Two-column layout — flex:1 overflow:auto display:flex gap:12
- * padding:'20px 16px 90px' minWidth:0
- *
- * Column structure (source: flex:'0 0 230px'):
- *   Col header:
- *     name  — 15px bold
- *     meta  — 11px semiBold 0.12em uppercase slate-500 marginTop:4
- *             "{count} randevu[ · {blok} blok]"
- *   Items — gap:10
- *
- * Mehmet: count=5, blok=1
- *   09:00 / 30dk  Can Demir    / Saç kesim · 30dk          (done)
- *   10:30 / 45dk  Ahmet Yılmaz / Saç + Sakal · 45 dk       (upcoming)
- *   13:00 / 45dk  BLOKE · Mola                              (block)
- *   14:30 / 30dk  Kerem Arslan / Saç kesim · 30 dk         (active)
- *   16:00 / 60dk  Ozan Y.      / Saç + Sakal + Boya · 60 dk (upcoming)
- *
- * Can: count=3, blok=0
- *   11:15 / 30dk  Mehmet Kaya / Saç kesim · 30 dk   (upcoming)
- *   15:00 / 45dk  Burak Ş.    / Saç + Sakal · 45 dk (upcoming)
- *
- * Empty drop zone (per AjandaDrag source):
- *   border:'2px dashed var(--brand-600)' borderRadius:10 padding:'20px 10px'
- *   textAlign:'center' fontSize:11 fontWeight:600 color:brand-600
- *   background:'rgba(30,58,138,0.03)' text="Bırak"
- *
- * FAB — position:absolute bottom:90 right:12 (AjandaDrag uses right:12, AjandaScreen uses right:20)
- *   Button variant="accent" size="md" text="Randevu Ekle"
- *   shadow: boxShadow:'0 8px 20px -6px rgba(30,58,138,0.5)'
- *   (screens.jsx uses size="lg" right:20 shadow:'0 12px 24px -10px rgba(30,58,138,0.4)')
- *   → use size="lg" right:20 per screens.jsx (the primary reference)
- */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createDebounce } from '../../lib/debounce';
 import { trackEvent } from '../../lib/analytics';
@@ -46,21 +7,20 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
+  Pressable,
 } from 'react-native';
-import { colors } from '../../lib/theme';
-import { OverlineHeader } from '../../components/ds/OverlineHeader';
-import { DayPicker } from '../../components/ds/DayPicker';
-import { AppointmentCard } from '../../components/ds/AppointmentCard';
-import { BlokCard } from '../../components/ds/BlokCard';
-import { Button } from '../../components/ds/Button';
+import { Move, Plus } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
-import { buildLocalAppointmentTimestamp } from '../../lib/appointment-time';
+import { buildLocalAppointmentTimestamp, formatLocalAppointmentDate } from '../../lib/appointment-time';
 import type { AppointmentWorkingHours } from '../../lib/appointment-time';
 import { appointmentRowToAgendaItem } from '../../lib/appointment-mappers';
 import { formatTime, translateReason, AppointmentState as AppState } from '../../lib/utils';
-import { AddAppointmentModal, ServiceOption, StaffOption } from '../../components/AddAppointmentModal';
 import { AppointmentDetailSheet, AppointmentDetail } from '../../components/AppointmentDetailSheet';
 import { useShop } from '../../lib/ShopContext';
+import { V2AddAppointmentSheet } from '../../components/v2/V2AddAppointmentSheet';
+import type { AppointmentDraft } from '../../lib/appointment-modal-state';
+import { v2Colors, v2Fonts, v2Radii, v2Spacing } from '../../lib/v2-tokens';
 
 
 interface AppItem {
@@ -93,17 +53,38 @@ interface StaffCol {
 }
 
 const INIT_COLS: StaffCol[] = [];
+const DAY_LABELS = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
 
-/* ── Empty drop zone ─────────────────────────────────────────── */
+function buildDays() {
+  const today = getToday();
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(today);
+    day.setDate(today.getDate() + index);
+    return day;
+  });
+}
+
+function isSameLocalDate(left: Date, right: Date): boolean {
+  return formatLocalAppointmentDate(left) === formatLocalAppointmentDate(right);
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('');
+}
+
 function EmptyDropZone() {
   return (
     <View style={styles.dropZone}>
-      <Text style={styles.dropZoneText}>Bırak</Text>
+      <Text style={styles.dropZoneText}>Randevu yok</Text>
     </View>
   );
 }
 
-/* ── Main Screen ─────────────────────────────────────────────── */
 function getToday(): Date {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
@@ -111,7 +92,8 @@ function getToday(): Date {
 }
 
 export default function AgendaScreen() {
-  const { shopId, shopSlug, workingHours, services, staffList: barberList, reload } = useShop();
+  const insets = useSafeAreaInsets();
+  const { shopSlug, workingHours, services, staffList: barberList, reload } = useShop();
   const shopWorkingHours = workingHours as AppointmentWorkingHours | null;
 
   const [selectedDate, setSelectedDate] = useState<Date>(getToday);
@@ -120,8 +102,10 @@ export default function AgendaScreen() {
   const [showDetail, setShowDetail] = useState(false);
   const [serverNowMs, setServerNowMs] = useState<number | undefined>(undefined);
   const [selectedAppt, setSelectedAppt] = useState<AppointmentDetail | null>(null);
+  const [addDraft, setAddDraft] = useState<AppointmentDraft | null>(null);
 
   const isMountedRef = useRef(true);
+  const days = buildDays();
 
   // Refresh context (services + staff) when modal opens so newly added entries appear
   useEffect(() => {
@@ -221,10 +205,20 @@ export default function AgendaScreen() {
     supabase.rpc('get_server_time').then(({ data }) => {
       if (data) setServerNowMs(new Date(data as string).getTime());
     });
+    setAddDraft({
+      customerName: '',
+      customerPhone: '',
+      serviceId: services[0]?.id ?? null,
+      staffId: barberList[0]?.id ?? null,
+      date: formatLocalAppointmentDate(selectedDate),
+      time: '',
+      notes: '',
+      gapDurationMin: null,
+    });
     setShowAdd(true);
   }
 
-  async function handleOpenDetail(item: AppItem) {
+  async function handleOpenDetail(item: AppItem, staffName: string) {
     const { data } = await supabase
       .from('appointments')
       .select('customer_phone')
@@ -237,25 +231,45 @@ export default function AgendaScreen() {
       customerName: item.name,
       customerPhone: (data as any)?.customer_phone ?? null,
       serviceName: item.svc,
+      staffName,
       notes: item.notes,
     });
     setShowDetail(true);
   }
 
   return (
-    <View style={styles.screen}>
-      {/* Header */}
-      <OverlineHeader eyebrow="Berber · Dükkan Paneli" title="Ajanda" />
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
+      <View style={styles.header}>
+        <Text style={styles.overline}>Berber · Dükkan Paneli</Text>
+        <Text style={styles.title}>Ajanda</Text>
+      </View>
 
-      {/* DayPicker — gap:6, padding:'0 16px' */}
-      <DayPicker
-        selected={selectedDate}
-        onSelect={d => {
-          setSelectedDate(d);
-        }}
-      />
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.dayScroll}
+        contentContainerStyle={styles.dayRow}
+      >
+        {days.map((day) => {
+          const active = isSameLocalDate(day, selectedDate);
+          return (
+            <Pressable
+              key={formatLocalAppointmentDate(day)}
+              onPress={() => setSelectedDate(day)}
+              style={[styles.dayCell, active && styles.dayCellActive]}
+            >
+              <Text style={[styles.dayName, active && styles.dayTextActive]}>{DAY_LABELS[day.getDay()]}</Text>
+              <Text style={[styles.dayNumber, active && styles.dayTextActive]}>{day.getDate()}</Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
 
-      {/* Two-column horizontal scroll — flex:1, gap:12, padding:'20px 16px 90px' */}
+      <View style={styles.dragHint}>
+        <Move size={13} color={v2Colors.spruce} strokeWidth={2.4} />
+        <Text style={styles.dragHintText}>Bir randevuyu başka bir ustaya sürükle</Text>
+      </View>
+
       {cols.length === 0 ? (
         <View style={styles.emptyWrap}>
           <Text style={styles.emptyText}>Henüz personel veya randevu yok</Text>
@@ -269,15 +283,18 @@ export default function AgendaScreen() {
       >
         {cols.map(col => (
           <View key={col.id} style={styles.col}>
-            {/* Column header — padding:'0 4px 4px' */}
             <View style={styles.colHeader}>
-              <Text style={styles.colName}>{col.name}</Text>
-              <Text style={styles.colMeta}>
-                {col.count} randevu{col.blok > 0 ? ` · ${col.blok} blok` : ''}
-              </Text>
+              <View style={styles.colAvatar}>
+                <Text style={styles.colAvatarText}>{getInitials(col.name)}</Text>
+              </View>
+              <View style={styles.colHeaderCopy}>
+                <Text style={styles.colName} numberOfLines={1}>{col.name}</Text>
+                <Text style={styles.colMeta}>
+                  {col.count} rdv{col.blok > 0 ? ` · ${col.blok} blok` : ''}
+                </Text>
+              </View>
             </View>
 
-            {/* Items — gap:10 */}
             <ScrollView
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.itemContent}
@@ -287,25 +304,30 @@ export default function AgendaScreen() {
               ) : (
                 col.items.map(item =>
                   item.type === 'blok' ? (
-                    <BlokCard
-                      key={item.id}
-                      time={item.time}
-                      endTime={item.endTime}
-                      duration={item.dur}
-                      label={item.label}
-                    />
+                    <View key={item.id} style={styles.blockCard}>
+                      <Text style={styles.blockTime}>{item.time} - {item.endTime}</Text>
+                      <Text style={styles.blockLabel}>{item.label}</Text>
+                    </View>
                   ) : (
-                    <AppointmentCard
+                    <Pressable
                       key={item.id}
-                      time={item.time}
-                      endTime={item.endTime}
-                      duration={item.dur}
-                      name={item.name}
-                      service={item.svc}
-                      notes={item.notes}
-                      state={item.state}
-                      onPress={() => handleOpenDetail(item)}
-                    />
+                      style={[
+                        styles.appointmentCard,
+                        item.state === 'done' && styles.appointmentCardDone,
+                        item.state === 'active' && styles.appointmentCardNow,
+                      ]}
+                      onPress={() => handleOpenDetail(item, col.name)}
+                    >
+                      <Text style={styles.appointmentTime}>{item.time} {item.endTime}</Text>
+                      <Text style={styles.appointmentName} numberOfLines={1}>{item.name}</Text>
+                      <Text style={styles.appointmentService} numberOfLines={1}>{item.svc}</Text>
+                      {item.state === 'active' ? (
+                        <View style={styles.nowBadge}>
+                          <View style={styles.nowDot} />
+                          <Text style={styles.nowText}>Şimdi</Text>
+                        </View>
+                      ) : null}
+                    </Pressable>
                   )
                 )
               )}
@@ -314,17 +336,14 @@ export default function AgendaScreen() {
         ))}
       </ScrollView>
 
-      {/* FAB — position:absolute bottom:90 right:20
-          variant="accent" size="lg" "+ Randevu Ekle"
-          shadow: 0 12px 24px -10px rgba(30,58,138,0.4) */}
       <View style={styles.fab}>
-        <Button
-          variant="accent"
-          size="lg"
+        <Pressable
+          style={styles.fabButton}
           onPress={handleAddAppointment}
         >
-          + Randevu Ekle
-        </Button>
+          <Plus size={20} color={v2Colors.paper} strokeWidth={2.8} />
+          <Text style={styles.fabText}>Randevu</Text>
+        </Pressable>
       </View>
 
       <AppointmentDetailSheet
@@ -349,14 +368,15 @@ export default function AgendaScreen() {
         }}
       />
 
-      <AddAppointmentModal
+      <V2AddAppointmentSheet
         visible={showAdd}
+        mode="agenda"
         onClose={() => setShowAdd(false)}
         services={services}
         staffList={barberList}
+        initialDraft={addDraft}
         workingHours={shopWorkingHours}
         serverNowMs={serverNowMs}
-        shopId={shopId}
         onSave={async (data) => {
           if (!shopSlug) {
             Alert.alert('Hata', 'Dükkan bilgisi yüklenmedi. Sayfayı yenileyin.');
@@ -409,92 +429,261 @@ export default function AgendaScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.slate[50],
+    backgroundColor: v2Colors.paper,
   },
-
-  /* Horizontal column scroll — flex:1, gap:12, padding:'20px 16px 90px' */
-  colScroll: { flex: 1 },
-  colContent: {
+  header: {
+    paddingBottom: 0,
+    paddingHorizontal: v2Spacing[40],
+    paddingTop: v2Spacing[28],
+  },
+  overline: {
+    color: v2Colors.ember,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+  },
+  title: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.display,
+    fontSize: 40,
+    includeFontPadding: false,
+    lineHeight: 42,
+    marginTop: 6,
+  },
+  dayScroll: {
+    flexGrow: 0,
+    height: 102,
+    maxHeight: 102,
+  },
+  dayRow: {
+    gap: 8,
+    paddingBottom: 12,
+    paddingHorizontal: v2Spacing[40],
+    paddingTop: v2Spacing[24],
+  },
+  dayCell: {
+    alignItems: 'center',
+    borderColor: v2Colors.line2,
+    borderRadius: 14,
+    borderWidth: 1,
+    height: 66,
+    justifyContent: 'center',
+    width: 50,
+  },
+  dayCellActive: {
+    backgroundColor: v2Colors.spruce,
+    borderColor: v2Colors.spruce,
+  },
+  dayName: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodySemiBold,
+    fontSize: 10,
+    textTransform: 'uppercase',
+  },
+  dayNumber: {
+    color: v2Colors.ink2,
+    fontFamily: v2Fonts.mono,
+    fontSize: 20,
+    includeFontPadding: false,
+    marginTop: 2,
+  },
+  dayTextActive: {
+    color: v2Colors.paper,
+  },
+  dragHint: {
+    alignItems: 'center',
     flexDirection: 'row',
+    gap: 7,
+    paddingBottom: 14,
+    paddingHorizontal: v2Spacing[40],
+  },
+  dragHintText: {
+    color: v2Colors.ink2,
+    fontFamily: v2Fonts.bodySemiBold,
+    fontSize: 12,
+  },
+  colScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+    height: 520,
+    maxHeight: 520,
+  },
+  colContent: {
     alignItems: 'flex-start',
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingBottom: 90,
+    flexDirection: 'row',
+    gap: 16,
+    paddingBottom: 102,
+    paddingHorizontal: v2Spacing[40],
   },
-
-  /* Each column — flex:'0 0 230px' */
   col: {
-    width: 230,
     flexDirection: 'column',
+    width: 184,
   },
-
-  /* Column header — padding:'0 4px 4px' */
   colHeader: {
-    paddingHorizontal: 4,
-    paddingBottom: 4,
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    paddingBottom: 12,
+    paddingHorizontal: 2,
+  },
+  colAvatar: {
+    alignItems: 'center',
+    backgroundColor: v2Colors.spruceSoft,
+    borderColor: v2Colors.line,
+    borderRadius: 11,
+    borderWidth: 1,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  colAvatarText: {
+    color: v2Colors.spruce,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 11,
+  },
+  colHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
   },
   colName: {
-    fontSize: 15,
-    fontFamily: 'Montserrat-Bold',
-    color: colors.ink[900],
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 16,
   },
   colMeta: {
-    fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    letterSpacing: 1.32,           // 0.12em × 11
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-    marginTop: 4,
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.mono,
+    fontSize: 13,
+    marginTop: 2,
   },
-
-  /* Item list — gap:10 */
-  itemContent: { gap: 10 },
-
-  /* Empty screen state */
+  itemContent: {
+    gap: 12,
+    paddingBottom: 4,
+  },
+  appointmentCard: {
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line,
+    borderRadius: 15,
+    borderWidth: 1,
+    minHeight: 108,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  appointmentCardDone: {
+    opacity: 0.6,
+  },
+  appointmentCardNow: {
+    borderColor: v2Colors.spruce,
+    borderWidth: 1.5,
+  },
+  appointmentTime: {
+    color: v2Colors.ink2,
+    fontFamily: v2Fonts.mono,
+    fontSize: 13,
+  },
+  appointmentName: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 17,
+    marginTop: 8,
+  },
+  appointmentService: {
+    color: v2Colors.ink2,
+    fontFamily: v2Fonts.body,
+    fontSize: 13,
+    marginTop: 5,
+  },
+  nowBadge: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 5,
+  },
+  nowDot: {
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 999,
+    height: 6,
+    width: 6,
+  },
+  nowText: {
+    color: v2Colors.spruce,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  blockCard: {
+    backgroundColor: 'rgba(27,24,19,0.025)',
+    borderColor: v2Colors.line2,
+    borderRadius: 13,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 11,
+  },
+  blockTime: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.mono,
+    fontSize: 9.5,
+  },
+  blockLabel: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 9,
+    marginTop: 4,
+    textTransform: 'uppercase',
+  },
   emptyWrap: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 28,
   },
   emptyText: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.body,
     fontSize: 13,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[400],
     textAlign: 'center',
   },
-
-  /* Empty drop zone (AjandaDrag source):
-     border:'2px dashed brand-600' borderRadius:10 padding:'20px 10px'
-     text center 11px semiBold brand-600, bg rgba(30,58,138,0.03) */
   dropZone: {
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: colors.brand[600],
-    borderRadius: 10,
-    paddingVertical: 20,
-    paddingHorizontal: 10,
     alignItems: 'center',
-    backgroundColor: 'rgba(30,58,138,0.03)',
+    borderColor: v2Colors.line2,
+    borderRadius: 13,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 21,
   },
   dropZoneText: {
+    color: v2Colors.line2,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.brand[600],
   },
-
-  /* FAB — position:absolute bottom:90 right:20
-     shadowColor = brand-600 (~rgba(30,58,138,...))
-     shadowOffset y:12, opacity:0.4, radius:14 (≈ 24-10 = spread subtraction) */
   fab: {
+    bottom: 42,
+    right: 40,
     position: 'absolute',
-    bottom: 90,
-    right: 20,
     zIndex: 10,
-    shadowColor: colors.brand[600],
+  },
+  fabButton: {
+    alignItems: 'center',
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 18,
+    flexDirection: 'row',
+    gap: 9,
+    height: 52,
+    justifyContent: 'center',
+    minWidth: 132,
+    paddingHorizontal: 22,
+    shadowColor: v2Colors.spruce,
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.6,
     shadowRadius: 14,
     elevation: 8,
+  },
+  fabText: {
+    color: v2Colors.paper,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 15,
   },
 });

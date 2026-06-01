@@ -27,7 +27,7 @@
  *                Sakal Şekillendirme 20/150 active, Fön+Şekillendirme 40/250 inactive
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -41,10 +41,12 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors, radius } from '../../lib/theme';
+import { Baby, ChevronLeft, Droplets, Info, Plus, Scissors, Sparkles, Wind } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { trackEvent } from '../../lib/analytics';
 import { serviceFormToDb, serviceRowToView } from '../../lib/service-mappers';
+import { v2Colors, v2Fonts } from '../../lib/v2-tokens';
 
 /* ─── Data ──────────────────────────────────────────────────── */
 
@@ -59,6 +61,15 @@ interface Service {
 }
 
 const INIT_SERVICES: Service[] = [];
+
+function formatMetricPriceRange(min: number, max: number): string {
+  if (min === max) return `₺${min}`;
+  if (max >= 1000) {
+    const maxText = String(max);
+    return `₺${min}-${maxText.slice(0, -3)}\n${maxText.slice(-3)}`;
+  }
+  return `₺${min}-${max}`;
+}
 
 /* ─── Toggle ────────────────────────────────────────────────── */
 
@@ -82,7 +93,7 @@ function Toggle({ on, onChange }: ToggleProps) {
 
   const bgColor = anim.interpolate({
     inputRange: [0, 1],
-    outputRange: [colors.slate[200], colors.brand[600]],
+    outputRange: [v2Colors.line, v2Colors.spruce],
   });
   const thumbLeft = anim.interpolate({
     inputRange: [0, 1],
@@ -199,7 +210,7 @@ function ServiceSheet({ open, onClose, onSave, onDelete, initial }: ServiceSheet
                 value={name}
                 onChangeText={setName}
                 placeholder="örn. Saç Kesimi"
-                placeholderTextColor={colors.slate[300]}
+                placeholderTextColor={v2Colors.ink3}
                 style={styles.textInput}
               />
             </View>
@@ -217,7 +228,7 @@ function ServiceSheet({ open, onClose, onSave, onDelete, initial }: ServiceSheet
                 value={price}
                 onChangeText={setPrice}
                 placeholder="örn. 200"
-                placeholderTextColor={colors.slate[300]}
+                placeholderTextColor={v2Colors.ink3}
                 keyboardType="numeric"
                 style={[styles.textInput, styles.textInputPrice]}
               />
@@ -299,62 +310,41 @@ interface ServiceRowProps {
   onToggle: () => void;
 }
 
-function ServiceRow({ service: sv, onPress, onToggle }: ServiceRowProps) {
-  const [pressed, setPressed] = useState(false);
+function serviceIcon(name: string, active: boolean) {
+  const normalized = name.toLocaleLowerCase('tr-TR');
+  const color = active ? v2Colors.spruce : v2Colors.ink3;
+  const props = { size: 21, color, strokeWidth: 2.3 };
+  if (normalized.includes('çocuk')) return <Baby {...props} />;
+  if (normalized.includes('sakal')) return <Wind {...props} />;
+  if (normalized.includes('boya')) return <Sparkles {...props} />;
+  if (normalized.includes('maske') || normalized.includes('bakım')) return <Droplets {...props} />;
+  return <Scissors {...props} />;
+}
 
+function ServiceRow({ service: sv, onPress, onToggle }: ServiceRowProps) {
   return (
     <Pressable
       onPress={onPress}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      style={[
-        styles.row,
-        pressed && styles.rowPressed,
-        !sv.active && styles.rowInactive,
-      ]}
+      style={[styles.row, !sv.active && styles.rowInactive]}
     >
-      {/* Color dot */}
-      <View
-        style={[
-          styles.dot,
-          { backgroundColor: sv.active ? colors.mint[600] : colors.slate[300] },
-        ]}
-      />
+      {/* Icon */}
+      <View style={[styles.iconBox, !sv.active && styles.iconBoxInactive]}>
+        {serviceIcon(sv.name, sv.active)}
+      </View>
 
       {/* Info */}
       <View style={styles.rowInfo}>
         <Text style={styles.rowName}>{sv.name}</Text>
-        <View style={styles.rowBadges}>
-          <View style={styles.durBadge}>
-            <Text style={styles.durBadgeText}>{sv.duration} dk</Text>
-          </View>
-          <View style={styles.priceBadge}>
-            <Text style={styles.priceBadgeText}>{sv.price}₺</Text>
-          </View>
-          {!sv.active && (
-            <View style={styles.pasifBadge}>
-              <Text style={styles.pasifBadgeText}>Pasif</Text>
-            </View>
-          )}
-        </View>
+        <Text style={styles.rowMeta}>{sv.duration} dk · ₺{sv.price}</Text>
       </View>
 
-      {/* Toggle + chevron */}
-      <View style={styles.rowTrailing}>
-        <Pressable
-          onPress={(e) => {
-            e.stopPropagation && e.stopPropagation();
-            onToggle();
-          }}
-          hitSlop={8}
-        >
-          <Toggle on={sv.active} onChange={() => onToggle()} />
-        </Pressable>
-        <View style={styles.chevronWrap}>
-          <View style={styles.chevronLine1} />
-          <View style={styles.chevronLine2} />
-        </View>
-      </View>
+      {/* Toggle */}
+      <Pressable
+        onPress={(e) => { e.stopPropagation?.(); onToggle(); }}
+        hitSlop={8}
+      >
+        <Toggle on={sv.active} onChange={() => onToggle()} />
+      </Pressable>
     </Pressable>
   );
 }
@@ -363,11 +353,27 @@ function ServiceRow({ service: sv, onPress, onToggle }: ServiceRowProps) {
 
 export default function ServicesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [services, setServices] = useState<Service[]>(INIT_SERVICES);
   const [editing,  setEditing]  = useState<Service | null>(null);
   const [adding,   setAdding]   = useState(false);
   const [shopId,   setShopId]   = useState<string | null>(null);
   const nextId = useRef(1);
+  const activeServices = services.filter((service) => service.active);
+  const priceRange = useMemo(() => {
+    if (services.length === 0) return '₺0';
+    const prices = services.map((service) => service.price);
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    return formatMetricPriceRange(min, max);
+  }, [services]);
+  const durationRange = useMemo(() => {
+    if (services.length === 0) return '0';
+    const durations = services.map((service) => service.duration);
+    const min = Math.min(...durations);
+    const max = Math.max(...durations);
+    return min === max ? `${min}` : `${min}-${max}`;
+  }, [services]);
 
   useEffect(() => { loadServices(); }, []);
 
@@ -444,33 +450,33 @@ export default function ServicesScreen() {
   }
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top + 4 }]}>
 
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={10} activeOpacity={0.7}>
-          <View style={styles.backChevron1} />
-          <View style={styles.backChevron2} />
+          <ChevronLeft size={22} color={v2Colors.ink} strokeWidth={2.4} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.eyebrow}>Dükkan Ayarları</Text>
+          <Text style={styles.eyebrow}>Ayarlar</Text>
           <Text style={styles.pageTitle}>Hizmetler</Text>
         </View>
-        <TouchableOpacity
-          onPress={() => setAdding(true)}
-          style={styles.headerAddBtn}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.headerAddBtnPlus}>+</Text>
-          <Text style={styles.headerAddBtnText}>Ekle</Text>
-        </TouchableOpacity>
       </View>
 
-      {/* Hint */}
-      <View style={styles.hintContainer}>
-        <Text style={styles.hintText}>
-          Aktif hizmetler müşteri rezervasyon ekranında görünür. Pasif hizmetler sisteme kayıtlı kalır.
-        </Text>
+      <View style={styles.statsRow}>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{activeServices.length}</Text>
+          <Text style={styles.statLabel}>Aktif{'\n'}Hizmet</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{priceRange}</Text>
+          <Text style={styles.statLabel}>Fiyat{'\n'}Aralığı</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{durationRange}</Text>
+          <Text style={styles.statUnit}>dk</Text>
+          <Text style={styles.statLabel}>Süre</Text>
+        </View>
       </View>
 
       {/* Service list or empty state */}
@@ -502,21 +508,19 @@ export default function ServicesScreen() {
               onToggle={() => toggleActive(sv.id)}
             />
           ))}
-        </ScrollView>
-      )}
-
-      {/* FAB */}
-      {services.length > 0 && (
-        <View style={styles.fab}>
           <TouchableOpacity
             onPress={() => setAdding(true)}
-            style={styles.fabBtn}
+            style={styles.addServiceButton}
             activeOpacity={0.85}
           >
-            <Text style={styles.fabBtnPlus}>+</Text>
-            <Text style={styles.fabBtnText}>Hizmet Ekle</Text>
+            <Plus size={18} color={v2Colors.spruce} strokeWidth={2.4} />
+            <Text style={styles.addServiceButtonText}>Hizmet Ekle</Text>
           </TouchableOpacity>
-        </View>
+          <View style={styles.footerNote}>
+            <Info size={14} color={v2Colors.ink3} strokeWidth={2} />
+            <Text style={styles.footerNoteText}>Müşteriler rezervasyon sayfasında yalnızca aktif hizmetleri görür.</Text>
+          </View>
+        </ScrollView>
       )}
 
       {/* Edit sheet */}
@@ -544,89 +548,88 @@ export default function ServicesScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.slate[50],
+    backgroundColor: v2Colors.paper,
   },
 
   /* Header */
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
     paddingTop: 8,
-    paddingBottom: 16,
-    gap: 12,
+    paddingBottom: 14,
+    gap: 13,
   },
   backBtn: {
-    width: 32,
-    height: 32,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
     flexShrink: 0,
-  },
-  backChevron1: {
-    position: 'absolute',
-    width: 9,
-    height: 1.8,
-    backgroundColor: colors.ink[900],
-    borderRadius: 1,
-    transform: [{ rotate: '45deg' }, { translateY: -3 }],
-  },
-  backChevron2: {
-    position: 'absolute',
-    width: 9,
-    height: 1.8,
-    backgroundColor: colors.ink[900],
-    borderRadius: 1,
-    transform: [{ rotate: '-45deg' }, { translateY: 3 }],
+    backgroundColor: v2Colors.paper,
+    borderColor: v2Colors.line,
+    borderRadius: 14,
+    borderWidth: 1,
   },
   eyebrow: {
     fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    letterSpacing: 2.5,
+    fontFamily: v2Fonts.bodySemiBold,
+    letterSpacing: 2.2,
     textTransform: 'uppercase',
-    color: colors.slate[500],
+    color: v2Colors.ink3,
   },
   pageTitle: {
-    fontSize: 32,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: -0.3,
-    color: colors.ink[900],
-    marginTop: 10,
+    fontSize: 30,
+    fontFamily: v2Fonts.display,
+    letterSpacing: 0,
+    color: v2Colors.ink,
+    includeFontPadding: false,
+    lineHeight: 32,
+    marginTop: 2,
   },
-  headerAddBtn: {
-    height: 34,
-    paddingHorizontal: 12,
-    backgroundColor: colors.brand[600],
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+  statsRow: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 10,
+    paddingHorizontal: 22,
+    paddingBottom: 16,
   },
-  headerAddBtnPlus: {
-    fontSize: 14,
-    fontFamily: 'Montserrat-Bold',
-    color: '#ffffff',
-    lineHeight: 16,
+  statCard: {
+    backgroundColor: '#FFFFFF',
+    borderColor: v2Colors.line,
+    borderRadius: 16,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 104,
+    paddingHorizontal: 14,
+    paddingTop: 15,
+    shadowColor: v2Colors.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 2,
   },
-  headerAddBtnText: {
+  statValue: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.mono,
+    fontSize: 19,
+    includeFontPadding: false,
+    lineHeight: 23,
+  },
+  statUnit: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 13,
-    fontFamily: 'Montserrat-SemiBold',
-    color: '#ffffff',
+    marginTop: 2,
   },
-
-  /* Hint */
-  hintContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
-  hintText: {
-    fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
-    lineHeight: 18,
+  statLabel: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 10.5,
+    letterSpacing: 1.4,
+    lineHeight: 15.5,
+    marginTop: 8,
+    textTransform: 'uppercase',
   },
 
   /* List */
@@ -634,120 +637,89 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
+    paddingHorizontal: 22,
+    paddingBottom: 30,
+    gap: 10,
+  },
+  addServiceButton: {
+    alignItems: 'center',
+    borderColor: v2Colors.line2,
+    borderRadius: 14,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    flexDirection: 'row',
     gap: 8,
+    height: 54,
+    justifyContent: 'center',
+    marginTop: 6,
+  },
+  addServiceButtonText: {
+    color: v2Colors.spruce,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 15,
+  },
+  footerNote: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 7,
+    paddingHorizontal: 2,
+  },
+  footerNoteText: {
+    color: v2Colors.ink3,
+    flex: 1,
+    fontFamily: v2Fonts.bodyMedium,
+    fontSize: 11,
   },
 
   /* Service row */
   row: {
-    padding: 14,
-    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.slate[200],
-    backgroundColor: colors.slate[0],
+    borderColor: v2Colors.line,
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    shadowColor: colors.ink[900],
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 0,
-    elevation: 1,
-  },
-  rowPressed: {
-    shadowColor: colors.ink[900],
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12,
+    gap: 11,
+    minHeight: 78,
+    shadowColor: v2Colors.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.075,
     shadowRadius: 12,
-    elevation: 4,
+    elevation: 2,
   },
   rowInactive: {
-    opacity: 0.55,
+    opacity: 0.56,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
+  iconBox: {
+    alignItems: 'center',
+    backgroundColor: v2Colors.spruceSoft,
+    borderRadius: 10,
     flexShrink: 0,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
+  },
+  iconBoxInactive: {
+    backgroundColor: v2Colors.paper2,
   },
   rowInfo: {
     flex: 1,
     minWidth: 0,
   },
   rowName: {
-    fontSize: 15,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.ink[900],
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 14,
+    includeFontPadding: false,
   },
-  rowBadges: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 5,
-    flexWrap: 'wrap',
-  },
-  durBadge: {
-    backgroundColor: colors.slate[100],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
-    borderRadius: 999,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-  },
-  durBadgeText: {
-    fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.slate[500],
-  },
-  priceBadge: {
-    backgroundColor: colors.ink[900],
-    borderRadius: 999,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-  },
-  priceBadgeText: {
-    fontSize: 11,
-    fontFamily: 'Montserrat-Bold',
-    color: '#ffffff',
-  },
-  pasifBadge: {
-    backgroundColor: colors.slate[100],
-    borderRadius: 999,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-  },
-  pasifBadgeText: {
-    fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.slate[400],
-    letterSpacing: 0.44,
-  },
-  rowTrailing: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  chevronWrap: {
-    width: 16,
-    height: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chevronLine1: {
-    position: 'absolute',
-    width: 8,
-    height: 1.6,
-    backgroundColor: colors.slate[400],
-    borderRadius: 1,
-    transform: [{ rotate: '-45deg' }, { translateY: -3 }],
-  },
-  chevronLine2: {
-    position: 'absolute',
-    width: 8,
-    height: 1.6,
-    backgroundColor: colors.slate[400],
-    borderRadius: 1,
-    transform: [{ rotate: '45deg' }, { translateY: 3 }],
+  rowMeta: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.mono,
+    fontSize: 12,
+    marginTop: 4,
   },
 
   /* Empty state */
@@ -759,74 +731,38 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   emptyTitle: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 15,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.slate[700],
     textAlign: 'center',
   },
   emptyBody: {
+    color: v2Colors.ink2,
+    fontFamily: v2Fonts.body,
     fontSize: 13,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
-    lineHeight: 19.5,
-    textAlign: 'center',
-    marginTop: 6,
+    lineHeight: 19,
     marginBottom: 20,
+    marginTop: 6,
+    textAlign: 'center',
   },
   emptyCtaBtn: {
-    height: 44,
-    paddingHorizontal: 18,
-    backgroundColor: colors.ink[900],
-    borderRadius: 12,
     alignItems: 'center',
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 12,
+    height: 44,
     justifyContent: 'center',
+    paddingHorizontal: 18,
   },
   emptyCtaBtnText: {
+    color: v2Colors.paper,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 14,
-    fontFamily: 'Montserrat-SemiBold',
-    color: '#ffffff',
-  },
-
-  /* FAB */
-  fab: {
-    position: 'absolute',
-    bottom: 90,
-    right: 16,
-    zIndex: 10,
-  },
-  fabBtn: {
-    height: 44,
-    paddingHorizontal: 18,
-    backgroundColor: colors.brand[600],
-    borderWidth: 1,
-    borderColor: colors.brand[700],
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 6,
-    shadowColor: colors.brand[600],
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  fabBtnPlus: {
-    fontSize: 15,
-    fontFamily: 'Montserrat-Bold',
-    color: '#ffffff',
-    lineHeight: 16,
-  },
-  fabBtnText: {
-    fontSize: 14,
-    fontFamily: 'Montserrat-SemiBold',
-    color: '#ffffff',
   },
 
   /* Toggle */
   toggleTrack: {
-    width: 44,
-    height: 26,
+    width: 48,
+    height: 30,
     borderRadius: 999,
     position: 'relative',
     flexShrink: 0,
@@ -834,8 +770,8 @@ const styles = StyleSheet.create({
   toggleThumb: {
     position: 'absolute',
     top: 2,
-    width: 22,
-    height: 22,
+    width: 26,
+    height: 26,
     borderRadius: 999,
     backgroundColor: '#ffffff',
     shadowColor: '#000000',
@@ -860,176 +796,184 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   durCellSel: {
-    backgroundColor: colors.ink[900],
-    borderColor: colors.ink[900],
+    backgroundColor: v2Colors.ink,
+    borderColor: v2Colors.ink,
   },
   durCellUnsel: {
-    backgroundColor: colors.slate[0],
-    borderColor: colors.slate[200],
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line2,
   },
   durValue: {
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 14,
-    fontFamily: 'Montserrat-Bold',
   },
   durValueSel: {
-    color: '#ffffff',
+    color: v2Colors.paper,
   },
   durValueUnsel: {
-    color: colors.ink[900],
+    color: v2Colors.ink,
   },
   durUnit: {
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 9,
-    fontFamily: 'Montserrat-SemiBold',
+    letterSpacing: 0.5,
     opacity: 0.6,
-    letterSpacing: 0.54,
   },
   durUnitSel: {
-    color: '#ffffff',
+    color: v2Colors.paper,
   },
   durUnitUnsel: {
-    color: colors.ink[900],
+    color: v2Colors.ink,
   },
 
   /* Sheet */
   sheetBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(11,18,32,0.38)',
+    backgroundColor: 'rgba(27,24,19,0.4)',
     justifyContent: 'flex-end',
   },
   sheetContainer: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: v2Colors.paper,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     maxHeight: '88%',
-    paddingBottom: 32,
-    shadowColor: colors.ink[900],
+    paddingBottom: 18,
+    shadowColor: v2Colors.ink,
     shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.18,
-    shadowRadius: 32,
-    elevation: 16,
+    shadowOpacity: 0.16,
+    shadowRadius: 34,
   },
   sheetHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: colors.slate[200],
-    borderRadius: 4,
     alignSelf: 'center',
-    marginTop: 12,
+    backgroundColor: v2Colors.line2,
+    borderRadius: 3,
+    height: 5,
+    marginTop: 11,
+    width: 38,
   },
   sheetHeader: {
+    alignItems: 'center',
+    borderBottomColor: v2Colors.line,
+    borderBottomWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.slate[100],
+    paddingBottom: 11,
+    paddingHorizontal: 17,
+    paddingTop: 8,
   },
   sheetTitle: {
-    fontSize: 20,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: -0.3,
-    color: colors.ink[900],
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.display,
+    fontSize: 21,
+    includeFontPadding: false,
+    lineHeight: 25,
   },
   sheetCancelBtn: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 14,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.slate[500],
   },
   sheetBody: {
     flexShrink: 1,
   },
   sheetBodyContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    gap: 17,
     paddingBottom: 8,
-    gap: 16,
+    paddingHorizontal: 17,
+    paddingTop: 15,
   },
 
   /* Form fields */
   fieldLabel: {
-    fontSize: 10,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: 2.5,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 10.5,
+    letterSpacing: 1.7,
     marginBottom: 7,
+    textTransform: 'uppercase',
   },
   textInput: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 15,
-    color: colors.ink[900],
-    backgroundColor: colors.slate[0],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
-    borderRadius: 10,
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line2,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodyMedium,
+    fontSize: 16,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
   },
   textInputPrice: {
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: v2Fonts.mono,
   },
 
   /* Toggle row inside sheet */
   toggleRow: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.slate[50],
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.slate[200],
-    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 12,
     paddingHorizontal: 16,
-    paddingVertical: 13,
+    paddingVertical: 14,
   },
   toggleRowTitle: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 15,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.ink[900],
   },
   toggleRowSub: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.body,
     fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
     marginTop: 2,
   },
 
   /* Summary */
   summaryBox: {
-    backgroundColor: colors.slate[100],
-    borderRadius: 10,
+    backgroundColor: v2Colors.spruceSoft,
+    borderColor: v2Colors.line,
+    borderRadius: 13,
+    borderWidth: 1,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 11,
   },
   summaryLabel: {
+    color: v2Colors.spruce,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 10,
-    fontFamily: 'Montserrat-Bold',
     letterSpacing: 1.4,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
     marginBottom: 5,
+    textTransform: 'uppercase',
   },
   summaryValue: {
+    color: v2Colors.spruce,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 14,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.ink[900],
   },
 
   /* Primary CTA */
   primaryBtn: {
-    height: 52,
-    backgroundColor: colors.ink[900],
-    borderRadius: 12,
     alignItems: 'center',
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 15,
+    height: 52,
     justifyContent: 'center',
+    shadowColor: v2Colors.spruce,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.24,
+    shadowRadius: 18,
   },
   primaryBtnDisabled: {
-    opacity: 0.45,
+    backgroundColor: v2Colors.line2,
+    shadowOpacity: 0,
   },
   primaryBtnText: {
+    color: v2Colors.paper,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 15,
-    fontFamily: 'Montserrat-SemiBold',
-    color: '#ffffff',
   },
 
   /* Delete / confirm */
@@ -1038,9 +982,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteBtnText: {
+    color: v2Colors.brick,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 14,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.coral[600],
   },
   confirmRow: {
     flexDirection: 'row',
@@ -1055,21 +999,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   confirmBtnSecondary: {
-    backgroundColor: 'transparent',
-    borderColor: colors.ink[900],
+    backgroundColor: v2Colors.paper,
+    borderColor: v2Colors.line2,
   },
   confirmBtnSecondaryText: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 14,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.ink[900],
   },
   confirmBtnDanger: {
-    backgroundColor: 'transparent',
-    borderColor: colors.coral[600],
+    backgroundColor: v2Colors.brickSoft,
+    borderColor: '#E4C9C3',
   },
   confirmBtnDangerText: {
+    color: v2Colors.brick,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 14,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.coral[600],
   },
 });

@@ -1,277 +1,137 @@
-/**
- * M3 · Özet / KPI Polish
- * Source: screen-20-ajanda-v2.html — OzetKpiPolished()
- *         screens.jsx — OzetScreen()
- *
- * OverlineHeader: eyebrow="Dükkan Özet" title="Bugün" meta="20 Mayıs 2026, Çar"
- *
- * ChipRow (gap:8, padding:'4px 20px 4px'):
- *   Tüm Ekip (12) · Mehmet (5) · Can (4) · Ayşe (3)
- *
- * KPI row — gap:8, padding:'14px 16px 0':
- *   1. label="Toplam"     value="12"    trend=+8%  spark=[7,9,8,10,7,11,12]
- *   2. label="Tamamlanan" value="8"     trend=+5%  progress=8/12
- *   3. label="Tahmini"    value="2.840" unit="₺"  trend=+12% spark=[2100,2300,2200,2650,2480,2840] accent
- *
- * KpiPolished card (source):
- *   flex:1 minWidth:0 borderRadius:14 padding:'13px 13px 11px'
- *   label: 9px bold 0.18em uppercase
- *   value: 28px bold tabular-nums -0.025em
- *   unit:  10px semiBold marginLeft:2 0.06em
- *   trend pill: 10px bold borderRadius:999 padding:'2px 7px'
- *     up: mint-100 bg, mint-700 text (dark: rgba bg, rgba(0,255,180,0.75) text)
- *     dn: coral-100 bg, coral-700 text (dark: rgba bg, rgba(255,120,100,0.8) text)
- *   accent (dark): ink-900 bg, ink-700 border, shadow '0 8px 24px -8px rgba(11,18,32,0.55)'
- *   default:        slate-0 bg, slate-200 border, shadow '0 1px 3px rgba(11,18,32,0.05)'
- *
- * Sparkline: w=54 h=28, polyline, barColor= dark?rgba(255,255,255,0.55):brand-500
- * RingProgress: size=30, r=(30-5)/2=12.5, circ≈78.5, strokeWidth=3
- *   fg= dark?#fff:brand-600, bg= dark?rgba(255,255,255,0.12):slate-100
- *
- * SectionLabel "Öngörüler (30 gün)":
- *   Card padding=0, two rows padding:'13px 16px':
- *     En Çok Tercih Edilen / Saç + Sakal / %34
- *     En Yoğun Gün / Cumartesi / 32 randevu
- *   row divider: borderBottom:'1px solid var(--slate-100)'
- *
- * SectionLabel "Usta Bazında":
- *   Cards padding=12, gap=8, padding:'0 16px'
- *   Each: avatar 34×34 borderRadius:999 (brand-600/umber-600/mint-700),
- *     name 14px semiBold, meta 11px fg-3,
- *     mini bar: count 12px bold, track 36×3 borderRadius:2
- *
- * ScrollView + RefreshControl
- */
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
+  RefreshControl,
   ScrollView,
   StyleSheet,
-  RefreshControl,
+  Text,
+  Pressable,
+  View,
 } from 'react-native';
-import { colors, shadows } from '../../lib/theme';
-import { OverlineHeader } from '../../components/ds/OverlineHeader';
-import { SectionLabel } from '../../components/ds/SectionLabel';
-import { Chip } from '../../components/ds/Chip';
-import { supabase } from '../../lib/supabase';
+import { ChevronRight } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { estimatedAppointmentRevenueCents } from '../../lib/revenue-mappers';
 import { useShop } from '../../lib/ShopContext';
+import { supabase } from '../../lib/supabase';
+import { v2Colors, v2Fonts, v2Radii, v2Spacing } from '../../lib/v2-tokens';
 
-/* ── Sparkline (bar-chart approximation in RN) ──────────────── */
-function Sparkline({ data }: { data: number[] }) {
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const rng = max - min || 1;
-  const barColor = colors.brand[500];
-  const W = 54;
-  const H = 28;
-  const n = data.length;
-  const gap = 2;
-  const barW = (W - (n - 1) * gap) / n;
-
-  return (
-    <View style={{ width: W, height: H, flexDirection: 'row', alignItems: 'flex-end', gap, flexShrink: 0 }}>
-      {data.map((v, i) => {
-        const heightRatio = ((v - min) / rng) * 0.78 + 0.08;
-        return (
-          <View
-            key={i}
-            style={{
-              width: barW,
-              height: H * heightRatio,
-              borderRadius: 1,
-              backgroundColor: barColor,
-              opacity: i === n - 1 ? 1 : 0.45 + (i / n) * 0.35,
-            }}
-          />
-        );
-      })}
-    </View>
-  );
-}
-
-/* ── RingProgress ────────────────────────────────────────────── */
-function RingProgress({ value, max }: { value: number; max: number }) {
-  const pct    = value / max;
-  const ringFg = colors.brand[600];
-  const ringBg = colors.slate[100];
-  return (
-    <View style={{ width: 30, height: 30, flexShrink: 0 }}>
-      {/* Background ring */}
-      <View style={[rp.ring, { borderColor: ringBg }]} />
-      {/* Progress — simplified quadrant technique */}
-      <View
-        style={[
-          rp.ring,
-          {
-            borderColor: ringFg,
-            borderBottomColor: pct < 0.25 ? 'transparent' : ringFg,
-            borderLeftColor:   pct < 0.5  ? 'transparent' : ringFg,
-            transform: [{ rotate: '-90deg' }],
-          },
-        ]}
-      />
-    </View>
-  );
-}
-
-const rp = StyleSheet.create({
-  ring: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    borderRadius: 15,
-    borderWidth: 3,
-    borderColor: 'transparent',
-  },
-});
-
-/* ── KpiPolished ─────────────────────────────────────────────── */
-interface KpiPolishedProps {
-  label: string;
+interface Insight {
+  name: string;
   value: string;
-  unit?: string;
-  accent?: boolean;
-  spark?: number[];
-  progress?: number;
-  max?: number;
 }
 
-function KpiPolished({
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('tr-TR', {
+    day: 'numeric',
+    month: 'short',
+    weekday: 'short',
+  });
+}
+
+function initials(name: string): string {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('');
+}
+
+function KpiHero({
+  total,
+  completed,
+}: {
+  total: string;
+  completed: string;
+}) {
+  return (
+    <View style={styles.heroCard}>
+      <ChevronRight
+        color="rgba(255,255,255,0.14)"
+        size={168}
+        strokeWidth={7}
+        style={styles.heroWatermark}
+      />
+      <View style={styles.heroTop}>
+        <Text style={styles.heroOverline}>Bugünkü Randevu</Text>
+        <Text style={styles.heroTrend}>+12%</Text>
+      </View>
+      <Text style={styles.heroNumber}>{total}</Text>
+      <Text style={styles.heroSub}>{completed} tamamlandı · {total} sırada</Text>
+    </View>
+  );
+}
+
+function SmallKpi({
   label,
   value,
-  unit,
-  accent = false,
-  spark,
-  progress,
-  max,
-}: KpiPolishedProps) {
-  const bg     = accent ? colors.ink[900]              : colors.slate[0];
-  const fg     = accent ? '#ffffff'                    : colors.ink[900];
-  const sub    = accent ? 'rgba(255,255,255,0.5)'      : colors.slate[500];
-  const borCol = accent ? colors.ink[700]              : colors.slate[200];
-
+  sub,
+  revenue,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  revenue?: boolean;
+}) {
   return (
-    <View style={[kpi.card, { backgroundColor: bg, borderColor: borCol }]}>
-      {/* Label — 9px bold 0.18em uppercase */}
-      <Text style={[kpi.label, { color: sub }]}>{label}</Text>
-
-      {/* Value row */}
-      <View style={kpi.valueRow}>
-        <View style={{ minWidth: 0, flex: 1 }}>
-          {/* Value + unit */}
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
-            <Text
-              style={[kpi.value, { color: fg }]}
-              numberOfLines={1}
-              adjustsFontSizeToFit
-            >
-              {value}
-            </Text>
-            {unit ? <Text style={[kpi.unit, { color: sub }]}>{unit}</Text> : null}
-          </View>
-        </View>
-        {/* Sparkline or Ring — right side */}
-        {spark && <Sparkline data={spark} />}
-        {progress !== undefined ? (
-          <RingProgress value={progress} max={max ?? 1} />
-        ) : null}
-      </View>
+    <View style={styles.smallKpi}>
+      <Text style={styles.smallKpiLabel}>{label}</Text>
+      <Text style={[styles.smallKpiValue, revenue && styles.revenueValue]}>{value}</Text>
+      <Text style={styles.smallKpiSub}>{sub}</Text>
     </View>
   );
 }
 
-const kpi = StyleSheet.create({
-  card: {
-    flex: 1,
-    minWidth: 0,
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingTop: 13,
-    paddingHorizontal: 13,
-    paddingBottom: 11,
-    ...shadows.sm,
-  },
-  label: {
-    fontSize: 9,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: 1.62,           // 0.18em × 9
-    textTransform: 'uppercase',
-    lineHeight: 9,
-  },
-  valueRow: {
-    marginTop: 8,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: 4,
-  },
-  value: {
-    fontSize: 28,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: -0.7,           // -0.025em × 28
-    lineHeight: 28,
-  },
-  unit: {
-    fontSize: 10,
-    fontFamily: 'Montserrat-SemiBold',
-    marginLeft: 2,
-    letterSpacing: 0.6,            // 0.06em × 10
-    marginBottom: 2,
-  },
-});
-
-/* ── Main Screen ─────────────────────────────────────────────── */
 export default function OzetScreen() {
+  const insets = useSafeAreaInsets();
   const { shopId, staffList: contextStaff } = useShop();
-  const [filter,     setFilter]     = useState('all');
+  const [filter, setFilter] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
-  const [kpiTotal,     setKpiTotal]     = useState('—');
-  const [kpiCompleted, setKpiCompleted] = useState('—');
-  const [kpiRevenue,   setKpiRevenue]   = useState('—');
+  const [kpiTotal, setKpiTotal] = useState('0');
+  const [kpiCompleted, setKpiCompleted] = useState('0');
+  const [kpiRevenue, setKpiRevenue] = useState('—');
+  const [topService, setTopService] = useState<Insight | null>(null);
+  const [busiestDay, setBusiestDay] = useState<Insight | null>(null);
+
   const staffList = [{ id: 'all', name: 'Tüm Ekip' }, ...contextStaff];
-  const [topService, setTopService] = useState<{name:string;pct:string} | null>(null);
-  const [busiestDay, setBusiestDay] = useState<{name:string;count:string} | null>(null);
-  const [staffStats, setStaffStats] = useState<{id:string;name:string;count:number}[]>([]);
 
   useEffect(() => {
     if (shopId && contextStaff.length) loadSummary();
   }, [filter, shopId, contextStaff]);
 
   async function loadSummary() {
-    if (!shopId) return;
-    const barbers = contextStaff;
-    if (!barbers.length) return;
+    if (!shopId || contextStaff.length === 0) return;
 
-    const dayStart = new Date(); dayStart.setHours(0,0,0,0);
-    const dayEnd = new Date(); dayEnd.setDate(dayEnd.getDate()+1); dayEnd.setHours(0,0,0,0);
+    const dayStart = new Date();
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
 
-    const filteredIds = filter === 'all' ? barbers.map((b) => b.id) : [filter];
-    if (!filteredIds.length) { setKpiTotal('0'); setKpiCompleted('0'); setKpiRevenue('—'); return; }
-
+    const filteredIds = filter === 'all' ? contextStaff.map((staff) => staff.id) : [filter];
     const { data: appts, error: apptsErr } = await supabase.rpc('get_shop_appointments_revenue', {
       p_shop_id: shopId,
       p_from: dayStart.toISOString(),
       p_to: dayEnd.toISOString(),
       p_staff_ids: filteredIds,
     });
-    if (apptsErr) { console.warn('[owner-summary] appointments query error:', apptsErr); return; }
 
-    if (appts) {
-      const total = appts.length;
-      const completed = (appts as any[]).filter((a: any) => a.status === 'completed').length;
-      const revenue = (appts as any[]).reduce((s: number, a: any) => s + estimatedAppointmentRevenueCents(a), 0);
-      setKpiTotal(String(total));
-      setKpiCompleted(String(completed));
-      setKpiRevenue(revenue === 0 ? '—' : (revenue / 100).toLocaleString('tr-TR', { maximumFractionDigits: 0 }));
+    if (apptsErr) {
+      console.warn('[owner-summary] appointments query error:', apptsErr);
+      return;
     }
 
-    // Öngörüler + Usta Bazında — 30-day range, all staff
-    const allIds = barbers.map((b) => b.id);
-    if (!allIds.length) return;
-    const monthStart = new Date(); monthStart.setDate(monthStart.getDate() - 29); monthStart.setHours(0,0,0,0);
-    const monthEnd = new Date(); monthEnd.setDate(monthEnd.getDate() + 1); monthEnd.setHours(0,0,0,0);
+    const dailyRows = (appts ?? []) as any[];
+    const completed = dailyRows.filter((row) => row.status === 'completed').length;
+    const revenue = dailyRows.reduce((sum, row) => sum + estimatedAppointmentRevenueCents(row), 0);
+    setKpiTotal(String(dailyRows.length));
+    setKpiCompleted(String(completed));
+    setKpiRevenue(revenue === 0 ? '—' : `₺${(revenue / 100).toLocaleString('tr-TR', { maximumFractionDigits: 0 })}`);
 
+    const monthStart = new Date();
+    monthStart.setDate(monthStart.getDate() - 29);
+    monthStart.setHours(0, 0, 0, 0);
+    const monthEnd = new Date(dayEnd);
+    const allIds = contextStaff.map((staff) => staff.id);
     const { data: monthly } = await supabase.rpc('get_shop_appointments_revenue', {
       p_shop_id: shopId,
       p_from: monthStart.toISOString(),
@@ -279,42 +139,37 @@ export default function OzetScreen() {
       p_staff_ids: allIds,
     });
 
-    if (monthly && (monthly as any[]).length > 0) {
-      const rows = monthly as any[];
-
-      // En Çok Tercih Edilen hizmet
-      const svcCount = new Map<string, number>();
-      for (const a of rows) {
-        const name = a.service_name ?? 'Bilinmiyor';
-        svcCount.set(name, (svcCount.get(name) ?? 0) + 1);
-      }
-      let topSvc = '—'; let topSvcCnt = 0;
-      svcCount.forEach((cnt, name) => { if (cnt > topSvcCnt) { topSvcCnt = cnt; topSvc = name; } });
-      const topPct = rows.length > 0 ? `%${Math.round((topSvcCnt / rows.length) * 100)}` : '—';
-      setTopService({ name: topSvc, pct: topPct });
-
-      // En Yoğun Gün (haftanın günü)
-      const TR_DAYS = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
-      const dayCount = new Array(7).fill(0);
-      for (const a of rows) {
-        const d = new Date(a.starts_at ?? a.created_at);
-        dayCount[d.getDay()]++;
-      }
-      const maxDay = dayCount.indexOf(Math.max(...dayCount));
-      setBusiestDay({ name: TR_DAYS[maxDay], count: String(dayCount[maxDay]) });
-
-      // Usta Bazında — randevu sayısı
-      const staffCount = new Map<string, number>();
-      for (const a of rows) { staffCount.set(a.staff_id, (staffCount.get(a.staff_id) ?? 0) + 1); }
-      setStaffStats(
-        barbers.map((b) => ({ id: b.id, name: b.name, count: staffCount.get(b.id) ?? 0 }))
-          .sort((a, b) => b.count - a.count),
-      );
-    } else {
+    const rows = (monthly ?? []) as any[];
+    if (rows.length === 0) {
       setTopService(null);
       setBusiestDay(null);
-      setStaffStats(barbers.map((b) => ({ id: b.id, name: b.name, count: 0 })));
+      return;
     }
+
+    const serviceCount = new Map<string, number>();
+    const staffCount = new Map<string, number>();
+    const dayCount = new Array(7).fill(0);
+    for (const row of rows) {
+      const serviceName = row.service_name ?? 'Bilinmiyor';
+      serviceCount.set(serviceName, (serviceCount.get(serviceName) ?? 0) + 1);
+      staffCount.set(row.staff_id, (staffCount.get(row.staff_id) ?? 0) + 1);
+      dayCount[new Date(row.starts_at ?? row.created_at).getDay()] += 1;
+    }
+
+    let topName = '—';
+    let topCount = 0;
+    serviceCount.forEach((count, name) => {
+      if (count > topCount) {
+        topName = name;
+        topCount = count;
+      }
+    });
+    setTopService({ name: topName, value: `%${Math.round((topCount / rows.length) * 100)}` });
+
+    const dayNames = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+    const busiestIndex = dayCount.indexOf(Math.max(...dayCount));
+    setBusiestDay({ name: dayNames[busiestIndex], value: `${dayCount[busiestIndex]} rdv` });
+
   }
 
   async function onRefresh() {
@@ -326,220 +181,384 @@ export default function OzetScreen() {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      showsVerticalScrollIndicator={false}
     >
-      {/* OverlineHeader — padding:'8px 20px 16px' */}
-      <OverlineHeader
-        eyebrow="Dükkan Özet"
-        title="Bugün"
-        meta={new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'short' })}
-      />
+      <View style={styles.headerRow}>
+        <View>
+          <Text style={styles.overline}>Dükkan Özet</Text>
+          <Text style={styles.title}>Bugün</Text>
+        </View>
+        <Text style={styles.dateText}>{formatDate(new Date())}</Text>
+      </View>
 
-      {/* ChipRow — gap:8, padding:'4px 20px 4px', overflowX:auto */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.chipScroll}
-        contentContainerStyle={styles.chipContent}
+        contentContainerStyle={styles.chipRow}
       >
-        {staffList.map(s => (
-          <Chip key={s.id} selected={filter === s.id} onPress={() => setFilter(s.id)}>
-            {s.name}
-          </Chip>
-        ))}
+        {staffList.map((staff) => {
+          const selected = filter === staff.id;
+          return (
+            <Pressable
+              key={staff.id}
+              onPress={() => setFilter(staff.id)}
+              style={[styles.chip, selected && styles.chipSelected]}
+            >
+              {staff.id !== 'all' ? (
+                <View style={[styles.chipAvatar, selected && styles.chipAvatarSelected]}>
+                  <Text style={[styles.chipAvatarText, selected && styles.chipTextSelected]}>
+                    {initials(staff.name)}
+                  </Text>
+                </View>
+              ) : null}
+              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{staff.name}</Text>
+            </Pressable>
+          );
+        })}
       </ScrollView>
 
-      {/* KPI row — gap:8, padding:'14px 16px 0' */}
-      <View style={styles.kpiRow}>
-        <KpiPolished
-          label="Toplam"
-          value={kpiTotal}
-        />
-        <KpiPolished
-          label="Tamamlanan"
-          value={kpiCompleted}
-        />
-        <KpiPolished
-          label="Tahmini"
-          value={kpiRevenue}
-          unit="₺"
-          accent
-        />
+      <KpiHero total={kpiTotal} completed={kpiCompleted} />
+
+      <View style={styles.smallKpiRow}>
+        <SmallKpi label="Tamamlanan" value={kpiCompleted} sub={`/ ${kpiTotal} randevu`} />
+        <SmallKpi label="Tahmini Gelir" value={kpiRevenue} sub="bugün" revenue />
       </View>
 
-      <SectionLabel>Öngörüler (30 gün)</SectionLabel>
-      <View style={styles.insightsCard}>
-        <View style={[styles.insightRow, styles.insightBorder]}>
-          <View>
-            <Text style={styles.insightRowLabel}>En Çok Tercih Edilen</Text>
-            <Text style={styles.insightRowValue}>{topService?.name ?? '—'}</Text>
-          </View>
-          <Text style={styles.insightRowRight}>{topService?.pct ?? '—'}</Text>
+      <View style={styles.insightCard}>
+        <View style={styles.insightHeader}>
+          <Text style={styles.sectionTitle}>Öngörüler</Text>
+          <Text style={styles.sectionMeta}>son 30 gün</Text>
         </View>
+        <View style={styles.divider} />
         <View style={styles.insightRow}>
           <View>
-            <Text style={styles.insightRowLabel}>En Yoğun Gün</Text>
-            <Text style={styles.insightRowValue}>{busiestDay?.name ?? '—'}</Text>
+            <Text style={styles.insightLabel}>En Çok Tercih Edilen</Text>
+            <Text style={styles.insightValue}>{topService?.name ?? '—'}</Text>
           </View>
-          <Text style={styles.insightRowRight}>{busiestDay ? `${busiestDay.count} randevu` : '—'}</Text>
+          <Text style={styles.insightRight}>{topService?.value ?? '—'}</Text>
         </View>
-      </View>
-
-      <SectionLabel>Usta Bazında</SectionLabel>
-      <View style={styles.staffList}>
-        {staffStats.length === 0 ? (
-          <View style={[styles.insightsCard, { marginHorizontal: 0, paddingVertical: 16, alignItems: 'center' }]}>
-            <Text style={{ fontSize: 13, fontFamily: 'Montserrat-Regular', color: colors.slate[400] }}>
-              Henüz veri yok
-            </Text>
+        <View style={styles.divider} />
+        <View style={styles.insightRow}>
+          <View>
+            <Text style={styles.insightLabel}>En Yoğun Gün</Text>
+            <Text style={styles.insightValue}>{busiestDay?.name ?? '—'}</Text>
           </View>
-        ) : (() => {
-          const maxCount = Math.max(...staffStats.map(s => s.count), 1);
-          const avatarColors = [colors.brand[600], '#8B4513', colors.mint[700] ?? '#14B8A6'];
-          return staffStats.map((s, i) => (
-            <View key={s.id} style={styles.staffCard}>
-              <View style={[styles.avatar, { backgroundColor: avatarColors[i % avatarColors.length] }]}>
-                <Text style={styles.avatarText}>{s.name.slice(0, 1).toUpperCase()}</Text>
-              </View>
-              <View style={styles.staffInfo}>
-                <Text style={styles.staffName}>{s.name}</Text>
-                <Text style={styles.staffMeta}>30 günde {s.count} randevu</Text>
-              </View>
-              <View style={styles.miniBarWrap}>
-                <Text style={[styles.miniCount, { color: colors.brand[600] }]}>{s.count}</Text>
-                <View style={styles.miniTrack}>
-                  <View style={[styles.miniFill, { width: `${Math.round((s.count / maxCount) * 100)}%`, backgroundColor: colors.brand[600] }]} />
-                </View>
-              </View>
-            </View>
-          ));
-        })()}
+          <Text style={styles.insightRight}>{busiestDay?.value ?? '—'}</Text>
+        </View>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen:  { flex: 1, backgroundColor: colors.slate[50] },
-  content: { paddingBottom: 24 },
-
-  /* ChipRow — padding:'4px 20px' */
-  chipScroll:  {},
-  chipContent: { gap: 8, paddingHorizontal: 20, paddingVertical: 4 },
-
-  /* KPI row — gap:8, padding:'14px 16px 0' */
-  kpiRow: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingTop: 14,
+  screen: {
+    backgroundColor: v2Colors.paper,
+    flex: 1,
   },
-
-  /* Insights card — padding:'0 16px' → marginH:16 */
-  insightsCard: {
-    marginHorizontal: 16,
-    backgroundColor: colors.slate[0],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
-    borderRadius: 12,
-    shadowColor: colors.ink[900],
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
-    overflow: 'hidden',
+  content: {
+    paddingBottom: 124,
   },
-  insightRow: {
+  headerRow: {
+    alignItems: 'flex-end',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
-    paddingHorizontal: 16,
-    paddingVertical: 13,
+    paddingHorizontal: v2Spacing[22],
   },
-  insightBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.slate[100],
-  },
-  insightRowLabel: {
-    fontSize: 10,
-    fontFamily: 'Montserrat-SemiBold',
-    letterSpacing: 1.4,            // 0.14em × 10
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-  },
-  insightRowValue: {
-    fontSize: 14,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.ink[900],
-    marginTop: 4,
-  },
-  insightRowRight: {
-    fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
-  },
-
-  /* Staff list — gap:8, padding:'0 16px' */
-  staffList: { gap: 8, paddingHorizontal: 16 },
-  staffCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: colors.slate[0],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
-    borderRadius: 12,
-    padding: 12,
-    shadowColor: colors.ink[900],
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-
-  /* Avatar — 34×34 borderRadius:999 */
-  avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: 12,
-    fontFamily: 'Montserrat-Bold',
-    color: '#ffffff',
-  },
-
-  staffInfo:  { flex: 1 },
-  staffName: {
-    fontSize: 14,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.ink[900],
-  },
-  staffMeta: {
+  overline: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 11,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
-    marginTop: 2,
+    letterSpacing: 2.2,
+    textTransform: 'uppercase',
   },
-
-  /* Mini bar — width:36, gap:3, alignItems:'flex-end' */
-  miniBarWrap: { width: 36, alignItems: 'flex-end', gap: 3 },
-  miniCount: {
-    fontSize: 12,
-    fontFamily: 'Montserrat-Bold',
+  title: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.display,
+    fontSize: 36,
+    includeFontPadding: false,
+    lineHeight: 38,
+    marginTop: 6,
   },
-  miniTrack: {
-    width: 36,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: colors.slate[100],
+  dateText: {
+    color: v2Colors.ink2,
+    fontFamily: v2Fonts.mono,
+    fontSize: 11,
+    marginBottom: 7,
+  },
+  chipRow: {
+    gap: 8,
+    paddingHorizontal: v2Spacing[22],
+    paddingTop: v2Spacing[14],
+  },
+  chip: {
+    alignItems: 'center',
+    borderColor: v2Colors.line2,
+    borderRadius: v2Radii.pill,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 7,
+    height: 32,
+    paddingHorizontal: 13,
+  },
+  chipSelected: {
+    backgroundColor: v2Colors.ink,
+    borderColor: v2Colors.ink,
+  },
+  chipAvatar: {
+    alignItems: 'center',
+    backgroundColor: v2Colors.spruceSoft,
+    borderRadius: 9,
+    height: 18,
+    justifyContent: 'center',
+    width: 18,
+  },
+  chipAvatarSelected: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  chipAvatarText: {
+    color: v2Colors.spruce,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 8,
+  },
+  chipText: {
+    color: v2Colors.ink2,
+    fontFamily: v2Fonts.bodySemiBold,
+    fontSize: 12.5,
+  },
+  chipTextSelected: {
+    color: v2Colors.paper,
+  },
+  heroCard: {
+    backgroundColor: v2Colors.spruce,
+    borderRadius: v2Radii.xl,
+    marginHorizontal: v2Spacing[22],
+    marginTop: v2Spacing[18],
+    minHeight: 134,
+    overflow: 'hidden',
+    paddingHorizontal: v2Spacing[20],
+    paddingVertical: v2Spacing[18],
+    shadowColor: v2Colors.spruce,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+  },
+  heroWatermark: {
+    bottom: -24,
+    position: 'absolute',
+    right: -20,
+  },
+  heroTop: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  heroOverline: {
+    color: 'rgba(255,255,255,0.62)',
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+  },
+  heroTrend: {
+    color: '#9FD9BE',
+    fontFamily: v2Fonts.mono,
+    fontSize: 11,
+  },
+  heroNumber: {
+    color: v2Colors.paper,
+    fontFamily: v2Fonts.mono,
+    fontSize: 58,
+    includeFontPadding: false,
+    lineHeight: 64,
+    marginTop: 8,
+  },
+  heroSub: {
+    color: 'rgba(255,255,255,0.78)',
+    fontFamily: v2Fonts.bodyMedium,
+    fontSize: 13,
+  },
+  smallKpiRow: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: v2Spacing[22],
+    paddingTop: 12,
+  },
+  smallKpi: {
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line,
+    borderRadius: v2Radii.card,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 90,
+    padding: 14,
+  },
+  smallKpiLabel: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodySemiBold,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  smallKpiValue: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.mono,
+    fontSize: 30,
+    marginTop: 8,
+  },
+  revenueValue: {
+    color: v2Colors.brass,
+  },
+  smallKpiSub: {
+    color: v2Colors.ink2,
+    fontFamily: v2Fonts.bodyMedium,
+    fontSize: 11,
+    marginTop: 3,
+  },
+  sectionTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: v2Spacing[22],
+    marginTop: v2Spacing[52],
+  },
+  sectionTitle: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.7,
+    textTransform: 'uppercase',
+  },
+  sectionMeta: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.mono,
+    fontSize: 10,
+  },
+  insightCard: {
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line,
+    borderRadius: v2Radii.card,
+    borderWidth: 1,
+    marginHorizontal: v2Spacing[22],
+    marginTop: v2Spacing[16],
     overflow: 'hidden',
   },
-  miniFill: {
+  insightHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  insightRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  insightLabel: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodySemiBold,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  insightValue: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.display,
+    fontSize: 20,
+    marginTop: 5,
+  },
+  insightRight: {
+    color: v2Colors.spruce,
+    fontFamily: v2Fonts.mono,
+    fontSize: 18,
+  },
+  divider: {
+    backgroundColor: v2Colors.line,
+    height: 1,
+  },
+  staffCard: {
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line,
+    borderRadius: v2Radii.card,
+    borderWidth: 1,
+    marginHorizontal: v2Spacing[22],
+    marginTop: 10,
+    overflow: 'hidden',
+  },
+  staffRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+  },
+  staffAvatar: {
+    alignItems: 'center',
+    backgroundColor: v2Colors.paper2,
+    borderColor: v2Colors.line,
+    borderRadius: 12,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  staffAvatarPrimary: {
+    backgroundColor: v2Colors.spruce,
+    borderColor: v2Colors.spruce,
+  },
+  staffAvatarText: {
+    color: v2Colors.spruce,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 11,
+  },
+  staffAvatarTextPrimary: {
+    color: v2Colors.paper,
+  },
+  staffCopy: {
+    flex: 1,
+  },
+  staffName: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 14,
+  },
+  staffSub: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodyMedium,
+    fontSize: 11,
+    marginTop: 3,
+  },
+  staffScore: {
+    alignItems: 'flex-end',
+    gap: 7,
+    width: 82,
+  },
+  staffBarTrack: {
+    backgroundColor: v2Colors.line,
+    borderRadius: 3,
+    height: 5,
+    overflow: 'hidden',
+    width: 72,
+  },
+  staffBarFill: {
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 3,
     height: '100%',
-    borderRadius: 2,
+  },
+  staffCount: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.mono,
+    fontSize: 12,
+  },
+  emptyText: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.body,
+    fontSize: 13,
+    padding: 18,
+    textAlign: 'center',
   },
 });

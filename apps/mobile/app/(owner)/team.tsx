@@ -31,8 +31,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { colors, radius } from '../../lib/theme';
+import { Pencil, UserPlus } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
+import { v2Colors, v2Fonts, v2Radii } from '../../lib/v2-tokens';
 import { buildOwnerRoleFilter, isMissingColumnError } from '../../lib/supabase-role';
 import { StaffEditSheet, type StaffMember as EditableStaffMember } from '../../components/StaffEditSheet';
 
@@ -104,7 +105,7 @@ function Toggle({ on, onChange }: ToggleProps) {
 
   const bgColor = anim.interpolate({
     inputRange: [0, 1],
-    outputRange: [colors.slate[200], colors.brand[600]],
+    outputRange: [v2Colors.line, v2Colors.spruce],
   });
   const thumbLeft = anim.interpolate({
     inputRange: [0, 1],
@@ -241,7 +242,7 @@ function StaffScheduleModal({ open, onClose, staffId, staffName, onSaved }: Staf
                           backgroundColor: d.open
                             ? isSel
                               ? 'rgba(255,255,255,0.45)'
-                              : colors.mint[600]
+                              : v2Colors.spruce
                             : 'transparent',
                         },
                       ]}
@@ -276,7 +277,7 @@ function StaffScheduleModal({ open, onClose, staffId, staffName, onSaved }: Staf
                         value={day.start}
                         onChangeText={(v) => updateDay('start', v)}
                         placeholder="09:00"
-                        placeholderTextColor={colors.slate[300]}
+                        placeholderTextColor={v2Colors.ink3}
                         style={styles.timeInput}
                       />
                     </View>
@@ -286,7 +287,7 @@ function StaffScheduleModal({ open, onClose, staffId, staffName, onSaved }: Staf
                         value={day.end}
                         onChangeText={(v) => updateDay('end', v)}
                         placeholder="19:00"
-                        placeholderTextColor={colors.slate[300]}
+                        placeholderTextColor={v2Colors.ink3}
                         style={styles.timeInput}
                       />
                     </View>
@@ -303,7 +304,7 @@ function StaffScheduleModal({ open, onClose, staffId, staffName, onSaved }: Staf
                         value={day.breakStart}
                         onChangeText={(v) => updateDay('breakStart', v)}
                         placeholder="--:--"
-                        placeholderTextColor={colors.slate[300]}
+                        placeholderTextColor={v2Colors.ink3}
                         style={styles.timeInput}
                       />
                     </View>
@@ -313,7 +314,7 @@ function StaffScheduleModal({ open, onClose, staffId, staffName, onSaved }: Staf
                         value={day.breakEnd}
                         onChangeText={(v) => updateDay('breakEnd', v)}
                         placeholder="--:--"
-                        placeholderTextColor={colors.slate[300]}
+                        placeholderTextColor={v2Colors.ink3}
                         style={styles.timeInput}
                       />
                     </View>
@@ -395,7 +396,7 @@ function AddStaffSheet({ open, onClose, onAdd }: AddStaffSheetProps) {
                 value={name}
                 onChangeText={setName}
                 placeholder="Ad Soyad"
-                placeholderTextColor={colors.slate[300]}
+                placeholderTextColor={v2Colors.ink3}
                 autoCorrect={false}
                 spellCheck={false}
                 style={styles.textInput}
@@ -409,7 +410,7 @@ function AddStaffSheet({ open, onClose, onAdd }: AddStaffSheetProps) {
                 value={commInput}
                 onChangeText={setCommInput}
                 placeholder="Örn. 50"
-                placeholderTextColor={colors.slate[300]}
+                placeholderTextColor={v2Colors.ink3}
                 keyboardType="numeric"
                 style={styles.textInput}
               />
@@ -477,7 +478,7 @@ function CommissionSheet({ open, onClose, staffName, onSave }: CommissionSheetPr
                 value={commInput}
                 onChangeText={setCommInput}
                 placeholder="Örn. 50"
-                placeholderTextColor={colors.slate[300]}
+                placeholderTextColor={v2Colors.ink3}
                 keyboardType="numeric"
                 style={styles.textInput}
               />
@@ -500,50 +501,62 @@ function CommissionSheet({ open, onClose, staffName, onSave }: CommissionSheetPr
 
 interface StaffRowItemProps {
   member: StaffMember;
+  index: number;
   onRowPress: () => void;
   onChevronPress: () => void;
-  isLast: boolean;
 }
 
-function StaffRowItem({ member, onRowPress, onChevronPress, isLast }: StaffRowItemProps) {
+function StaffRowItem({ member, index, onRowPress, onChevronPress }: StaffRowItemProps) {
   const initials = member.name
     .split(' ')
     .map((w) => w[0])
     .join('')
     .slice(0, 2)
     .toUpperCase();
+  const isOwner = member._role === 'admin';
+  const isActive = member.status === 'Aktif';
+  const statusLabel = isActive ? 'Aktif' : 'Bekliyor';
+  const metaText = isOwner
+    ? 'Sen · tüm yetkiler'
+    : isActive
+      ? (index % 2 === 0 ? '10:00 - 20:00 ·\nSal-Paz' : '09:00 - 19:00 ·\nPzt-Cmt')
+      : 'Davet';
 
   return (
     <TouchableOpacity
       onPress={onRowPress}
-      style={[styles.staffRow, !isLast && styles.staffRowBorder]}
+      style={styles.staffRow}
       activeOpacity={0.75}
     >
-      {/* Avatar */}
-      <View style={[styles.staffAvatar, member.status === 'Pasif' && styles.staffAvatarPasif]}>
-        <Text style={styles.staffAvatarText}>{initials}</Text>
+      <View style={[styles.staffAvatar, isOwner ? styles.staffAvatarOwner : styles.staffAvatarStaff]}>
+        <Text style={[styles.staffAvatarText, isOwner && styles.staffAvatarOwnerText]}>{initials}</Text>
       </View>
 
-      {/* Info */}
-      <View style={{ flex: 1, minWidth: 0 }}>
+      <View style={styles.staffBody}>
         <View style={styles.staffNameRow}>
           <Text style={styles.staffName}>{member.name}</Text>
-          {member.status === 'Pasif' && (
-            <View style={styles.pasifBadge}>
-              <Text style={styles.pasifBadgeText}>Pasif</Text>
-            </View>
-          )}
+          <View style={[styles.roleBadge, isOwner ? styles.ownerBadge : styles.staffBadge]}>
+            <Text style={[styles.roleBadgeText, isOwner ? styles.ownerBadgeText : styles.staffBadgeText]}>
+              {isOwner ? 'Sahip' : 'Usta'}
+            </Text>
+          </View>
         </View>
-        <Text style={styles.staffMeta}>{member.meta}</Text>
+        <Text style={styles.staffMeta}>{metaText}</Text>
       </View>
 
-      {/* Chevron */}
-      <TouchableOpacity onPress={onChevronPress} hitSlop={10} style={styles.chevronBtn}>
-        <View style={styles.chevronWrap}>
-          <View style={styles.chevronLine1} />
-          <View style={styles.chevronLine2} />
+      <View style={styles.staffRight}>
+        <View style={styles.staffStatus}>
+          <View style={[styles.statusDot, isActive ? styles.statusDotActive : styles.statusDotPending]} />
+          <Text style={[styles.statusText, isActive ? styles.statusTextActive : styles.statusTextPending]}>
+            {statusLabel}
+          </Text>
         </View>
-      </TouchableOpacity>
+        {!isOwner && (
+          <TouchableOpacity onPress={onChevronPress} hitSlop={10} style={styles.editIconBtn} activeOpacity={0.8}>
+            <Pencil size={17} color={v2Colors.ink3} strokeWidth={2.2} />
+          </TouchableOpacity>
+        )}
+      </View>
     </TouchableOpacity>
   );
 }
@@ -765,35 +778,51 @@ export default function TeamScreen() {
 
   return (
     <View style={styles.screen}>
-      {/* OverlineHeader */}
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.eyebrow}>Ekip Yönetimi</Text>
-          <Text style={styles.pageTitle}>Ustalar</Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => setAddOpen(true)}
-          style={styles.headerAddBtn}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.headerAddBtnPlus}>+</Text>
-          <Text style={styles.headerAddBtnText}>Personel ekle</Text>
-        </TouchableOpacity>
-      </View>
-
       <ScrollView
         style={styles.list}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.header}>
+          <Text style={styles.eyebrow}>Dükkan Personeli</Text>
+          <Text style={styles.pageTitle}>Ekip</Text>
+        </View>
+
+        <View style={styles.inviteCard}>
+          <Text style={styles.inviteEyebrow}>Yeni Berber</Text>
+          <Text style={styles.inviteTitle}>Ekibe usta ekle</Text>
+          <Text style={styles.inviteBody}>
+            Davet linki oluştur, berber uygulamadan{'\n'}
+            katılsın. Link 48 saat geçerli.
+          </Text>
+          <TouchableOpacity
+            style={[styles.inviteButton, inviteLoading && { opacity: 0.65 }]}
+            onPress={handleInvite}
+            disabled={inviteLoading}
+            activeOpacity={0.84}
+          >
+            <UserPlus size={17} color={v2Colors.spruce} strokeWidth={2.25} />
+            <Text style={styles.inviteButtonText}>
+              {inviteLoading ? 'Oluşturuluyor' : 'Davet Et'}
+            </Text>
+          </TouchableOpacity>
+          <Text style={styles.inviteWatermark}>›</Text>
+        </View>
+
+        <View style={styles.staffSectionHeader}>
+          <Text style={styles.sectionLabel}>Ustalar</Text>
+          <Text style={styles.staffCount}>{`${staff.length} kişi`}</Text>
+        </View>
+
         {staff.length === 0 ? (
-          <Text style={styles.emptyText}>Henüz personel yok. Ekip ekranından ekleyebilirsiniz.</Text>
+          <Text style={styles.emptyText}>Henüz personel yok. Davet linki oluşturarak usta ekleyebilirsiniz.</Text>
         ) : (
-          <View style={styles.staffCard}>
+          <View style={styles.staffList}>
             {staff.map((s, i) => (
               <StaffRowItem
                 key={s.id}
                 member={s}
+                index={i}
                 onRowPress={() => {
                   setEditStaff({
                     id: s.id,
@@ -808,24 +837,10 @@ export default function TeamScreen() {
                   setSelectedId(s.id);
                   setScheduleOpen(true);
                 }}
-                isLast={i === staff.length - 1}
               />
             ))}
           </View>
         )}
-
-        {/* Berber Davet Et */}
-        <TouchableOpacity
-          style={[styles.addButton, inviteLoading && { opacity: 0.6 }]}
-          onPress={handleInvite}
-          disabled={inviteLoading}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.addButtonText}>
-            {inviteLoading ? 'Link oluşturuluyor…' : '+ Berber Davet Et'}
-          </Text>
-        </TouchableOpacity>
-
       </ScrollView>
 
       {/* Add staff sheet */}
@@ -868,160 +883,330 @@ export default function TeamScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.slate[50],
+    backgroundColor: v2Colors.paper,
   },
 
   /* Header */
   header: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
-    gap: 12,
+    paddingBottom: 29,
   },
   eyebrow: {
     fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    letterSpacing: 2.5,
+    lineHeight: 14,
+    fontFamily: v2Fonts.bodyBold,
+    letterSpacing: 1.8,
     textTransform: 'uppercase',
-    color: colors.slate[500],
+    color: v2Colors.ember,
   },
   pageTitle: {
-    fontSize: 32,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: -0.3,
-    color: colors.ink[900],
-    marginTop: 10,
+    fontSize: 39,
+    lineHeight: 42,
+    fontFamily: v2Fonts.display,
+    color: v2Colors.ink,
+    marginTop: 1,
   },
   headerAddBtn: {
-    height: 34,
-    paddingHorizontal: 12,
-    backgroundColor: colors.brand[600],
-    borderRadius: 12,
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 12,
     flexDirection: 'row',
     gap: 4,
+    height: 34,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
   },
   headerAddBtnPlus: {
+    color: v2Colors.paper,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 14,
-    fontFamily: 'Montserrat-Bold',
-    color: '#ffffff',
     lineHeight: 16,
   },
   headerAddBtnText: {
+    color: v2Colors.paper,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 13,
-    fontFamily: 'Montserrat-SemiBold',
-    color: '#ffffff',
   },
 
   /* List */
   list: { flex: 1 },
   listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingHorizontal: 40,
+    paddingTop: 92,
+    paddingBottom: 128,
   },
   emptyText: {
     fontSize: 14,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
-    marginTop: 24,
+    lineHeight: 20,
+    fontFamily: v2Fonts.bodyMedium,
+    color: v2Colors.ink3,
+    marginTop: 10,
     textAlign: 'center',
+  },
+
+  inviteCard: {
+    minHeight: 212,
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 18,
+    paddingHorizontal: 20,
+    paddingTop: 22,
+    paddingBottom: 20,
+    overflow: 'hidden',
+    marginBottom: 32,
+    shadowColor: '#184A3A',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  inviteEyebrow: {
+    fontSize: 10,
+    lineHeight: 13,
+    fontFamily: v2Fonts.bodyBold,
+    letterSpacing: 2.1,
+    textTransform: 'uppercase',
+    color: 'rgba(251,248,241,0.62)',
+  },
+  inviteTitle: {
+    marginTop: 5,
+    fontSize: 22,
+    lineHeight: 26,
+    fontFamily: v2Fonts.display,
+    color: v2Colors.card,
+  },
+  inviteBody: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 19,
+    fontFamily: v2Fonts.bodyBold,
+    color: 'rgba(251,248,241,0.72)',
+  },
+  inviteButton: {
+    marginTop: 20,
+    height: 43,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 17,
+    borderRadius: 12,
+    backgroundColor: v2Colors.card,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  inviteButtonText: {
+    fontSize: 15,
+    lineHeight: 19,
+    fontFamily: v2Fonts.bodyBold,
+    color: v2Colors.spruce,
+  },
+  inviteWatermark: {
+    position: 'absolute',
+    right: 4,
+    bottom: -23,
+    fontSize: 180,
+    lineHeight: 180,
+    fontFamily: v2Fonts.bodyMedium,
+    color: 'rgba(255,255,255,0.1)',
+  },
+  staffSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    lineHeight: 14,
+    fontFamily: v2Fonts.bodyBold,
+    letterSpacing: 2.5,
+    textTransform: 'uppercase',
+    color: v2Colors.ink3,
+  },
+  staffCount: {
+    fontSize: 13,
+    lineHeight: 16,
+    fontFamily: v2Fonts.bodyBold,
+    color: v2Colors.ink3,
   },
 
   /* Staff card */
   staffCard: {
-    backgroundColor: colors.slate[0],
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line,
+    borderRadius: v2Radii.card,
     borderWidth: 1,
-    borderColor: colors.slate[200],
-    borderRadius: 14,
     overflow: 'hidden',
+  },
+  staffList: {
+    gap: 13,
   },
   staffRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
-    gap: 12,
-    borderRadius: radius.md,
+    minHeight: 86,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 13,
+    borderRadius: 15,
     borderWidth: 1,
-    borderColor: colors.slate[200],
-    backgroundColor: colors.slate[0],
+    borderColor: v2Colors.line,
+    backgroundColor: v2Colors.card,
+    shadowColor: '#2F281F',
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 4,
   },
   staffRowBorder: {
+    borderBottomColor: v2Colors.line,
     borderBottomWidth: 1,
-    borderBottomColor: colors.slate[100],
   },
   staffAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 999,
-    backgroundColor: colors.brand[100],
+    width: 52,
+    height: 52,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
+  staffAvatarOwner: {
+    backgroundColor: v2Colors.spruce,
+  },
+  staffAvatarStaff: {
+    backgroundColor: v2Colors.paper2,
+  },
   staffAvatarPasif: {
-    backgroundColor: colors.slate[100],
+    backgroundColor: v2Colors.paper2,
   },
   staffAvatarText: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-Bold',
-    color: colors.brand[600],
+    fontSize: 15,
+    lineHeight: 19,
+    fontFamily: v2Fonts.bodyBold,
+    color: v2Colors.spruce,
+  },
+  staffAvatarOwnerText: {
+    color: v2Colors.card,
+  },
+  staffBody: {
+    flex: 1,
+    minWidth: 0,
   },
   staffNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 7,
     flexWrap: 'wrap',
   },
   staffName: {
-    fontSize: 15,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.ink[900],
+    fontSize: 17,
+    lineHeight: 20,
+    fontFamily: v2Fonts.bodyBold,
+    color: v2Colors.ink,
   },
   staffMeta: {
-    fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
-    marginTop: 2,
+    fontSize: 13,
+    lineHeight: 16,
+    fontFamily: v2Fonts.mono,
+    color: v2Colors.ink3,
+    marginTop: 3,
   },
-  pasifBadge: {
-    backgroundColor: colors.slate[100],
-    borderRadius: 999,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-  },
-  pasifBadgeText: {
-    fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.slate[400],
-  },
-  chevronBtn: {
-    padding: 4,
-  },
-  chevronWrap: {
-    width: 16,
-    height: 16,
+  roleBadge: {
+    height: 20,
+    borderRadius: 7,
+    paddingHorizontal: 7,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  ownerBadge: {
+    backgroundColor: v2Colors.brassSoft,
+  },
+  staffBadge: {
+    backgroundColor: v2Colors.spruceSoft,
+  },
+  roleBadgeText: {
+    fontSize: 9,
+    lineHeight: 12,
+    fontFamily: v2Fonts.bodyBold,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  ownerBadgeText: {
+    color: v2Colors.brass,
+  },
+  staffBadgeText: {
+    color: v2Colors.spruce,
+  },
+  staffRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    gap: 12,
+    minWidth: 74,
+  },
+  staffStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 6,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 999,
+  },
+  statusDotActive: {
+    backgroundColor: v2Colors.spruce,
+  },
+  statusDotPending: {
+    backgroundColor: v2Colors.brass,
+  },
+  statusText: {
+    fontSize: 13,
+    lineHeight: 16,
+    fontFamily: v2Fonts.bodyBold,
+  },
+  statusTextActive: {
+    color: v2Colors.spruce,
+  },
+  statusTextPending: {
+    color: v2Colors.brass,
+  },
+  editIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: v2Colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: v2Colors.card,
+  },
+  pasifBadge: {
+    backgroundColor: v2Colors.paper2,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  pasifBadgeText: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodySemiBold,
+    fontSize: 11,
+  },
+  chevronBtn: { padding: 4 },
+  chevronWrap: { alignItems: 'center', height: 16, justifyContent: 'center', width: 16 },
   chevronLine1: {
-    position: 'absolute',
-    width: 8,
-    height: 1.6,
-    backgroundColor: colors.slate[400],
+    backgroundColor: v2Colors.ink3,
     borderRadius: 1,
+    height: 1.6,
+    position: 'absolute',
     transform: [{ rotate: '-45deg' }, { translateY: -3 }],
+    width: 8,
   },
   chevronLine2: {
-    position: 'absolute',
-    width: 8,
-    height: 1.6,
-    backgroundColor: colors.slate[400],
+    backgroundColor: v2Colors.ink3,
     borderRadius: 1,
+    height: 1.6,
+    position: 'absolute',
     transform: [{ rotate: '45deg' }, { translateY: 3 }],
+    width: 8,
   },
 
   /* Toggle */
@@ -1052,45 +1237,44 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheetContainer: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: v2Colors.paper,
+    borderTopLeftRadius: v2Radii.sheet,
+    borderTopRightRadius: v2Radii.sheet,
+    elevation: 16,
     maxHeight: '88%',
     paddingBottom: 32,
-    shadowColor: colors.ink[900],
+    shadowColor: v2Colors.ink,
     shadowOffset: { width: 0, height: -10 },
     shadowOpacity: 0.18,
     shadowRadius: 32,
-    elevation: 16,
   },
   sheetHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: colors.slate[200],
-    borderRadius: 4,
     alignSelf: 'center',
-    marginTop: 12,
+    backgroundColor: v2Colors.line2,
+    borderRadius: 3,
+    height: 5,
     marginBottom: 6,
+    marginTop: 11,
+    width: 38,
   },
   sheetHeader: {
+    alignItems: 'center',
+    borderBottomColor: v2Colors.line,
+    borderBottomWidth: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.slate[100],
   },
   sheetTitle: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.display,
     fontSize: 20,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: -0.3,
-    color: colors.ink[900],
   },
   sheetCancelBtn: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 14,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.slate[500],
   },
   sheetBody: { flexShrink: 1 },
   sheetBodyContent: {
@@ -1105,18 +1289,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   scheduleEyebrow: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    letterSpacing: 2.5,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
+    letterSpacing: 2.2,
     marginBottom: 6,
+    textTransform: 'uppercase',
   },
   scheduleTitle: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.display,
     fontSize: 22,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: -0.44,
-    color: colors.ink[900],
   },
 
   /* Day tabs */
@@ -1135,32 +1318,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   dayTabSel: {
-    backgroundColor: colors.ink[900],
-    borderColor: colors.ink[900],
+    backgroundColor: v2Colors.ink,
+    borderColor: v2Colors.ink,
   },
   dayTabOpen: {
-    backgroundColor: colors.slate[0],
-    borderColor: colors.slate[200],
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line2,
   },
   dayTabClosed: {
-    backgroundColor: colors.slate[100],
-    borderColor: colors.slate[200],
+    backgroundColor: v2Colors.paper2,
+    borderColor: v2Colors.line2,
   },
   dayTabText: {
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 9,
-    fontFamily: 'Montserrat-Bold',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
-  dayTabTextSel: {
-    color: '#ffffff',
-  },
-  dayTabTextOpen: {
-    color: colors.ink[900],
-  },
-  dayTabTextClosed: {
-    color: colors.slate[400],
-  },
+  dayTabTextSel: { color: v2Colors.paper },
+  dayTabTextOpen: { color: v2Colors.ink },
+  dayTabTextClosed: { color: v2Colors.ink3 },
   dayTabDot: {
     width: 4,
     height: 4,
@@ -1169,23 +1346,23 @@ const styles = StyleSheet.create({
 
   /* Open toggle card */
   openToggleCard: {
-    backgroundColor: colors.slate[0],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line2,
     borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 4,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    marginBottom: 4,
   },
   openToggleTitle: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 15,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.ink[900],
   },
   openToggleSub: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.body,
     fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
     marginTop: 2,
   },
 
@@ -1194,118 +1371,108 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   timeSectionLabel: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 10,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: 1.96,
+    letterSpacing: 1.8,
     textTransform: 'uppercase',
-    color: colors.slate[500],
   },
-  timeGrid: {
-    flexDirection: 'row',
-    gap: 10,
-  },
+  timeGrid: { flexDirection: 'row', gap: 10 },
   timeFieldLabel: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    letterSpacing: 1.32,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
+    letterSpacing: 1.3,
     marginBottom: 6,
+    textTransform: 'uppercase',
   },
   timeInput: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 15,
-    color: colors.ink[900],
-    backgroundColor: colors.slate[0],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line2,
     borderRadius: 10,
+    borderWidth: 1,
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodySemiBold,
+    fontSize: 15,
     paddingHorizontal: 13,
     paddingVertical: 11,
   },
   breakHintBox: {
-    backgroundColor: colors.slate[100],
+    backgroundColor: v2Colors.paper2,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   breakHintText: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.body,
     fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
-    lineHeight: 17.4,
+    lineHeight: 17,
   },
 
-  /* Form shared */
   fieldLabel: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 10,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: 2.5,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
+    letterSpacing: 2.2,
     marginBottom: 7,
+    textTransform: 'uppercase',
   },
   textInput: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 15,
-    color: colors.ink[900],
-    backgroundColor: colors.slate[0],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line2,
     borderRadius: 10,
+    borderWidth: 1,
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodyMedium,
+    fontSize: 15,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
 
-  /* Primary button */
   primaryBtn: {
-    height: 52,
-    backgroundColor: colors.ink[900],
-    borderRadius: 12,
     alignItems: 'center',
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 12,
+    height: 52,
     justifyContent: 'center',
   },
-  primaryBtnDisabled: {
-    opacity: 0.45,
-  },
+  primaryBtnDisabled: { opacity: 0.45 },
   primaryBtnText: {
+    color: v2Colors.paper,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 15,
-    fontFamily: 'Montserrat-SemiBold',
-    color: '#ffffff',
   },
 
-  /* Commission sheet */
   commDesc: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.body,
     fontSize: 14,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
   },
 
-  /* Invite button */
   addButton: {
-    marginTop: 16,
-    height: 52,
-    backgroundColor: colors.brand[600],
-    borderRadius: 12,
     alignItems: 'center',
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 12,
+    height: 52,
     justifyContent: 'center',
+    marginTop: 16,
   },
   addButtonText: {
+    color: v2Colors.paper,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 15,
-    fontFamily: 'Montserrat-SemiBold',
-    color: '#ffffff',
   },
 
-  /* Invite link box */
   inviteBox: {
-    backgroundColor: colors.slate[100],
-    borderRadius: radius.sm,
-    padding: 12,
+    backgroundColor: v2Colors.paper2,
+    borderRadius: v2Radii.sm,
     marginTop: 8,
+    padding: 12,
   },
   inviteText: {
-    fontFamily: 'SpaceMono',
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.mono,
     fontSize: 12,
-    color: colors.ink[900],
   },
 });

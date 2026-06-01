@@ -1,55 +1,31 @@
-/**
- * M1 · Giriş Ekranı
- * Source: screens.jsx LoginScreen()
- *
- * Layout (source):
- *   height:'100%', display:'flex', flexDirection:'column',
- *   padding:'20px 20px 28px', background:'#fff'
- *
- * Top area — marginTop:60:
- *   img mark.svg 48×48 marginBottom:28
- *   overline "Berber · Dükkan Paneli" 11px semiBold 0.16em uppercase slate-500
- *   H1 "Giriş Yap" 34px bold -0.02em margin:'14px 0 10px' lineHeight:1.05
- *   p  "Randevu panelini açmak için hesabına giriş yap." 16px lineHeight:1.55 fg-2
- *
- * Fields — marginTop:32 gap:14:
- *   TextField label="E-posta" placeholder="berber@dukkan.com"
- *   TextField label="Şifre"   placeholder="••••••••" secure
- *
- * CTA — marginTop:'auto' gap:14 alignItems:'center':
- *   Button variant="primary" size="lg" full disabled={!email||!pass} "Giriş Yap"
- *   footer: "Hesabın yok mu? " + "Kayıt ol" (brand-600 semiBold)
- */
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ChevronRight, Lock, Mail } from 'lucide-react-native';
 import { router } from 'expo-router';
-import { colors } from '../../lib/theme';
-import { Button } from '../../components/ds/Button';
-import { TextField } from '../../components/ds/TextField';
 import { supabase, determineUserRole } from '../../lib/supabase';
 import { registerForPushNotifications } from '../../lib/notifications';
 import { configureGoogleSignIn, signInWithGoogle } from '../../lib/google-auth';
 import { routeForRole } from '../../lib/router-guard';
 import { trackEvent } from '../../lib/analytics';
+import { v2Colors, v2Fonts } from '../../lib/v2-tokens';
 
 export default function LoginScreen() {
-  const [email,    setEmail]    = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    configureGoogleSignIn();
-  }, []);
+  useEffect(() => { configureGoogleSignIn(); }, []);
 
   const canSubmit = email.trim().length > 0 && password.length > 0;
 
@@ -85,231 +61,354 @@ export default function LoginScreen() {
       if (result.error) {
         trackEvent('login_fail', { method: 'google', code: 'google_auth_error' });
         setError(result.error);
-        return;
+      } else {
+        trackEvent('login_success', { method: 'google' });
       }
-      trackEvent('login_success', { method: 'google' });
-      // routing is handled by _layout.tsx onAuthStateChange — no explicit navigate needed
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <SafeAreaView style={styles.kav}>
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        style={styles.screen}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        bounces={false}
-      >
-        {/* Top area — marginTop:60 */}
-        <View style={styles.topArea}>
-          {/* Brand mark — 48×48 marginBottom:28 (ink-900 circle with "S") */}
-          <View style={styles.mark}>
-            <Text style={styles.markLetter}>S</Text>
+    <SafeAreaView style={styles.safe}>
+      <KeyboardAvoidingView style={styles.kav} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Watermark */}
+          <ChevronRight
+            color={v2Colors.spruce}
+            size={260}
+            strokeWidth={5}
+            style={styles.watermark}
+          />
+
+          {/* Brand */}
+          <View style={styles.brandRow}>
+            <View style={styles.logoMark}>
+              <Text style={styles.logoChevron}>›</Text>
+              <View style={styles.logoDot} />
+            </View>
+            <Text style={styles.brandName}>Sıradaki</Text>
           </View>
 
-          {/* Overline — 11px semiBold 0.16em uppercase slate-500 */}
-          <Text style={styles.overline}>Berber · Dükkan Paneli</Text>
-
-          {/* H1 — 34px bold -0.02em lineHeight:1.05 margin:'14px 0 10px' */}
-          <Text style={styles.title}>Giriş Yap</Text>
-
-          {/* Lead — 16px lineHeight:1.55 fg-2=slate-700 */}
-          <Text style={styles.lead}>
-            Randevu panelini açmak için hesabına giriş yap.
-          </Text>
-        </View>
-
-        {/* Fields — marginTop:32, gap:14 */}
-        <View style={styles.fields}>
-          <TextField
-            label="E-posta"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="berber@dukkan.com"
-            keyboardType="email-address"
-          />
-          <TextField
-            label="Şifre"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="••••••••"
-            secureTextEntry
-          />
-        </View>
-
-        {/* Spacer pushes CTA to bottom */}
-        <View style={styles.spacer} />
-
-        {/* CTA — gap:14 alignItems:'center' */}
-        <View style={styles.cta}>
-          {error ? (
-            <Text style={styles.errorText}>{error}</Text>
-          ) : null}
-          <Button
-            variant="primary"
-            size="lg"
-            full
-            disabled={!canSubmit || loading}
-            onPress={handleLogin}
-          >
-            {loading ? 'Giriş yapılıyor…' : 'Giriş Yap'}
-          </Button>
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>veya</Text>
-            <View style={styles.dividerLine} />
+          {/* Hero copy */}
+          <View style={styles.hero}>
+            <Text style={styles.overline}>Berber · Dükkan Paneli</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>Sıra </Text>
+              <Text style={styles.titleItalic}>sende.</Text>
+            </View>
+            <Text style={styles.lead}>
+              Randevu panelini açmak için hesabına giriş yap.
+            </Text>
           </View>
 
-          <Button
-            variant="google"
-            size="lg"
-            full
-            disabled={loading}
-            onPress={handleGoogleLogin}
-          >
-            {loading ? 'Giriş yapılıyor…' : 'Google ile Giriş Yap'}
-          </Button>
-          <View style={styles.footerRow}>
-            <Text style={styles.footerText}>Hesabın yok mu? </Text>
-            <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-              <Text style={styles.footerLink}>Kayıt ol</Text>
+          {/* Fields */}
+          <View style={styles.fields}>
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>E-posta</Text>
+              <View style={styles.inputRow}>
+                <Mail size={16} color={v2Colors.ink3} style={styles.inputIcon} />
+                <TextInput
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="berber@dukkan.com"
+                  placeholderTextColor={v2Colors.ink3}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={styles.input}
+                />
+              </View>
+              <View style={styles.inputUnderline} />
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Şifre</Text>
+              <View style={styles.inputRow}>
+                <Lock size={16} color={v2Colors.ink3} style={styles.inputIcon} />
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="••••••••"
+                  placeholderTextColor={v2Colors.ink3}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={styles.input}
+                />
+              </View>
+              <View style={styles.inputUnderline} />
+            </View>
+          </View>
+
+          <View style={styles.spacer} />
+
+          {/* CTA */}
+          <View style={styles.cta}>
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+
+            <TouchableOpacity
+              activeOpacity={!canSubmit || loading ? 1 : 0.82}
+              disabled={!canSubmit || loading}
+              onPress={handleLogin}
+              style={[styles.primaryBtn, (!canSubmit || loading) && styles.primaryBtnDisabled]}
+            >
+              <Text style={styles.primaryText}>
+                {loading ? 'Giriş yapılıyor…' : 'Giriş Yap →'}
+              </Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={loading ? 1 : 0.78}
+              disabled={loading}
+              onPress={handleGoogleLogin}
+              style={[styles.googleBtn, loading && styles.googleBtnDisabled]}
+            >
+              <Text style={styles.googleMark}>G</Text>
+              <Text style={styles.googleText}>
+                {loading ? 'Giriş yapılıyor…' : 'Google ile Giriş Yap'}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.footerRow}>
+              <Text style={styles.footerText}>Hesabın yok mu? </Text>
+              <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+                <Text style={styles.footerLink}>Kayıt ol</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safe: {
+    backgroundColor: v2Colors.paper,
+    flex: 1,
+  },
   kav: {
     flex: 1,
-    backgroundColor: colors.slate[0],
   },
-  screen: {
+  scroll: {
     flex: 1,
-    backgroundColor: colors.slate[0],
   },
   content: {
     flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 28,
+    paddingBottom: 32,
+    paddingHorizontal: 28,
+    paddingTop: 40,
   },
 
-  /* Top area — source: marginTop:60 → 40 */
-  topArea: {
-    marginTop: 40,
+  /* Watermark */
+  watermark: {
+    opacity: 0.055,
+    position: 'absolute',
+    right: -60,
+    top: 80,
   },
 
-  /* Brand mark — 48×48 borderRadius:999 ink-900 bg, "S" letter, marginBottom:28 */
-  mark: {
-    width: 48,
-    height: 48,
-    borderRadius: 999,
-    backgroundColor: colors.ink[900],
+  /* Brand */
+  brandRow: {
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 28,
-  },
-  markLetter: {
-    fontSize: 22,
-    fontFamily: 'Montserrat-Bold',
-    color: '#ffffff',
-  },
-
-  /* Overline — 11px semiBold letterSpacing:0.16em uppercase slate-500 lineHeight:1 */
-  overline: {
-    fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    letterSpacing: 1.76,           // 0.16em × 11
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-    lineHeight: 11,
-  },
-
-  /* H1 — 34px bold -0.02em lineHeight:1.05 margin:'14px 0 10px' */
-  title: {
-    fontSize: 34,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: -0.68,          // -0.02em × 34
-    lineHeight: 36,                // 34 × 1.05 ≈ 36
-    color: colors.ink[900],
-    marginTop: 14,
-    marginBottom: 10,
-  },
-
-  /* Lead — 16px Regular lineHeight:1.55 fg-2=slate-700 */
-  lead: {
-    fontSize: 16,
-    fontFamily: 'Montserrat-Regular',
-    lineHeight: 25,                // 16 × 1.55 ≈ 25
-    color: colors.slate[700],
-  },
-
-  /* Fields — marginTop:32, gap:14 */
-  fields: {
-    marginTop: 32,
+    flexDirection: 'row',
     gap: 14,
+    marginBottom: 96,
+  },
+  logoMark: {
+    alignItems: 'center',
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 11,
+    height: 44,
+    justifyContent: 'center',
+    shadowColor: v2Colors.spruce,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    width: 44,
+  },
+  logoChevron: {
+    color: v2Colors.paper,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 30,
+    includeFontPadding: false,
+    lineHeight: 34,
+    marginLeft: -2,
+    marginTop: -2,
+  },
+  logoDot: {
+    backgroundColor: v2Colors.ember,
+    borderRadius: 999,
+    bottom: 8,
+    height: 5,
+    position: 'absolute',
+    right: 8,
+    width: 5,
+  },
+  brandName: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.display,
+    fontSize: 25,
+    lineHeight: 29,
   },
 
-  /* Spacer — pushes CTA to bottom (marginTop:'auto') */
+  /* Hero */
+  hero: {},
+  overline: {
+    color: v2Colors.ember,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 12,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 10,
+    marginTop: 12,
+  },
+  title: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.display,
+    fontSize: 40,
+    includeFontPadding: false,
+    lineHeight: 44,
+  },
+  titleItalic: {
+    color: v2Colors.spruce,
+    fontFamily: v2Fonts.display,
+    fontSize: 40,
+    fontStyle: 'italic',
+    includeFontPadding: false,
+    lineHeight: 44,
+  },
+  lead: {
+    color: v2Colors.ink2,
+    fontFamily: v2Fonts.body,
+    fontSize: 15,
+    lineHeight: 23,
+    maxWidth: 290,
+  },
+
+  /* Fields */
+  fields: {
+    gap: 22,
+    marginTop: 36,
+  },
+  field: {
+    gap: 0,
+  },
+  fieldLabel: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.7,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  inputRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    paddingBottom: 8,
+  },
+  inputIcon: {
+    flexShrink: 0,
+  },
+  input: {
+    color: v2Colors.ink,
+    flex: 1,
+    fontFamily: v2Fonts.bodyMedium,
+    fontSize: 16,
+    includeFontPadding: false,
+    padding: 0,
+  },
+  inputUnderline: {
+    backgroundColor: v2Colors.spruce,
+    height: 1,
+  },
+
   spacer: {
     flex: 1,
-    minHeight: 24,
+    minHeight: 32,
   },
 
-  /* CTA — gap:14 alignItems:'center' */
+  /* CTA */
   cta: {
-    gap: 14,
     alignItems: 'center',
+    gap: 12,
   },
-
-  /* Footer row */
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  footerText: {
+  error: {
+    color: v2Colors.brick,
+    fontFamily: v2Fonts.bodySemiBold,
     fontSize: 13,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],      // fg-3
-  },
-  footerLink: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.brand[600],
-  },
-  errorText: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.coral[600],
     textAlign: 'center',
   },
-
-  /* Divider — "veya" separator */
-  divider: {
-    flexDirection: 'row',
+  primaryBtn: {
     alignItems: 'center',
-    gap: 8,
-    marginVertical: 4,
+    alignSelf: 'stretch',
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 14,
+    height: 54,
+    justifyContent: 'center',
+    shadowColor: v2Colors.spruce,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.34,
+    shadowRadius: 18,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.slate[200],
+  primaryBtnDisabled: {
+    backgroundColor: v2Colors.line2,
+    shadowOpacity: 0,
   },
-  dividerText: {
-    fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[400],
+  primaryText: {
+    color: v2Colors.paper,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 16,
+  },
+  googleBtn: {
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    borderColor: v2Colors.line2,
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 11,
+    height: 52,
+    justifyContent: 'center',
+  },
+  googleBtnDisabled: {
+    opacity: 0.55,
+  },
+  googleMark: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 15,
+  },
+  googleText: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 15,
+  },
+  footerRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginTop: 12,
+  },
+  footerText: {
+    color: v2Colors.ink2,
+    fontFamily: v2Fonts.body,
+    fontSize: 13,
+  },
+  footerLink: {
+    color: v2Colors.spruce,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 13,
   },
 });
