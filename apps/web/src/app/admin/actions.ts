@@ -10,6 +10,45 @@ function getAdminClient() {
   );
 }
 
+async function sendOwnerPush(
+  supabase: ReturnType<typeof getAdminClient>,
+  shopId: string,
+  title: string,
+  body: string,
+  data: Record<string, string>,
+): Promise<void> {
+  const { data: shop } = await supabase
+    .from('shops')
+    .select('owner_user_id')
+    .eq('id', shopId)
+    .single();
+
+  if (!shop?.owner_user_id) return;
+
+  const { data: ownerStaff } = await supabase
+    .from('staff')
+    .select('push_token')
+    .eq('shop_id', shopId)
+    .eq('user_id', shop.owner_user_id)
+    .maybeSingle();
+
+  if (!ownerStaff?.push_token) return;
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+  await fetch(`${supabaseUrl}/functions/v1/send-push`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${serviceKey}`,
+    },
+    body: JSON.stringify({
+      messages: [{ to: ownerStaff.push_token, title, body, data }],
+    }),
+  }).catch((e) => console.error('[admin] sendOwnerPush failed:', e));
+}
+
 // Platform erişimi yalnızca ADMIN_SECRET_KEY ile korunur.
 // staff.role='admin' tüm dükkan sahipleri için geçerli olduğundan
 // DB role kontrolü ek güvenlik sağlamaz — timing-safe key karşılaştırması yeterli.
@@ -40,32 +79,13 @@ export async function approveShop(shopId: string, adminKey: string) {
   const { error } = await supabase.from('shops').update({ status: 'active' }).eq('id', shopId);
   if (error) throw new Error('Onay başarısız: ' + error.message);
 
-  const { data: shop } = await supabase
-    .from('shops')
-    .select('owner_user_id')
-    .eq('id', shopId)
-    .single();
-
-  if (shop?.owner_user_id) {
-    const { data: ownerStaff } = await supabase
-      .from('staff')
-      .select('push_token')
-      .eq('shop_id', shopId)
-      .eq('user_id', shop.owner_user_id)
-      .maybeSingle();
-
-    if (ownerStaff?.push_token) {
-      await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: ownerStaff.push_token,
-          title: 'Başvurunuz Onaylandı! 🎉',
-          body: 'Dükkanınız aktif hale getirildi. Şimdi giriş yapabilirsiniz.',
-        }),
-      }).catch((e) => console.error('[admin] Push notification failed:', e));
-    }
-  }
+  await sendOwnerPush(
+    supabase,
+    shopId,
+    'Başvurunuz Onaylandı! 🎉',
+    'Dükkanınız aktif hale getirildi. Şimdi giriş yapabilirsiniz.',
+    { type: 'shop_approved' },
+  );
 }
 
 export async function rejectShop(shopId: string, adminKey: string) {
@@ -73,6 +93,14 @@ export async function rejectShop(shopId: string, adminKey: string) {
   const supabase = getAdminClient();
   const { error } = await supabase.from('shops').update({ status: 'rejected' }).eq('id', shopId);
   if (error) throw new Error('Red başarısız: ' + error.message);
+
+  await sendOwnerPush(
+    supabase,
+    shopId,
+    'Başvuru Sonucu',
+    'Dükkan başvurunuz bu sefer onaylanamadı. Detay için destek ekibiyle iletişime geçebilirsiniz.',
+    { type: 'shop_rejected' },
+  );
 }
 
 // "getShops" çünkü pending + active + rejected tüm durumlar döner
