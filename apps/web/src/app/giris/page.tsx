@@ -390,7 +390,12 @@ function GirisForm() {
   const [pass,     setPass]     = useState('');
   const [showPass, setShowPass] = useState(false);
   const [remember, setRemember] = useState(true);
-  const [error,    setError]    = useState<string | null>(null);
+  const urlError = params.get('error');
+  const [error,    setError]    = useState<string | null>(
+    urlError === 'link_expired'
+      ? 'Şifre sıfırlama bağlantısının süresi dolmuş. Lütfen tekrar deneyin.'
+      : null,
+  );
   const [success,  setSuccess]  = useState<string | null>(null);
   const [loading,  setLoading]  = useState(false);
 
