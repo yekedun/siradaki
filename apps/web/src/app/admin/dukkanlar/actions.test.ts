@@ -10,7 +10,7 @@ vi.mock('@supabase/supabase-js', () => ({
 
 import { approveShop, rejectShop, suspendShop, reactivateShop, assertAdmin } from './actions';
 
-function mockUpdate(resolveValue = { error: null }) {
+function mockUpdate(resolveValue: { error: null | { message: string } } = { error: null }) {
   return {
     update: vi.fn().mockReturnThis(),
     eq: vi.fn().mockResolvedValue(resolveValue),
