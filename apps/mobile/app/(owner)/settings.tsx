@@ -907,7 +907,6 @@ export default function SettingsScreen() {
           >
             <View style={{ flex: 1 }}>
               <Text style={styles.opRowTitle}>Dükkan Saatleri</Text>
-              <Text style={styles.opRowMeta}>{hoursSubtitle}</Text>
             </View>
             <View style={styles.chevronWrap}>
               <View style={styles.chevronLine1} />

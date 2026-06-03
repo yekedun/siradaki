@@ -33,4 +33,19 @@ describe('appointmentRowToAgendaItem', () => {
     expect(item.dur).toBe(30);
     expect(item.svc).toBe('Hizmet');
   });
+
+  it('prefers customer_notes for appointment card notes', () => {
+    const item = appointmentRowToAgendaItem({
+      id: 'appt-3',
+      customer_name: 'Veli',
+      starts_at: '2026-05-24T11:00:00+03:00',
+      ends_at: '2026-05-24T11:30:00+03:00',
+      status: 'confirmed',
+      notes: 'legacy note',
+      customer_notes: 'customer note',
+      services: null,
+    }, new Date('2026-05-24T09:00:00+03:00'));
+
+    expect(item.notes).toBe('customer note');
+  });
 });

@@ -36,7 +36,7 @@
  *         main "{curSvc.label} · {dateLabel} · {slot}" (14px SemiBold marginTop 6 ink-900)
  *         sub  "Bitiş: {endTime} ({curSvc.dur} dk)"   (12px Regular fg-3 marginTop 4)
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -51,6 +51,7 @@ import { User } from 'lucide-react-native';
 import { colors } from '../lib/theme';
 import { ContactPickerSheet } from './ContactPickerSheet';
 import {
+  getAppointmentDayIndex,
   getInitialAppointmentServiceId,
   isAppointmentModalSaveEnabled,
   resolveAppointmentServiceId,
@@ -161,6 +162,17 @@ export interface AddAppointmentModalProps {
   serverNowMs?: number;
   /** Son müşteri önerilerini doldurmak için kullanılır. */
   shopId?: string | null;
+  mode?: 'create' | 'edit';
+  initialValues?: {
+    id?: string;
+    customerName: string;
+    customerPhone?: string | null;
+    serviceId: string | null;
+    staffId: string | null;
+    date: string;
+    time: string;
+    notes?: string | null;
+  } | null;
 }
 
 /* ── MODAL ──────────────────────────────────────────────────────── */
@@ -174,6 +186,8 @@ export function AddAppointmentModal({
   workingHours,
   serverNowMs,
   shopId,
+  mode = 'create',
+  initialValues,
 }: AddAppointmentModalProps) {
   const [name,           setName]           = useState('');
   const [phone,          setPhone]          = useState('');
@@ -183,25 +197,7 @@ export function AddAppointmentModal({
   const [slot,           setSlot]           = useState('');
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(initialStaffId ?? null);
   const [pickerVisible,  setPickerVisible]  = useState(false);
-
-  useEffect(() => {
-    if (visible) setSelectedStaffId(initialStaffId ?? null);
-  }, [visible, initialStaffId]);
-
-  useEffect(() => {
-    if (!visible) return;
-    setSvc((current) => resolveAppointmentServiceId(current, services));
-    setNotes('');
-  }, [visible, services]);
-
-  const curSvc  = services.find(s => s.id === svc);
-  const canSave = isAppointmentModalSaveEnabled({
-    customerName: name,
-    slot,
-    serviceId: svc,
-    staffListHasItems: !!(staffList && staffList.length > 0),
-    selectedStaffId,
-  });
+  const initializedKeyRef = useRef<string | null>(null);
 
   /* Build date label for ÖZET card */
   const days = useMemo(() => {
@@ -212,6 +208,53 @@ export function AddAppointmentModal({
       return d;
     });
   }, []); // days array is always relative to today at mount — stable within modal session
+
+  useEffect(() => {
+    if (!visible) {
+      initializedKeyRef.current = null;
+      return;
+    }
+
+    const initKey = mode === 'edit'
+      ? `edit:${initialValues?.id ?? initialValues?.date ?? ''}:${initialValues?.time ?? ''}`
+      : 'create';
+    if (initializedKeyRef.current === initKey) return;
+
+    if (mode === 'edit' && initialValues) {
+      setName(initialValues.customerName);
+      setPhone(initialValues.customerPhone ?? '');
+      setNotes(initialValues.notes ?? '');
+      setSvc(resolveAppointmentServiceId(initialValues.serviceId, services));
+      setDayIdx(getAppointmentDayIndex(days, initialValues.date));
+      setSlot(initialValues.time);
+      setSelectedStaffId(initialValues.staffId ?? null);
+      initializedKeyRef.current = initKey;
+      return;
+    }
+
+    setName('');
+    setPhone('');
+    setNotes('');
+    setSvc(getInitialAppointmentServiceId(services));
+    setDayIdx(0);
+    setSlot('');
+    setSelectedStaffId(initialStaffId ?? null);
+    initializedKeyRef.current = initKey;
+  }, [visible, mode, initialValues, services, initialStaffId, days]);
+
+  useEffect(() => {
+    if (!visible) return;
+    setSvc((current) => resolveAppointmentServiceId(current, services));
+  }, [visible, services]);
+
+  const curSvc  = services.find(s => s.id === svc);
+  const canSave = isAppointmentModalSaveEnabled({
+    customerName: name,
+    slot,
+    serviceId: svc,
+    staffListHasItems: !!(staffList && staffList.length > 0),
+    selectedStaffId,
+  });
 
   const selDate = days[dayIdx];
 
@@ -228,6 +271,10 @@ export function AddAppointmentModal({
   const timeSlots = useMemo(
     () => generateAppointmentTimesForDate(selDate, workingHours, curSvc?.dur ?? 30, serverNowMs),
     [selDate, workingHours, curSvc, serverNowMs],
+  );
+  const visibleTimeSlots = useMemo(
+    () => (slot && !timeSlots.includes(slot) ? [slot, ...timeSlots] : timeSlots),
+    [slot, timeSlots],
   );
 
   function handleSave() {
@@ -259,7 +306,7 @@ export function AddAppointmentModal({
           <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
             <Text style={styles.headerGhost}>İptal</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Randevu Ekle</Text>
+          <Text style={styles.headerTitle}>{mode === 'edit' ? 'Randevu Düzenle' : 'Randevu Ekle'}</Text>
           <TouchableOpacity onPress={handleSave} activeOpacity={canSave ? 0.7 : 1}>
             <Text style={[styles.headerSave, !canSave && styles.headerSaveDisabled]}>Kaydet</Text>
           </TouchableOpacity>
@@ -409,7 +456,7 @@ export function AddAppointmentModal({
               Each: height 38, borderRadius 8, sel=ink-900 bg, unsel=slate-0
               13px SemiBold tabular-nums */}
           <View style={styles.timeGrid}>
-            {timeSlots.map(t => {
+            {visibleTimeSlots.map(t => {
               const sel = slot === t;
               return (
                 <TouchableOpacity

@@ -38,6 +38,7 @@
  *   → use size="lg" right:20 per screens.jsx (the primary reference)
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { createDebounce } from '../../lib/debounce';
 import { trackEvent } from '../../lib/analytics';
 import {
@@ -56,11 +57,11 @@ import { AppointmentCard } from '../../components/ds/AppointmentCard';
 import { BlokCard } from '../../components/ds/BlokCard';
 import { Button } from '../../components/ds/Button';
 import { supabase } from '../../lib/supabase';
-import { buildLocalAppointmentTimestamp } from '../../lib/appointment-time';
+import { buildLocalAppointmentTimestamp, formatLocalAppointmentDate } from '../../lib/appointment-time';
 import type { AppointmentWorkingHours } from '../../lib/appointment-time';
 import { appointmentRowToAgendaItem } from '../../lib/appointment-mappers';
 import { formatTime, translateReason, AppointmentState as AppState } from '../../lib/utils';
-import { AddAppointmentModal, ServiceOption, StaffOption } from '../../components/AddAppointmentModal';
+import { AddAppointmentModal } from '../../components/AddAppointmentModal';
 import { AppointmentDetailSheet, AppointmentDetail } from '../../components/AppointmentDetailSheet';
 import { AddBlockModal } from '../../components/AddBlockModal';
 import { useShop } from '../../lib/ShopContext';
@@ -95,6 +96,17 @@ interface StaffCol {
   items: ColItem[];
 }
 
+interface EditAppointmentInitialValues {
+  id: string;
+  customerName: string;
+  customerPhone: string | null;
+  serviceId: string | null;
+  staffId: string | null;
+  date: string;
+  time: string;
+  notes: string | null;
+}
+
 const INIT_COLS: StaffCol[] = [];
 
 /* ── Empty drop zone ─────────────────────────────────────────── */
@@ -125,6 +137,7 @@ export default function AgendaScreen() {
   const [selectedAppt, setSelectedAppt] = useState<AppointmentDetail | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddBlock, setShowAddBlock] = useState(false);
+  const [editingAppt, setEditingAppt] = useState<EditAppointmentInitialValues | null>(null);
 
   const isMountedRef = useRef(true);
 
@@ -146,7 +159,7 @@ export default function AgendaScreen() {
     const dayEnd = new Date(selectedDate); dayEnd.setDate(dayEnd.getDate()+1); dayEnd.setHours(0,0,0,0);
 
     const [{ data: appts, error: apptsErr }, { data: blocks, error: blocksErr }] = await Promise.all([
-      supabase.from('appointments').select('id, staff_id, customer_name, starts_at, ends_at, status, notes, services(name, duration_min)')
+      supabase.from('appointments').select('id, staff_id, customer_name, starts_at, ends_at, status, notes, customer_notes, services(name, duration_min)')
         .in('staff_id', barbers.map((b: any) => b.id))
         .gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString())
         .neq('status', 'cancelled'),
@@ -188,6 +201,12 @@ export default function AgendaScreen() {
   useEffect(() => {
     if (barberList.length) loadAgenda();
   }, [selectedDate, barberList, loadAgenda]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (barberList.length) loadAgenda();
+    }, [barberList.length, loadAgenda]),
+  );
 
   useEffect(() => {
     if (!barberList.length) return;
@@ -232,6 +251,7 @@ export default function AgendaScreen() {
     supabase.rpc('get_server_time').then(({ data }) => {
       if (data) setServerNowMs(new Date(data as string).getTime());
     });
+    setEditingAppt(null);
     setShowAdd(true);
   }
 
@@ -251,6 +271,33 @@ export default function AgendaScreen() {
       notes: item.notes,
     });
     setShowDetail(true);
+  }
+
+  async function handleEditAppointment(id: string) {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('id, staff_id, service_id, starts_at, customer_name, customer_phone, customer_notes, notes')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error || !data) {
+      if (__DEV__ && error) console.warn('[agenda] appointment edit fetch error:', error);
+      Alert.alert('Hata', 'Randevu bilgileri yüklenemedi.');
+      return;
+    }
+
+    const start = new Date((data as any).starts_at);
+    setEditingAppt({
+      id: (data as any).id,
+      customerName: (data as any).customer_name ?? '',
+      customerPhone: (data as any).customer_phone ?? null,
+      serviceId: (data as any).service_id ?? null,
+      staffId: (data as any).staff_id ?? null,
+      date: formatLocalAppointmentDate(start),
+      time: formatTime(start),
+      notes: (data as any).customer_notes ?? (data as any).notes ?? null,
+    });
+    setShowAdd(true);
   }
 
   return (
@@ -352,7 +399,7 @@ export default function AgendaScreen() {
         visible={showDetail}
         onClose={() => setShowDetail(false)}
         appointment={selectedAppt}
-        onEdit={() => setShowDetail(false)}
+        onEdit={handleEditAppointment}
         onCancel={(id) => {
           setCols(prev => prev.map(col => ({
             ...col,
@@ -379,15 +426,50 @@ export default function AgendaScreen() {
 
       <AddAppointmentModal
         visible={showAdd}
-        onClose={() => setShowAdd(false)}
+        onClose={() => {
+          setShowAdd(false);
+          setEditingAppt(null);
+        }}
         services={services}
         staffList={barberList}
         workingHours={shopWorkingHours}
         serverNowMs={serverNowMs}
         shopId={shopId}
+        mode={editingAppt ? 'edit' : 'create'}
+        initialValues={editingAppt ? {
+          id: editingAppt.id,
+          customerName: editingAppt.customerName,
+          customerPhone: editingAppt.customerPhone,
+          serviceId: editingAppt.serviceId,
+          staffId: editingAppt.staffId,
+          date: editingAppt.date,
+          time: editingAppt.time,
+          notes: editingAppt.notes,
+        } : null}
         onSave={async (data) => {
           if (!shopSlug) {
             Alert.alert('Hata', 'Dükkan bilgisi yüklenmedi. Sayfayı yenileyin.');
+            return;
+          }
+          if (editingAppt) {
+            const { error } = await supabase.rpc('update_appointment_atomic', {
+              p_appointment_id: editingAppt.id,
+              p_staff_id: data.staffId,
+              p_service_id: data.serviceId,
+              p_starts_at: buildLocalAppointmentTimestamp(data.date, data.time),
+              p_customer_name: data.customerName,
+              p_customer_phone: data.customerPhone || null,
+              p_customer_notes: data.notes ?? null,
+            });
+            if (error) {
+              if (__DEV__) console.warn('[agenda] update_appointment_atomic error:', error);
+              Alert.alert('Hata', error.message || 'Randevu güncellenemedi.');
+              return;
+            }
+            trackEvent('appointment_edited', { service_id: data.serviceId, staff_id: data.staffId });
+            setShowAdd(false);
+            setEditingAppt(null);
+            loadAgenda();
             return;
           }
           const { error: fnErr } = await supabase.functions.invoke('app-book-appointment', {
@@ -447,7 +529,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 12,
     paddingHorizontal: 16,
-    paddingBottom: 90,
+    paddingTop: 20,
+    paddingBottom: 24,
   },
 
   /* Each column — flex:'0 0 230px' */
@@ -514,7 +597,7 @@ const styles = StyleSheet.create({
   /* FAB group — sağ alt köşe */
   fabGroup: {
     position: 'absolute',
-    bottom: 90,
+    bottom: 18,
     right: 20,
     zIndex: 10,
     alignItems: 'flex-end',

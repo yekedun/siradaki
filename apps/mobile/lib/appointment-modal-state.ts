@@ -40,3 +40,17 @@ export function isAppointmentModalSaveEnabled(state: SaveState): boolean {
     && !!state.serviceId
     && (!state.staffListHasItems || !!state.selectedStaffId);
 }
+
+export function getAppointmentDayIndex(
+  days: Date[],
+  date: string | null | undefined,
+): number {
+  if (!date) return 0;
+  const idx = days.findIndex((day) => {
+    const year = day.getFullYear();
+    const month = String(day.getMonth() + 1).padStart(2, '0');
+    const dayOfMonth = String(day.getDate()).padStart(2, '0');
+    return `${year}-${month}-${dayOfMonth}` === date;
+  });
+  return idx >= 0 ? idx : 0;
+}

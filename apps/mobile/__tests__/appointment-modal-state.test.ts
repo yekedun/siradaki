@@ -1,4 +1,5 @@
 import {
+  getAppointmentDayIndex,
   getInitialAppointmentServiceId,
   isAppointmentModalSaveEnabled,
   resolveAppointmentServiceId,
@@ -34,5 +35,16 @@ describe('appointment modal service selection', () => {
       staffListHasItems: false,
       selectedStaffId: null,
     })).toBe(false);
+  });
+
+  it('resolves the selected day index for edit prefill dates', () => {
+    const days = [
+      new Date(2026, 5, 3),
+      new Date(2026, 5, 4),
+      new Date(2026, 5, 5),
+    ];
+
+    expect(getAppointmentDayIndex(days, '2026-06-04')).toBe(1);
+    expect(getAppointmentDayIndex(days, '2026-06-10')).toBe(0);
   });
 });
