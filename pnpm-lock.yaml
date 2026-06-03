@@ -20,6 +20,9 @@ importers:
 
   apps/mobile:
     dependencies:
+      '@berber/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@berber/shared':
         specifier: workspace:*
         version: link:../../packages/shared
