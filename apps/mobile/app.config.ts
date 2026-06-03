@@ -1,5 +1,65 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
-import { withGradleProperties } from '@expo/config-plugins';
+import { withDangerousMod, withGradleProperties } from '@expo/config-plugins';
+import fs from 'node:fs';
+import path from 'node:path';
+
+function replaceOnce(source: string, from: string, to: string): string {
+  return source.includes(to) ? source : source.replace(from, to);
+}
+
+function addKotlinImport(source: string, importLine: string): string {
+  return source.includes(importLine)
+    ? source
+    : source.replace('import android.os.Bundle', `import android.os.Bundle\n${importLine}`);
+}
+
+function withFramelessAndroidWindow(config: ExpoConfig): ExpoConfig {
+  return withDangerousMod(config, ['android', async (cfg) => {
+    const androidRoot = cfg.modRequest.platformProjectRoot;
+    const stylesPath = path.join(androidRoot, 'app', 'src', 'main', 'res', 'values', 'styles.xml');
+    const mainActivityPath = path.join(
+      androidRoot,
+      'app',
+      'src',
+      'main',
+      'java',
+      'com',
+      'siradaki',
+      'app',
+      'MainActivity.kt',
+    );
+
+    if (fs.existsSync(stylesPath)) {
+      let styles = fs.readFileSync(stylesPath, 'utf8');
+      styles = styles
+        .replace(/\s*<item name="android:windowFullscreen">.*?<\/item>/g, '')
+        .replace(/\s*<item name="android:windowLayoutInDisplayCutoutMode">.*?<\/item>/g, '')
+        .replace(/\s*<item name="android:statusBarColor">.*?<\/item>/g, '');
+      styles = styles.replace(
+        '<item name="colorPrimary">@color/colorPrimary</item>',
+        '<item name="colorPrimary">@color/colorPrimary</item>\n    <item name="android:windowFullscreen">true</item>\n    <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>\n    <item name="android:statusBarColor">#FBF8F1</item>',
+      );
+      fs.writeFileSync(stylesPath, styles);
+    }
+
+    if (fs.existsSync(mainActivityPath)) {
+      let mainActivity = fs.readFileSync(mainActivityPath, 'utf8');
+      mainActivity = addKotlinImport(mainActivity, 'import android.view.View');
+      mainActivity = addKotlinImport(mainActivity, 'import android.view.WindowInsets');
+      mainActivity = addKotlinImport(mainActivity, 'import android.view.WindowInsetsController');
+      mainActivity = addKotlinImport(mainActivity, 'import android.view.WindowManager');
+      mainActivity = replaceOnce(mainActivity, '    super.onCreate(null)', '    super.onCreate(null)\n    hideStatusBar()');
+      mainActivity = replaceOnce(
+        mainActivity,
+        '\n  /**\n   * Returns the name of the main component registered from JavaScript. This is used to schedule\n',
+        '\n  override fun onResume() {\n    super.onResume()\n    hideStatusBar()\n  }\n\n  override fun onWindowFocusChanged(hasFocus: Boolean) {\n    super.onWindowFocusChanged(hasFocus)\n    if (hasFocus) {\n      hideStatusBar()\n    }\n  }\n\n  private fun hideStatusBar() {\n    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {\n      val attrs = window.attributes\n      attrs.layoutInDisplayCutoutMode =\n        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES\n      window.attributes = attrs\n    }\n\n    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {\n      window.setDecorFitsSystemWindows(false)\n      window.insetsController?.systemBarsBehavior =\n        WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE\n      window.insetsController?.hide(WindowInsets.Type.systemBars())\n    } else {\n      @Suppress("DEPRECATION")\n      window.decorView.systemUiVisibility =\n        window.decorView.systemUiVisibility or\n          View.SYSTEM_UI_FLAG_FULLSCREEN or\n          View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or\n          View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or\n          View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or\n          View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or\n          View.SYSTEM_UI_FLAG_LAYOUT_STABLE\n    }\n  }\n\n  /**\n   * Returns the name of the main component registered from JavaScript. This is used to schedule\n',
+      );
+      fs.writeFileSync(mainActivityPath, mainActivity);
+    }
+
+    return cfg;
+  }]) as ExpoConfig;
+}
 
 const baseConfig = ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -30,6 +90,12 @@ const baseConfig = ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#ffffff',
     },
     package: 'com.siradaki.app',
+  },
+  androidStatusBar: {
+    hidden: true,
+    translucent: true,
+    backgroundColor: '#FBF8F1',
+    barStyle: 'dark-content',
   },
   plugins: [
     'expo-router',
@@ -86,7 +152,7 @@ const baseConfig = ({ config }: ConfigContext): ExpoConfig => ({
 });
 
 export default (ctx: ConfigContext): ExpoConfig => {
-  const cfg = baseConfig(ctx);
+  const cfg = withFramelessAndroidWindow(baseConfig(ctx));
   return withGradleProperties(cfg as any, (props) => {
     for (const item of props.modResults) {
       if (item.type !== 'property') continue;

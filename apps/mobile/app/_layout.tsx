@@ -1,8 +1,9 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useFonts } from 'expo-font';
+import { StatusBar } from 'expo-status-bar';
 import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
-import { AppState } from 'react-native';
+import { AppState, StatusBar as NativeStatusBar } from 'react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Session } from '@supabase/supabase-js';
 import type { Href } from 'expo-router';
@@ -21,6 +22,13 @@ export default function RootLayout() {
     'Montserrat-Medium': require('../assets/fonts/Montserrat-Medium.otf'),
     'Montserrat-SemiBold': require('../assets/fonts/Montserrat-SemiBold.otf'),
     'Montserrat-Bold': require('../assets/fonts/Montserrat-Bold.otf'),
+    'Newsreader-Medium': require('../assets/fonts/Newsreader-Medium.ttf'),
+    'Newsreader-MediumItalic': require('../assets/fonts/Newsreader-MediumItalic.ttf'),
+    'HankenGrotesk-Regular': require('../assets/fonts/HankenGrotesk-Regular.ttf'),
+    'HankenGrotesk-Medium': require('../assets/fonts/HankenGrotesk-Medium.ttf'),
+    'HankenGrotesk-SemiBold': require('../assets/fonts/HankenGrotesk-SemiBold.ttf'),
+    'HankenGrotesk-Bold': require('../assets/fonts/HankenGrotesk-Bold.ttf'),
+    'JetBrainsMono-SemiBold': require('../assets/fonts/JetBrainsMono-SemiBold.ttf'),
   });
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const router = useRouter();
@@ -31,6 +39,10 @@ export default function RootLayout() {
   const pendingNotif = useRef(false);
 
   useEffect(() => { segmentRef.current = firstSegment; }, [firstSegment]);
+
+  useEffect(() => {
+    NativeStatusBar.setHidden(true, 'none');
+  }, []);
 
   // Notification tap → navigate to appointments screen
   useEffect(() => {
@@ -103,6 +115,7 @@ export default function RootLayout() {
   if (!loaded || session === undefined) return null;
   return (
     <SentryErrorBoundary>
+      <StatusBar hidden />
       <Stack screenOptions={{ headerShown: false }} />
     </SentryErrorBoundary>
   );

@@ -632,7 +632,7 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
 interface InfoRowProps {
   icon: React.ReactNode;
   title: string;
-  meta: string;
+  meta?: string;
   onPress?: () => void;
   last?: boolean;
 }
@@ -938,7 +938,6 @@ export default function SettingsScreen() {
           <InfoRow
             icon={<Clock size={18} color={v2Colors.spruce} strokeWidth={2.2} />}
             title="Çalışma Saatleri"
-            meta={hoursSubtitle}
             onPress={() => setHoursOpen(true)}
             last
           />

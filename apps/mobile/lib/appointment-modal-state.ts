@@ -13,6 +13,33 @@ interface SaveState {
   selectedStaffId: string | null;
 }
 
+export interface AppointmentDraft {
+  customerName: string;
+  customerPhone: string;
+  serviceId: string | null;
+  staffId: string | null;
+  date: string;
+  time: string;
+  notes: string;
+  gapDurationMin: number | null;
+}
+
+export interface FreeGapPrefill {
+  startsAt: string;
+  staffId: string;
+  gapDurationMin: number;
+}
+
+export interface DraftSaveState {
+  customerName: string;
+  date: string;
+  time: string;
+  serviceId: string | null;
+  staffId: string | null;
+  serviceDurationMin: number | null;
+  gapDurationMin: number | null;
+}
+
 const DESIGN_DEFAULT_SERVICE_ID = 'sac-sakal';
 
 export function getInitialAppointmentServiceId(
@@ -39,4 +66,40 @@ export function isAppointmentModalSaveEnabled(state: SaveState): boolean {
     && !!state.slot
     && !!state.serviceId
     && (!state.staffListHasItems || !!state.selectedStaffId);
+}
+
+export function createAppointmentDraftFromFreeGap(prefill: FreeGapPrefill): AppointmentDraft {
+  return {
+    customerName: '',
+    customerPhone: '',
+    serviceId: null,
+    staffId: prefill.staffId,
+    date: prefill.startsAt.slice(0, 10),
+    time: prefill.startsAt.slice(11, 16),
+    notes: '',
+    gapDurationMin: prefill.gapDurationMin,
+  };
+}
+
+export function selectedServiceFitsGap({
+  serviceDurationMin,
+  gapDurationMin,
+}: {
+  serviceDurationMin: number | null;
+  gapDurationMin: number | null;
+}): boolean {
+  if (serviceDurationMin == null || gapDurationMin == null) return true;
+  return serviceDurationMin <= gapDurationMin;
+}
+
+export function isAppointmentDraftSaveEnabled(state: DraftSaveState): boolean {
+  return state.customerName.trim().length >= 2
+    && !!state.date
+    && !!state.time
+    && !!state.serviceId
+    && !!state.staffId
+    && selectedServiceFitsGap({
+      serviceDurationMin: state.serviceDurationMin,
+      gapDurationMin: state.gapDurationMin,
+    });
 }

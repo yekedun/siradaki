@@ -1,482 +1,323 @@
 /**
- * M9 — Staff: Randevular screen
- * Source: screens.jsx → RandevularScreen
- *
- * Layout (exact from source):
- *   height: '100%', display: 'flex', flexDirection: 'column'
- *   OverlineHeader eyebrow="Berber · Dükkan Paneli" title="Randevular" meta="7 Mayıs 2026, Çar"
- *   DayPicker selected={day} onSelect={setDay}
- *   ScrollView: padding '20px 20px 100px', gap 8, flexCol
- *     SectionLabel "Tamamlandı"  (padding: 0, margin: '0 0 4px')
- *     AppointmentCard 09:00 30min Can Demir   "Saç kesim · 30dk"    state=done
- *     AppointmentCard 09:30 20min Burak Ş.    "Sakal · 20dk"        state=done
- *     SectionLabel "Şu Anda"    (margin: '12px 0 4px')
- *     AppointmentCard 10:30 45min Ahmet Yılmaz "Saç + Sakal · 45 dk" state=active → opens detail sheet
- *     SectionLabel "Gelecek"    (margin: '12px 0 4px')
- *     AppointmentCard 11:15 30min Mehmet Kaya  "Saç kesim · 30 dk"
- *     BlokCard        13:00 45min "BLOKE · Mola"
- *     AppointmentCard 14:30 30min Kerem Arslan "Saç kesim · 30 dk"
- *     AppointmentCard 16:00 60min Ozan Y.      "Saç + Sakal + Boya · 60 dk"
- *   FAB: position absolute, bottom 90, right 20, z-index 10
- *     Button variant="accent" size="lg" "+ Yeni Randevu"
- *     boxShadow: '0 12px 24px -10px rgba(30,58,138,0.4)'
- *
- * Empty state (screen-27 EmptyRandevular):
- *   icon CalendarEmpty (brand-600), title "Bugün randevu yok"
- *   body "20 Mayıs için randevu bulunmuyor. Yeni randevu ekleyebilirsiniz."
- *   cta "Yeni Randevu" ctaVariant="accent"
+ * S1 — Ajanda · Günlük Takvim
+ * Design: Sıradaki-Final-Staff.html · S1
+ * Timeline view: 09:00–20:00 · 64px/hr · now-line · appointment cards · block cards
  */
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  Alert,
+  View, Text, TouchableOpacity, ScrollView, StyleSheet,
+  Alert, Animated, Dimensions,
 } from 'react-native';
-import Svg, { Rect, Path, Circle } from 'react-native-svg';
-import { colors } from '../../lib/theme';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  Ban, CalendarX, CheckCircle2, Coffee, MoreHorizontal, Plane,
+  Plus, User,
+} from 'lucide-react-native';
+import { type LucideIcon } from 'lucide-react-native';
+import { v2Colors, v2Fonts, v2Radii } from '../../lib/v2-tokens';
+import { supabase } from '../../lib/supabase';
 import { AppointmentDetailSheet } from '../../components/AppointmentDetailSheet';
 import { AddAppointmentModal, ServiceOption } from '../../components/AddAppointmentModal';
-import { supabase } from '../../lib/supabase';
-import { formatTime, translateReason, getAppointmentState, buildDayRange } from '../../lib/utils';
+import { formatTime } from '../../lib/utils';
 
-/* ── TR day labels ──────────────────────────────────────────────── */
-const TR_DAYS_SHORT = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'] as const;
+/* ── Timeline constants ── */
+const TL_START_H = 9;   // 09:00
+const TL_END_H   = 20;  // 20:00
+const HOUR_PX    = 64;
+const PXM        = HOUR_PX / 60;
+const TL_HOURS   = Array.from({ length: TL_END_H - TL_START_H + 1 }, (_, i) => TL_START_H + i);
+const TL_HEIGHT  = (TL_END_H - TL_START_H) * HOUR_PX;
 
-/* ── DayPicker ──────────────────────────────────────────────────────
- * Source: components.jsx DayPicker
- * today = new Date(2026, 4, 7) — 7 Mayıs 2026 (Çarşamba)
- * 7 days, starting 2 before today (index 2 = today)
- * Selected cell: bg ink-900, border ink-900, color #fff
- * Each cell: flex 0 0 56px, height 64, borderRadius 12, gap 2
- * Day label: 10px SemiBold letterSpacing 0.12em uppercase opacity 0.7
- * Date number: 18px Bold tabular-nums
- */
-function DayPicker({
-  selected,
-  onSelect,
-}: {
-  selected: number;
-  onSelect: (i: number) => void;
-}) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - 2 + i);
-    return d;
-  });
+const TR_DAYS_SHORT  = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'] as const;
+const TR_MONTHS_FULL = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'] as const;
+const TR_DAYS_FULL   = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'] as const;
+
+const SCREEN_W = Dimensions.get('window').width;
+
+const BLOCK_ICON: Record<string, LucideIcon> = {
+  break: Coffee, mola: Coffee,
+  personal: User, kisisel: User,
+  vacation: Plane, izin: Plane,
+  other: MoreHorizontal, diger: MoreHorizontal,
+};
+const TL_LEFT  = 52;
+const TL_RIGHT = 14;
+
+function toMin(date: Date): number { return date.getHours() * 60 + date.getMinutes(); }
+function dateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+/* ── Toast ── */
+function Toast({ visible, text }: { visible: boolean; text: string }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(anim, { toValue: visible ? 1 : 0, duration: 260, useNativeDriver: true }).start();
+  }, [visible]);
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.dayPickerScroll}
-      contentContainerStyle={styles.dayPickerContent}
+    <Animated.View
+      pointerEvents="none"
+      style={[a.toast, { opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange:[0,1], outputRange:[14,0] }) }] }]}
     >
-      {days.map((d, i) => {
-        const isSel = selected === i;
-        const dowIdx = (d.getDay() + 6) % 7;
-        return (
-          <TouchableOpacity
-            key={i}
-            onPress={() => onSelect(i)}
-            activeOpacity={0.8}
-            style={[styles.dayCell, isSel ? styles.dayCellActive : styles.dayCellInactive]}
-          >
-            <Text style={[styles.dayDow, isSel && styles.dayDowActive]}>
-              {TR_DAYS_SHORT[dowIdx]}
-            </Text>
-            <Text style={[styles.dayNum, isSel && styles.dayNumActive]}>
-              {d.getDate()}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </ScrollView>
+      <CheckCircle2 size={18} color="#9FD9BE" />
+      <Text style={a.toastTx}>{text}</Text>
+    </Animated.View>
   );
 }
 
-/* ── SectionLabel ───────────────────────────────────────────────────
- * Source: components.jsx SectionLabel
- * fontSize 11, fontWeight 600, letterSpacing 0.16em, uppercase, color slate-500
- * padding: '0 20px', margin: '24px 0 10px'
- * Accepts topMargin override for the "Şu Anda" / "Gelecek" labels (12px)
- */
-function SectionLabel({
-  children,
-  topMargin = 0,
-}: {
-  children: string;
-  topMargin?: number;
-}) {
-  return (
-    <Text style={[styles.sectionLabel, { marginTop: topMargin }]}>{children}</Text>
-  );
+interface ApptItem {
+  id: string; startMin: number; endMin: number;
+  customerName: string; customerPhone: string | null;
+  serviceName: string; durationMin: number; status: string; notes?: string | null;
+  startsAt: string;
+}
+interface BlockItem { id: string; startMin: number; endMin: number; reason: string; }
+
+function statusOf(item: ApptItem, isToday: boolean): 'done' | 'now' | 'up' {
+  if (!isToday) return item.startMin < toMin(new Date()) ? 'done' : 'up';
+  const nowMin = toMin(new Date());
+  if (item.endMin <= nowMin) return 'done';
+  if (item.startMin <= nowMin && nowMin < item.endMin) return 'now';
+  return 'up';
 }
 
-/* ── AppointmentCard ────────────────────────────────────────────────
- * Source: components.jsx AppointmentCard
- * variants: upcoming (slate-0/slate-200/ink-900), active (brand-600/brand-700/#fff), done (slate-0, opacity 0.55, strikethrough)
- * Layout: borderRadius 12, padding 14, flex row, gap 14
- * Left col (minWidth 56): time 14px Bold, dur 10px SemiBold letterSpacing 0.14em uppercase " DK"
- * Right col (flex 1): name 15px SemiBold, service 12px Regular
- */
-type ApptState = 'upcoming' | 'active' | 'done';
+function fMin(m: number) { return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`; }
 
-interface ApptCardProps {
-  time: string;
-  duration: number;
-  name: string;
-  service: string;
-  notes?: string | null;
-  state?: ApptState;
-  onPress?: () => void;
-}
-
-function AppointmentCard({ time, duration, name, service, notes, state = 'upcoming', onPress }: ApptCardProps) {
-  const v = {
-    upcoming: {
-      bg: colors.slate[0],
-      border: colors.slate[200],
-      text: colors.ink[900],
-      sub: colors.slate[500],
-      dur: colors.slate[500],
-      opacity: 1 as number,
-      strike: false,
-    },
-    active: {
-      bg: colors.brand[600],
-      border: colors.brand[700],
-      text: '#ffffff' as string,
-      sub: 'rgba(255,255,255,0.6)' as string,
-      dur: 'rgba(255,255,255,0.6)' as string,
-      opacity: 1 as number,
-      strike: false,
-    },
-    done: {
-      bg: colors.slate[0],
-      border: colors.slate[200],
-      text: colors.ink[900],
-      sub: colors.slate[500],
-      dur: colors.slate[500],
-      opacity: 0.55 as number,
-      strike: true,
-    },
-  }[state];
-
+/* ── Appointment card (positioned absolute in timeline) ── */
+function ApptCard({ item, status, onPress }: { item: ApptItem; status: 'done'|'now'|'up'; onPress: () => void }) {
+  const top    = Math.max(0, (item.startMin - TL_START_H * 60) * PXM);
+  const height = Math.max(36, (item.endMin - item.startMin) * PXM - 2);
+  const bgColor = status === 'now' ? v2Colors.emberSoft : v2Colors.card;
+  const borderColor = status === 'now' ? v2Colors.ember : status === 'done' ? v2Colors.line2 : v2Colors.spruce;
+  const opacity = status === 'done' ? 0.72 : 1;
+  const tall = height >= 50;
   return (
     <TouchableOpacity
+      activeOpacity={0.85}
       onPress={onPress}
-      activeOpacity={onPress ? 0.8 : 1}
-      style={[
-        styles.apptCard,
-        { backgroundColor: v.bg, borderColor: v.border, opacity: v.opacity },
-      ]}
+      style={[a.appt, { top, height, backgroundColor: bgColor, borderLeftColor: borderColor, opacity }]}
     >
-      {/* Left col */}
-      <View style={styles.apptLeft}>
-        <Text style={[styles.apptTime, { color: v.text }]}>{time}</Text>
-        <Text style={[styles.apptDur, { color: v.dur }]}>{duration} DK</Text>
-      </View>
-      {/* Right col */}
-      <View style={styles.apptRight}>
-        <Text
-          style={[
-            styles.apptName,
-            { color: v.text, textDecorationLine: v.strike ? 'line-through' : 'none' },
-          ]}
-          numberOfLines={1}
-        >
-          {name}
-        </Text>
-        <Text style={[styles.apptService, { color: v.sub }]} numberOfLines={1}>
-          {service}
-        </Text>
-        {!!notes && (
-          <Text style={[styles.apptNotes, { color: v.sub }]} numberOfLines={1}>
-            {notes}
-          </Text>
+      <View style={a.apptTop}>
+        <Text style={[a.apptName, status==='done' && a.apptNameDone]} numberOfLines={1}>{item.customerName}</Text>
+        {status === 'now' ? (
+          <View style={a.flagNow}><Text style={a.flagNowTx}>Devam Ediyor</Text></View>
+        ) : status === 'done' ? (
+          <View style={a.flagDone}><Text style={a.flagDoneTx}>✓ Bitti</Text></View>
+        ) : (
+          <Text style={a.apptTime}>{fMin(item.startMin)}–{fMin(item.endMin)}</Text>
         )}
       </View>
+      {tall && (
+        <Text style={a.apptSvc} numberOfLines={1}>{item.serviceName} · {fMin(item.startMin)}–{fMin(item.endMin)}</Text>
+      )}
     </TouchableOpacity>
   );
 }
 
-/* ── BlokCard ───────────────────────────────────────────────────────
- * Source: components.jsx BlokCard
- * background: repeating-linear-gradient(45deg, slate-100 0 6px, slate-200 6px 12px) → slate-100 in RN
- * border: 1px dashed slate-400, borderRadius 12, padding 14, flex row, gap 14
- * Left: time 14px Bold slate-700, dur 10px SemiBold 0.14em uppercase slate-500
- * Right: label 11px Bold 0.18em uppercase fg-2 (slate-700)
- */
-function BlokCard({ time, duration, label }: { time: string; duration: number; label: string }) {
+/* ── Block card (absolute) ── */
+function BlockCard({ item }: { item: BlockItem }) {
+  const top    = Math.max(0, (item.startMin - TL_START_H * 60) * PXM);
+  const height = Math.max(28, (item.endMin - item.startMin) * PXM - 2);
+  const BlkIcon = BLOCK_ICON[item.reason] ?? Ban;
   return (
-    <View style={styles.blokCard}>
-      <View style={styles.apptLeft}>
-        <Text style={styles.blokTime}>{time}</Text>
-        <Text style={styles.blokDur}>{duration} DK</Text>
-      </View>
-      <View style={styles.blokRight}>
-        <Text style={styles.blokLabel}>{label}</Text>
-      </View>
+    <View style={[a.blkCard, { top, height }]}>
+      <BlkIcon size={15} color={v2Colors.ink3} />
+      <Text style={a.blkTx} numberOfLines={1}>{item.reason}</Text>
+      <Text style={a.blkTime}>{fMin(item.startMin)}–{fMin(item.endMin)}</Text>
     </View>
   );
 }
 
-/* ── CalendarEmpty SVG ──────────────────────────────────────────────
- * Source: screen-27-empty-states.html CalendarEmpty (color = brand-600)
- */
-function CalendarEmptyIcon() {
-  return (
-    <Svg width={32} height={32} viewBox="0 0 32 32" fill="none">
-      <Rect x="3" y="6" width="26" height="22" rx="4" stroke={colors.brand[600]} strokeWidth="1.8" />
-      <Path d="M3 13h26" stroke={colors.brand[600]} strokeWidth="1.6" />
-      <Path d="M11 4v4M21 4v4" stroke={colors.brand[600]} strokeWidth="1.8" strokeLinecap="round" />
-      <Circle cx="11" cy="20" r="1.5" fill={colors.brand[600]} opacity={0.4} />
-      <Circle cx="16" cy="20" r="1.5" fill={colors.brand[600]} opacity={0.4} />
-      <Circle cx="21" cy="20" r="1.5" fill={colors.brand[600]} opacity={0.4} />
-    </Svg>
-  );
-}
-
-/* ── EmptyState ─────────────────────────────────────────────────────
- * Source: screen-27-empty-states.html EmptyRandevular → EmptyState
- * icon container: width 72, height 72, borderRadius 20, bg brand-100, border brand-100
- * title (17px Bold fg-1): "Bugün randevu yok"
- * body (13px Regular fg-3 lineHeight 1.55): "20 Mayıs için randevu bulunmuyor. Yeni randevu ekleyebilirsiniz."
- * cta: Button variant=accent size=md "Yeni Randevu"
- */
-function EmptyState({ onCta, dateLabel }: { onCta?: () => void; dateLabel?: string }) {
-  return (
-    <View style={styles.emptyWrap}>
-      <View style={styles.emptyIconBox}>
-        <CalendarEmptyIcon />
-      </View>
-      <Text style={styles.emptyTitle}>Bugün randevu yok</Text>
-      <Text style={styles.emptyBody}>
-        {dateLabel ?? 'Bugün'} için randevu bulunmuyor. Yeni randevu ekleyebilirsiniz.
-      </Text>
-      {onCta && (
-        <TouchableOpacity style={styles.emptyCtaBtn} onPress={onCta}>
-          <Text style={styles.emptyCtaText}>Yeni Randevu</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-}
-
-type ListItem =
-  | { kind: 'section'; label: string; topMargin?: number }
-  | { kind: 'appt'; id: string; time: string; duration: number; name: string; service: string; notes?: string | null; state?: ApptState; isDetail?: boolean }
-  | { kind: 'blok'; time: string; duration: number; label: string };
-
-/* ── TR month names for header meta ─────────────────────────────── */
-const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'] as const;
-const TR_DAYS_FULL = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'] as const;
-function formatMetaDate(d: Date): string {
-  return `${d.getDate()} ${TR_MONTHS[d.getMonth()]} ${d.getFullYear()}, ${TR_DAYS_FULL[d.getDay()]}`;
-}
-
-/* ── SCREEN ──────────────────────────────────────────────────────── */
-export default function RandevularScreen() {
-  const [dayIndex, setDayIndex] = useState(2); // index 2 = today
-  const [showDetail, setShowDetail] = useState(false);
-  const [selectedAppt, setSelectedAppt] = useState<import('../../components/AppointmentDetailSheet').AppointmentDetail | null>(null);
-  const [showAdd, setShowAdd]   = useState(false);
-  const [staffId, setStaffId] = useState<string | null>(null);
+export default function AjandaScreen() {
+  const insets = useSafeAreaInsets();
+  const [dayIndex, setDayIndex] = useState(2);
+  const [appts, setAppts]   = useState<ApptItem[]>([]);
+  const [blocks, setBlocks] = useState<BlockItem[]>([]);
+  const [staffId,       setStaffId]       = useState<string | null>(null);
+  const [staffName,     setStaffName]     = useState('');
   const [staffShopSlug, setStaffShopSlug] = useState<string | null>(null);
-  const [items, setItems] = useState<ListItem[]>([]);
-  const [services, setServices] = useState<ServiceOption[]>([]);
+  const [services,      setServices]      = useState<ServiceOption[]>([]);
+  const [showDetail,    setShowDetail]    = useState(false);
+  const [selAppt,       setSelAppt]       = useState<import('../../components/AppointmentDetailSheet').AppointmentDetail | null>(null);
+  const [showAdd,       setShowAdd]       = useState(false);
+  const [toast,         setToast]         = useState({ visible: false, text: '' });
+  const [nowMin,        setNowMin]        = useState(toMin(new Date()));
 
-  const isEmpty = items.length === 0;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(today); d.setDate(today.getDate() - 2 + i); return d; });
+  const selectedDate = days[dayIndex];
+  const isToday = dayIndex === 2;
+
+  /* update now-line every minute */
+  useEffect(() => {
+    const id = setInterval(() => setNowMin(toMin(new Date())), 60000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
-    let isMounted = true;
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!isMounted || !user) return;
-      supabase.from('staff').select('id, shop_id').eq('user_id', user.id).eq('is_active', true).maybeSingle()
+      if (!user) return;
+      supabase.from('staff').select('id, name, shop_id').eq('user_id', user.id).eq('is_active', true).maybeSingle()
         .then(({ data }) => {
-          if (!isMounted || !data) return;
-          setStaffId((data as any).id);
-          supabase.from('shops').select('slug').eq('id', (data as any).shop_id).maybeSingle()
-            .then(({ data: shopData }) => {
-              if (!isMounted) return;
-              if (shopData) setStaffShopSlug((shopData as any).slug);
-            });
-          supabase.from('services').select('id, name, duration_min, price_cents').eq('shop_id', (data as any).shop_id).eq('is_active', true)
+          if (!data) return;
+          const row = data as any;
+          setStaffId(row.id);
+          setStaffName(row.name ?? '');
+          supabase.from('shops').select('slug').eq('id', row.shop_id).maybeSingle()
+            .then(({ data: sd }) => { if (sd) setStaffShopSlug((sd as any).slug); });
+          supabase.from('services').select('id, name, duration_min, price_cents').eq('shop_id', row.shop_id).eq('is_active', true)
             .then(({ data: svcs }) => {
-              if (!isMounted) return;
               if (svcs) setServices((svcs as any[]).map(s => ({ id: s.id, label: s.name, dur: s.duration_min, price: `${Math.round(s.price_cents/100)}₺` })));
             });
         });
     });
-    return () => { isMounted = false; };
   }, []);
 
-  useEffect(() => {
+  const fetchDay = useCallback(async () => {
     if (!staffId) return;
-    fetchAppointments();
-  }, [staffId, dayIndex]);
-
-  async function fetchAppointments() {
-    if (!staffId) return;
-
-    const today = new Date(); today.setHours(0,0,0,0);
-    const targetDate = new Date(today); targetDate.setDate(today.getDate() - 2 + dayIndex);
-    const dayStart = new Date(targetDate); dayStart.setHours(0,0,0,0);
-    const dayEnd = new Date(targetDate); dayEnd.setDate(targetDate.getDate()+1); dayEnd.setHours(0,0,0,0);
-
-    const [{ data: appts }, { data: blocks }] = await Promise.all([
+    const dayStart = new Date(selectedDate); dayStart.setHours(0,0,0,0);
+    const dayEnd   = new Date(selectedDate); dayEnd.setDate(selectedDate.getDate()+1); dayEnd.setHours(0,0,0,0);
+    const [{ data: apptRows }, { data: blkRows }] = await Promise.all([
       supabase.from('appointments').select('id, customer_name, service_name, starts_at, duration_min, status, notes')
-        .eq('staff_id', staffId).neq('status', 'cancelled')
+        .eq('staff_id', staffId).neq('status','cancelled')
         .gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString()).order('starts_at'),
       supabase.from('blocks').select('id, starts_at, ends_at, reason')
         .eq('staff_id', staffId)
         .gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString()),
     ]);
+    setAppts((apptRows ?? []).map((r: any) => {
+      const start = new Date(r.starts_at);
+      const startMin = toMin(start);
+      const endMin   = startMin + (r.duration_min ?? 30);
+      return { id: r.id, startMin, endMin, customerName: r.customer_name, customerPhone: null, serviceName: r.service_name, durationMin: r.duration_min ?? 30, status: r.status, notes: r.notes ?? null, startsAt: r.starts_at };
+    }));
+    setBlocks((blkRows ?? []).map((r: any) => {
+      const start = new Date(r.starts_at);
+      const end   = new Date(r.ends_at);
+      return { id: r.id, startMin: toMin(start), endMin: toMin(end), reason: r.reason };
+    }));
+  }, [staffId, dayIndex]);
 
-    const now = new Date();
-    const done: ListItem[] = [];
-    const active: ListItem[] = [];
-    const upcoming: (ListItem & {_startMs: number})[] = [];
+  useEffect(() => { if (staffId) fetchDay(); }, [fetchDay]);
 
-    for (const a of ((appts ?? []) as any[])) {
-      const start = new Date(a.starts_at);
-      const end = new Date(start.getTime() + (a.duration_min ?? 30) * 60000);
-      const timeStr = formatTime(start);
-      const state: ApptState = a.status === 'completed' ? 'done'
-        : (start <= now && now < end) ? 'active' : 'upcoming';
-      const item: ListItem = { kind: 'appt', id: a.id, time: timeStr, duration: a.duration_min ?? 30, name: a.customer_name, service: a.service_name, notes: a.notes ?? null, state, isDetail: state !== 'done' };
-      if (state === 'done') done.push(item);
-      else if (state === 'active') active.push(item);
-      else upcoming.push({ ...item, _startMs: start.getTime() } as any);
-    }
-
-    for (const b of ((blocks ?? []) as any[])) {
-      const start = new Date(b.starts_at);
-      const end = new Date(b.ends_at);
-      const dur = Math.round((end.getTime() - start.getTime()) / 60000);
-      const label = translateReason(b.reason);
-      upcoming.push({ kind: 'blok', time: formatTime(start), duration: dur, label: `BLOKE · ${label}`, _startMs: start.getTime() } as any);
-    }
-
-    upcoming.sort((a, b) => (a as any)._startMs - (b as any)._startMs);
-
-    const result: ListItem[] = [];
-    if (done.length) { result.push({ kind: 'section', label: 'Tamamlandı', topMargin: 0 }); result.push(...done); }
-    if (active.length) { result.push({ kind: 'section', label: 'Şu Anda', topMargin: 12 }); result.push(...active); }
-    if (upcoming.length) {
-      result.push({ kind: 'section', label: 'Gelecek', topMargin: 12 });
-      result.push(...upcoming.map(({ _startMs, ...i }: any) => i));
-    }
-
-    setItems(result);
-  }
-
-  async function openDetail(item: ListItem & { kind: 'appt' }) {
-    const { data } = await supabase
-      .from('appointments')
-      .select('customer_phone')
-      .eq('id', item.id)
-      .maybeSingle();
-    setSelectedAppt({
+  async function openDetail(item: ApptItem) {
+    const { data } = await supabase.from('appointments').select('customer_phone').eq('id', item.id).maybeSingle();
+    setSelAppt({
       id: item.id,
-      time: item.time,
-      duration: item.duration,
-      customerName: item.name,
+      time: formatTime(new Date(item.startsAt)),
+      duration: item.durationMin,
+      customerName: item.customerName,
       customerPhone: (data as any)?.customer_phone ?? null,
-      serviceName: item.service,
+      serviceName: item.serviceName,
       notes: item.notes,
     });
     setShowDetail(true);
   }
 
-  // Derive displayed date for header meta
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const selectedDate = new Date(today);
-  selectedDate.setDate(today.getDate() - 2 + dayIndex);
+  const nowTop = Math.max(0, (nowMin - TL_START_H * 60) * PXM);
+  const apptCount = appts.length;
+  const dow = selectedDate.getDay();
+  const overlineLabel = `${TR_DAYS_FULL[dow]} · ${selectedDate.getDate()} ${TR_MONTHS_FULL[selectedDate.getMonth()]}`;
 
   return (
-    <SafeAreaView style={styles.safe}>
-      {/* OverlineHeader */}
-      <View style={styles.header}>
-        <Text style={styles.eyebrow}>Berber · Dükkan Paneli</Text>
-        <Text style={styles.title}>Randevular</Text>
-        <Text style={styles.meta}>{formatMetaDate(selectedDate)}</Text>
+    <SafeAreaView style={a.safe} edges={['top']}>
+      {/* Header */}
+      <View style={a.head}>
+        <Text style={a.overline}>{overlineLabel}</Text>
+        <Text style={a.title}>Ajanda</Text>
       </View>
 
-      {/* DayPicker */}
-      <DayPicker selected={dayIndex} onSelect={setDayIndex} />
+      {/* Day picker */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={a.dpScroll} contentContainerStyle={a.dpContent}>
+        {days.map((d, i) => {
+          const dowIdx = (d.getDay() + 6) % 7;
+          const dayAppts = i === dayIndex ? apptCount : 0;
+          return (
+            <TouchableOpacity key={i} style={[a.dayCell, i===dayIndex && a.dayCellOn]} onPress={() => setDayIndex(i)} activeOpacity={0.8}>
+              <Text style={[a.dayDow, i===dayIndex && a.dayDowOn]}>{TR_DAYS_SHORT[dowIdx]}</Text>
+              <Text style={[a.dayNum, i===dayIndex && a.dayNumOn]}>{d.getDate()}</Text>
+              {dayAppts > 0 && <View style={[a.cdot, i===dayIndex && a.cdotOn]} />}
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
-      {isEmpty ? (
-        /* Empty state */
-        <EmptyState
-          onCta={() => setShowAdd(true)}
-          dateLabel={`${selectedDate.getDate()} ${TR_MONTHS[selectedDate.getMonth()]}`}
-        />
+      {/* Meta row */}
+      <View style={a.metaRow}>
+        <Text style={a.metaL}>
+          {apptCount === 0 && blocks.length === 0
+            ? 'Boş gün'
+            : [apptCount > 0 && `${apptCount} randevu`, blocks.length > 0 && `${blocks.length} blok`].filter(Boolean).join(' · ')}
+        </Text>
+        {staffName ? <Text style={a.metaR}>{staffName}</Text> : null}
+      </View>
+
+      {/* Timeline */}
+      {appts.length === 0 && blocks.length === 0 ? (
+        <View style={a.empty}>
+          <View style={a.emptyIc}><CalendarX size={28} color={v2Colors.line2} /></View>
+          <Text style={a.emptyT}>Bu gün boş</Text>
+          <Text style={a.emptyS}>Henüz randevu veya blok yok.</Text>
+        </View>
       ) : (
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {items.map((item, idx) => {
-            if (item.kind === 'section') {
-              return (
-                <SectionLabel key={idx} topMargin={item.topMargin ?? 0}>
-                  {item.label}
-                </SectionLabel>
-              );
-            }
-            if (item.kind === 'blok') {
-              return (
-                <BlokCard key={idx} time={item.time} duration={item.duration} label={item.label} />
-              );
-            }
-            return (
-              <AppointmentCard
-                key={idx}
-                time={item.time}
-                duration={item.duration}
-                name={item.name}
-                service={item.service}
-                notes={item.notes}
-                state={item.state}
-                onPress={item.isDetail ? () => openDetail(item) : undefined}
-              />
-            );
-          })}
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 130 }} showsVerticalScrollIndicator={false}>
+          <View style={[a.timeline, { height: TL_HEIGHT + 64 }]}>
+            {/* Hour rows */}
+            {TL_HOURS.map(h => (
+              <View key={h} style={[a.tlRow, { top: (h - TL_START_H) * HOUR_PX }]}>
+                <Text style={a.tlHour}>{String(h).padStart(2,'0')}:00</Text>
+                <View style={a.tlLine} />
+              </View>
+            ))}
+
+            {/* Now line */}
+            {isToday && nowMin >= TL_START_H*60 && nowMin <= TL_END_H*60 && (
+              <View style={[a.nowLine, { top: nowTop }]}>
+                <View style={a.nowDot} />
+                <Text style={a.nowLbl}>{fMin(nowMin)}</Text>
+              </View>
+            )}
+
+            {/* Events */}
+            <View style={a.tlTrack} pointerEvents="box-none">
+              {blocks.map(blk => <BlockCard key={blk.id} item={blk} />)}
+              {appts.map(ap => (
+                <ApptCard
+                  key={ap.id}
+                  item={ap}
+                  status={statusOf(ap, isToday)}
+                  onPress={() => openDetail(ap)}
+                />
+              ))}
+            </View>
+          </View>
         </ScrollView>
       )}
 
       {/* FAB */}
-      <TouchableOpacity style={styles.fab} onPress={() => setShowAdd(true)}>
-        <Text style={styles.fabText}>+ Yeni Randevu</Text>
+      <TouchableOpacity style={[a.fab, { bottom: insets.bottom + 90 }]} onPress={() => setShowAdd(true)} activeOpacity={0.85}>
+        <Plus size={18} color="#fff" />
+        <Text style={a.fabTx}>Randevu Ekle</Text>
       </TouchableOpacity>
 
-      {/* Appointment detail sheet */}
+      <Toast visible={toast.visible} text={toast.text} />
+
+      {/* Detail sheet */}
       <AppointmentDetailSheet
         visible={showDetail}
-        onClose={() => { setShowDetail(false); setSelectedAppt(null); }}
-        appointment={selectedAppt}
-        onEdit={() => { /* edit flow: close sheet, open AddAppointmentModal in edit mode — future */ }}
-        onCancel={() => fetchAppointments()}
-        onComplete={() => fetchAppointments()}
+        onClose={() => { setShowDetail(false); setSelAppt(null); }}
+        appointment={selAppt}
+        onEdit={() => {}}
+        onCancel={fetchDay}
+        onComplete={fetchDay}
       />
 
-      {/* Add appointment modal */}
+      {/* Add appointment */}
       <AddAppointmentModal
         visible={showAdd}
         onClose={() => setShowAdd(false)}
         onSave={async (data) => {
-          if (!staffShopSlug || !staffId) {
-            Alert.alert('Hata', 'Oturum bilgisi eksik.');
-            return;
-          }
+          if (!staffShopSlug || !staffId) { Alert.alert('Hata', 'Oturum bilgisi eksik.'); return; }
           try {
             const { error } = await supabase.functions.invoke('app-book-appointment', {
               body: {
@@ -491,10 +332,10 @@ export default function RandevularScreen() {
             });
             if (error) throw error;
             setShowAdd(false);
-            fetchAppointments();
-          } catch {
-            Alert.alert('Hata', 'Randevu eklenemedi. Slot dolu olabilir.');
-          }
+            fetchDay();
+            setToast({ visible: true, text: 'Randevu oluşturuldu' });
+            setTimeout(() => setToast(t => ({ ...t, visible: false })), 2200);
+          } catch { Alert.alert('Hata', 'Randevu eklenemedi. Slot dolu olabilir.'); }
         }}
         services={services}
       />
@@ -502,280 +343,78 @@ export default function RandevularScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    // background: 'var(--slate-50)' from index.html ios-content
-    backgroundColor: colors.slate[50],
-    position: 'relative',
-  },
+const a = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: v2Colors.paper },
+  head: { paddingHorizontal: 22, paddingTop: 14, paddingBottom: 4 },
+  overline: { fontFamily: v2Fonts.bodySemiBold, fontSize: 11, letterSpacing: 11*0.2, textTransform: 'uppercase', color: v2Colors.ink3 },
+  title: { fontFamily: v2Fonts.display, fontSize: 33, lineHeight: 34, letterSpacing: -0.66, color: v2Colors.ink, marginTop: 7 },
+  dpScroll: { flexGrow: 0, flexShrink: 0, height: 80 },
+  dpContent: { gap: 7, paddingHorizontal: 20, paddingVertical: 8, alignItems: 'center' },
+  dayCell: { width: 46, height: 64, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: v2Colors.line2, backgroundColor: v2Colors.paper, position: 'relative', gap: 2 },
+  dayCellOn: { backgroundColor: v2Colors.spruce, borderColor: v2Colors.spruce },
+  dayDow: { fontFamily: v2Fonts.bodySemiBold, fontSize: 10, letterSpacing: 10*0.08, textTransform: 'uppercase', color: v2Colors.ink3 },
+  dayDowOn: { color: 'rgba(255,255,255,0.7)' },
+  dayNum: { fontFamily: v2Fonts.mono, fontSize: 17, color: v2Colors.ink },
+  dayNumOn: { color: '#fff' },
+  cdot: { position: 'absolute', top: 5, right: 7, width: 5, height: 5, borderRadius: 999, backgroundColor: v2Colors.spruce },
+  cdotOn: { backgroundColor: v2Colors.ember },
+  metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22, paddingTop: 2, paddingBottom: 8 },
+  metaL: { fontFamily: v2Fonts.bodyBold, fontSize: 13, color: v2Colors.ink },
+  metaR: { fontFamily: v2Fonts.mono, fontSize: 11, color: v2Colors.ink3 },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 34 },
+  emptyIc: { width: 64, height: 64, borderRadius: 20, backgroundColor: v2Colors.paper2, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  emptyT: { fontFamily: v2Fonts.display, fontSize: 21, color: v2Colors.ink2, marginBottom: 6 },
+  emptyS: { fontFamily: v2Fonts.body, fontSize: 13, lineHeight: 19.5, color: v2Colors.ink3, textAlign: 'center' },
 
-  /* OverlineHeader (components.jsx):
-     padding: '8px 20px 16px'
-     eyebrow: 11px SemiBold letterSpacing 0.16em uppercase slate-500 lineHeight 1
-     title:   32px Bold letterSpacing -0.02em ink-900 marginTop 10 lineHeight 1.05
-     meta:    13px Regular fg-3 (slate-500) marginTop 8 */
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
+  /* Timeline */
+  timeline: { position: 'relative', paddingLeft: TL_LEFT, paddingRight: TL_RIGHT, marginBottom: 8, marginTop: 10 },
+  tlRow: { position: 'absolute', left: 0, right: TL_RIGHT, height: HOUR_PX, flexDirection: 'row', alignItems: 'flex-start' },
+  tlHour: { width: TL_LEFT - 4, textAlign: 'right', fontFamily: v2Fonts.mono, fontSize: 11, color: v2Colors.ink3, transform: [{ translateY: -7 }] },
+  tlLine: { flex: 1, borderTopWidth: 1, borderTopColor: v2Colors.line, height: 1 },
+  nowLine: {
+    position: 'absolute', left: TL_LEFT, right: TL_RIGHT,
+    height: 0, borderTopWidth: 2, borderTopColor: v2Colors.ember, zIndex: 4,
   },
-  eyebrow: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 11,
-    letterSpacing: 11 * 0.16,   // 0.16em
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-    lineHeight: 11,
+  nowDot: {
+    position: 'absolute', left: -4, top: -4,
+    width: 7, height: 7, borderRadius: 999, backgroundColor: v2Colors.ember,
   },
-  title: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 32,
-    letterSpacing: 32 * -0.02,  // -0.02em
-    color: colors.ink[900],
-    marginTop: 10,
-    lineHeight: 33.6,           // 1.05
-  },
-  meta: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 13,
-    color: colors.slate[500],
-    marginTop: 8,
-  },
+  nowLbl: { position: 'absolute', right: 0, top: -17, fontFamily: v2Fonts.mono, fontSize: 9, color: v2Colors.ember, backgroundColor: v2Colors.paper, paddingHorizontal: 4 },
+  tlTrack: { position: 'absolute', top: 0, left: TL_LEFT, right: TL_RIGHT, bottom: 0 },
 
-  /* DayPicker outer scroll — explicit height prevents Android flex-expand bug */
-  dayPickerScroll: {
-    height: 80,         // cell 64 + 8 top + 8 bottom padding
-    flexGrow: 0,
-    flexShrink: 0,
+  /* Appointment card */
+  appt: {
+    position: 'absolute', left: 6, right: 6,
+    borderRadius: 13, paddingHorizontal: 12, paddingVertical: 9,
+    borderWidth: 1, borderColor: v2Colors.line, borderLeftWidth: 3,
+    shadowColor: v2Colors.ink, shadowOffset: { width:0, height:1 }, shadowOpacity: 0.04, shadowRadius: 2, elevation: 1,
   },
-  /* DayPicker: gap 6, paddingHorizontal 16, paddingVertical 8 */
-  dayPickerContent: {
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
+  apptTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  apptName: { fontFamily: v2Fonts.bodyBold, fontSize: 14, color: v2Colors.ink, flex: 1 },
+  apptNameDone: { color: v2Colors.ink2 },
+  apptTime: { fontFamily: v2Fonts.mono, fontSize: 10.5, color: v2Colors.ink3 },
+  apptSvc: { fontFamily: v2Fonts.body, fontSize: 11.5, color: v2Colors.ink2, marginTop: 2 },
+  flagNow: { backgroundColor: v2Colors.ember, borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2 },
+  flagNowTx: { fontFamily: v2Fonts.bodySemiBold, fontSize: 8.5, letterSpacing: 8.5*0.08, textTransform: 'uppercase', color: '#fff' },
+  flagDone: { backgroundColor: v2Colors.spruceSoft, borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2 },
+  flagDoneTx: { fontFamily: v2Fonts.bodySemiBold, fontSize: 8.5, letterSpacing: 8.5*0.08, textTransform: 'uppercase', color: v2Colors.spruce },
 
-  /* Day cell: width 56, height 64, borderRadius 12, gap 2 */
-  dayCell: {
-    width: 56,
-    height: 64,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-    borderWidth: 1,
+  /* Block card */
+  blkCard: {
+    position: 'absolute', left: 6, right: 6,
+    borderRadius: 13, paddingHorizontal: 12, paddingVertical: 9,
+    backgroundColor: v2Colors.paper2,
+    borderWidth: 1, borderColor: v2Colors.line2, borderStyle: 'dashed',
+    flexDirection: 'row', alignItems: 'center', gap: 8,
   },
-  dayCellActive: {
-    backgroundColor: colors.ink[900],
-    borderColor: colors.ink[900],
-  },
-  dayCellInactive: {
-    backgroundColor: colors.slate[0],
-    borderColor: colors.slate[200],
-  },
-  dayDow: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 10,
-    letterSpacing: 10 * 0.12,   // 0.12em
-    textTransform: 'uppercase',
-    color: colors.ink[900],
-    opacity: 0.7,
-  },
-  dayDowActive: { color: '#ffffff', opacity: 0.7 },
-  dayNum: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 18,
-    color: colors.ink[900],
-  },
-  dayNumActive: { color: '#ffffff' },
+  blkTx: { fontFamily: v2Fonts.bodyBold, fontSize: 12.5, color: v2Colors.ink2, flex: 1 },
+  blkTime: { fontFamily: v2Fonts.mono, fontSize: 10, color: v2Colors.ink3 },
 
-  /* SectionLabel: 11px SemiBold 0.16em uppercase slate-500, marginBottom 4 */
-  sectionLabel: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 11,
-    letterSpacing: 11 * 0.16,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-    marginBottom: 4,
-  },
+  /* FAB */
+  fab: { position: 'absolute', right: 18, height: 52, borderRadius: 16, backgroundColor: v2Colors.spruce, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 18, shadowColor: v2Colors.spruce, shadowOffset: { width:0, height:14 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 8, zIndex: 8 },
+  fabTx: { fontFamily: v2Fonts.bodyBold, fontSize: 14.5, color: '#fff' },
 
-  scroll: { flex: 1 },
-  /* ScrollView content: padding '20px 20px 100px', gap 10 */
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 100,
-    gap: 10,
-  },
-
-  /* AppointmentCard: borderRadius 12, padding 14, flex row, gap 14, border 1px
-     boxShadow: '0 1px 2px rgba(15,20,16,0.04)' */
-  apptCard: {
-    borderRadius: 12,
-    padding: 14,
-    flexDirection: 'row',
-    gap: 14,
-    alignItems: 'flex-start',
-    borderWidth: 1,
-    shadowColor: colors.ink[900],
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  apptLeft: { minWidth: 56 },
-  apptTime: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 14,
-    lineHeight: 14,
-  },
-  apptDur: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 10,
-    letterSpacing: 10 * 0.14,   // 0.14em
-    textTransform: 'uppercase',
-    marginTop: 5,
-  },
-  apptRight: { flex: 1, minWidth: 0 },
-  apptName: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 15,
-    lineHeight: 18,
-  },
-  apptService: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 12,
-    marginTop: 2,
-  },
-
-  apptNotes: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 11,
-    marginTop: 2,
-    fontStyle: 'italic',
-    opacity: 0.7,
-  },
-
-  /* BlokCard: bg slate-100 (stripe pattern simulated), 1px dashed slate-400,
-     borderRadius 12, padding 14, flex row, gap 14 */
-  blokCard: {
-    borderRadius: 12,
-    padding: 14,
-    flexDirection: 'row',
-    gap: 14,
-    alignItems: 'center',
-    backgroundColor: colors.slate[100],
-    borderWidth: 1,
-    borderColor: colors.slate[400],
-    borderStyle: 'dashed',
-  },
-  blokRight: { flex: 1, alignSelf: 'center' },
-  blokTime: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 14,
-    color: colors.slate[700],
-  },
-  blokDur: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 10,
-    letterSpacing: 10 * 0.14,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-    marginTop: 5,
-  },
-  blokLabel: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 11,
-    letterSpacing: 11 * 0.18,   // 0.18em
-    textTransform: 'uppercase',
-    color: colors.slate[700],
-  },
-
-  /* EmptyState (screen-27 EmptyRandevular):
-     flex 1, alignItems center, justifyContent center, paddingHorizontal 28 */
-  emptyWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-  },
-  /* icon container: width 72, height 72, borderRadius 20, bg brand-100, border brand-100 */
-  emptyIconBox: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: colors.brand[100],
-    borderWidth: 1,
-    borderColor: colors.brand[100],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  /* title: 17px Bold letterSpacing -0.01em color fg-1, lineHeight 1.2, marginBottom 8 */
-  emptyTitle: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 17,
-    letterSpacing: 17 * -0.01,
-    color: colors.ink[900],
-    lineHeight: 20.4,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  /* body: 13px Regular color fg-3 lineHeight 1.55, marginBottom 24 */
-  emptyBody: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 13,
-    color: colors.slate[500],
-    lineHeight: 20.15,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  /* CTA: Button variant=accent size=md → bg brand-600, border brand-700, height 44, borderRadius 12 */
-  emptyCtaBtn: {
-    height: 44,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    backgroundColor: colors.brand[600],
-    borderWidth: 1,
-    borderColor: colors.brand[700],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyCtaText: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 14,
-    color: '#ffffff',
-    letterSpacing: 14 * -0.005,
-  },
-
-  /* FAB: position absolute, bottom 90, right 20, z-index 10
-     Button variant=accent size=lg → height 52, paddingHorizontal 20, borderRadius 12, bg brand-600
-     boxShadow: '0 12px 24px -10px rgba(30,58,138,0.4)' */
-  fab: {
-    position: 'absolute',
-    bottom: 90,
-    right: 20,
-    zIndex: 10,
-    height: 52,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    backgroundColor: colors.brand[600],
-    borderWidth: 1,
-    borderColor: colors.brand[700],
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.brand[600],
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
-    elevation: 8,
-  },
-  fabText: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 15,
-    color: '#ffffff',
-    letterSpacing: 15 * -0.005,
-  },
+  /* Toast */
+  toast: { position: 'absolute', left: 18, right: 18, bottom: 110, backgroundColor: v2Colors.ink, borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 11, shadowColor: v2Colors.ink, shadowOffset: { width:0, height:8 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 8, zIndex: 30 },
+  toastTx: { fontFamily: v2Fonts.bodySemiBold, fontSize: 13.5, color: '#fff' },
 });

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Dimensions,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -7,8 +8,8 @@ import {
   Pressable,
   View,
 } from 'react-native';
-import { ChevronRight } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ChevronRight, TrendingUp } from 'lucide-react-native';
 import { estimatedAppointmentRevenueCents } from '../../lib/revenue-mappers';
 import { useShop } from '../../lib/ShopContext';
 import { supabase } from '../../lib/supabase';
@@ -19,13 +20,31 @@ interface Insight {
   value: string;
 }
 
+const DESIGN_WIDTH = 354;
+const OWNER_SCALE = Dimensions.get('window').width / DESIGN_WIDTH;
+const dp = (value: number) => Math.round(value * OWNER_SCALE * 100) / 100;
+const H_PAD = dp(22);
+
+const CLAUDE_STAFF = [
+  { id: 'all', name: 'Tüm Ekip' },
+  { id: 'emre', name: 'Emre' },
+  { id: 'soner', name: 'Soner' },
+  { id: 'murat', name: 'Murat' },
+  { id: 'tuna', name: 'Tuna' },
+];
+
+const CLAUDE_INITIALS: Record<string, string> = {
+  emre: 'EK',
+  soner: 'SA',
+  murat: 'MD',
+  tuna: 'TE',
+};
+
 
 function formatDate(date: Date): string {
-  return date.toLocaleDateString('tr-TR', {
-    day: 'numeric',
-    month: 'short',
-    weekday: 'short',
-  });
+  const dayMonth = date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+  const weekday = date.toLocaleDateString('tr-TR', { weekday: 'short' });
+  return `${dayMonth} · ${weekday}`;
 }
 
 function initials(name: string): string {
@@ -44,20 +63,25 @@ function KpiHero({
   total: string;
   completed: string;
 }) {
+  const waiting = Math.max(0, Number(total) - Number(completed));
+
   return (
     <View style={styles.heroCard}>
       <ChevronRight
         color="rgba(255,255,255,0.14)"
-        size={168}
-        strokeWidth={7}
+        size={dp(190)}
+        strokeWidth={dp(6)}
         style={styles.heroWatermark}
       />
       <View style={styles.heroTop}>
         <Text style={styles.heroOverline}>Bugünkü Randevu</Text>
-        <Text style={styles.heroTrend}>+12%</Text>
+      </View>
+      <View style={styles.heroTrend}>
+        <TrendingUp color="#9FD9BE" size={dp(13)} strokeWidth={dp(2.2)} />
+        <Text style={styles.heroTrendText}>+12%</Text>
       </View>
       <Text style={styles.heroNumber}>{total}</Text>
-      <Text style={styles.heroSub}>{completed} tamamlandı · {total} sırada</Text>
+      <Text style={styles.heroSub}>{completed} tamamlandı · {waiting} sırada</Text>
     </View>
   );
 }
@@ -76,14 +100,24 @@ function SmallKpi({
   return (
     <View style={styles.smallKpi}>
       <Text style={styles.smallKpiLabel}>{label}</Text>
-      <Text style={[styles.smallKpiValue, revenue && styles.revenueValue]}>{value}</Text>
+      {revenue ? (
+        <Text style={[styles.smallKpiValue, styles.revenueValue]}>
+          <Text style={styles.revenueCurrency}>{value.slice(0, 1)}</Text>
+          {value.slice(1)}
+        </Text>
+      ) : (
+        <Text style={styles.smallKpiValue}>{value}</Text>
+      )}
       <Text style={styles.smallKpiSub}>{sub}</Text>
     </View>
   );
 }
 
 export default function OzetScreen() {
-  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const params = useLocalSearchParams<{ visual?: string }>();
+  const useClaudeFixture =
+    __DEV__ && (params.visual === 'claude' || process.env.EXPO_PUBLIC_VISUAL_FIXTURE === 'claude');
   const { shopId, staffList: contextStaff } = useShop();
   const [filter, setFilter] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
@@ -93,11 +127,18 @@ export default function OzetScreen() {
   const [topService, setTopService] = useState<Insight | null>(null);
   const [busiestDay, setBusiestDay] = useState<Insight | null>(null);
 
-  const staffList = [{ id: 'all', name: 'Tüm Ekip' }, ...contextStaff];
+  const staffList = useClaudeFixture ? CLAUDE_STAFF : [{ id: 'all', name: 'Tüm Ekip' }, ...contextStaff];
+  const displayTotal = useClaudeFixture ? '24' : kpiTotal;
+  const displayCompleted = useClaudeFixture ? '16' : kpiCompleted;
+  const displayRevenue = useClaudeFixture ? '₺4.250' : kpiRevenue;
+  const displayTopService = useClaudeFixture ? { name: 'Saç + Sakal', value: '%34' } : topService;
+  const displayBusiestDay = useClaudeFixture ? { name: 'Cumartesi', value: '32 rdv' } : busiestDay;
+  const displayDate = useClaudeFixture ? '20 May · Çar' : formatDate(new Date());
 
   useEffect(() => {
+    if (useClaudeFixture) return;
     if (shopId && contextStaff.length) loadSummary();
-  }, [filter, shopId, contextStaff]);
+  }, [filter, shopId, contextStaff, useClaudeFixture]);
 
   async function loadSummary() {
     if (!shopId || contextStaff.length === 0) return;
@@ -179,76 +220,83 @@ export default function OzetScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.headerRow}>
-        <View>
-          <Text style={styles.overline}>Dükkan Özet</Text>
-          <Text style={styles.title}>Bugün</Text>
-        </View>
-        <Text style={styles.dateText}>{formatDate(new Date())}</Text>
-      </View>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipRow}
+    <View style={styles.screen}>
+      <Pressable
+        accessibilityLabel="Ayarlar ve Profil"
+        onPress={() => router.push('/settings' as never)}
+        style={styles.profileFab}
       >
-        {staffList.map((staff) => {
-          const selected = filter === staff.id;
-          return (
-            <Pressable
-              key={staff.id}
-              onPress={() => setFilter(staff.id)}
-              style={[styles.chip, selected && styles.chipSelected]}
-            >
-              {staff.id !== 'all' ? (
-                <View style={[styles.chipAvatar, selected && styles.chipAvatarSelected]}>
-                  <Text style={[styles.chipAvatarText, selected && styles.chipTextSelected]}>
-                    {initials(staff.name)}
-                  </Text>
-                </View>
-              ) : null}
-              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{staff.name}</Text>
-            </Pressable>
-          );
-        })}
+        <Text style={styles.profileFabText}>EK</Text>
+      </Pressable>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.overline}>Dükkan Özet</Text>
+            <Text style={styles.title}>Bugün</Text>
+          </View>
+          <Text style={styles.dateText}>{displayDate}</Text>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipRow}
+        >
+          {staffList.map((staff) => {
+            const selected = filter === staff.id;
+            return (
+              <Pressable
+                key={staff.id}
+                onPress={() => setFilter(staff.id)}
+                style={[styles.chip, selected && styles.chipSelected]}
+              >
+                {staff.id !== 'all' ? (
+                  <View style={[styles.chipAvatar, selected && styles.chipAvatarSelected]}>
+                    <Text style={[styles.chipAvatarText, selected && styles.chipTextSelected]}>
+                      {useClaudeFixture ? CLAUDE_INITIALS[staff.id] : initials(staff.name)}
+                    </Text>
+                  </View>
+                ) : null}
+                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{staff.name}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        <KpiHero total={displayTotal} completed={displayCompleted} />
+
+        <View style={styles.smallKpiRow}>
+          <SmallKpi label="Tamamlanan" value={displayCompleted} sub={`/ ${displayTotal} randevu`} />
+          <SmallKpi label="Tahmini Gelir" value={displayRevenue} sub="bugün" revenue />
+        </View>
+
+        <View style={styles.insightCard}>
+          <View style={styles.insightHeader}>
+            <Text style={styles.sectionTitle}>Öngörüler</Text>
+            <Text style={styles.sectionMeta}>son 30 gün</Text>
+          </View>
+          <View style={styles.insightRow}>
+            <View>
+              <Text style={styles.insightLabel}>En Çok Tercih Edilen</Text>
+              <Text style={styles.insightValue}>{displayTopService?.name ?? '—'}</Text>
+            </View>
+            <Text style={styles.insightRight}>{displayTopService?.value ?? '—'}</Text>
+          </View>
+          <View style={styles.insightRow}>
+            <View>
+              <Text style={styles.insightLabel}>En Yoğun Gün</Text>
+              <Text style={styles.insightValue}>{displayBusiestDay?.name ?? '—'}</Text>
+            </View>
+            <Text style={styles.insightRight}>{displayBusiestDay?.value ?? '—'}</Text>
+          </View>
+        </View>
       </ScrollView>
-
-      <KpiHero total={kpiTotal} completed={kpiCompleted} />
-
-      <View style={styles.smallKpiRow}>
-        <SmallKpi label="Tamamlanan" value={kpiCompleted} sub={`/ ${kpiTotal} randevu`} />
-        <SmallKpi label="Tahmini Gelir" value={kpiRevenue} sub="bugün" revenue />
-      </View>
-
-      <View style={styles.insightCard}>
-        <View style={styles.insightHeader}>
-          <Text style={styles.sectionTitle}>Öngörüler</Text>
-          <Text style={styles.sectionMeta}>son 30 gün</Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.insightRow}>
-          <View>
-            <Text style={styles.insightLabel}>En Çok Tercih Edilen</Text>
-            <Text style={styles.insightValue}>{topService?.name ?? '—'}</Text>
-          </View>
-          <Text style={styles.insightRight}>{topService?.value ?? '—'}</Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.insightRow}>
-          <View>
-            <Text style={styles.insightLabel}>En Yoğun Gün</Text>
-            <Text style={styles.insightValue}>{busiestDay?.name ?? '—'}</Text>
-          </View>
-          <Text style={styles.insightRight}>{busiestDay?.value ?? '—'}</Text>
-        </View>
-      </View>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -257,14 +305,46 @@ const styles = StyleSheet.create({
     backgroundColor: v2Colors.paper,
     flex: 1,
   },
+  scroll: {
+    flex: 1,
+  },
   content: {
-    paddingBottom: 124,
+    paddingTop: dp(14),
+    paddingBottom: dp(120),
+  },
+  profileFab: {
+    alignItems: 'center',
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line2,
+    borderRadius: dp(20),
+    borderWidth: dp(1.5),
+    height: dp(40),
+    justifyContent: 'center',
+    position: 'absolute',
+    right: dp(18),
+    top: dp(16),
+    width: dp(40),
+    zIndex: 30,
+  },
+  profileFabText: {
+    alignItems: 'center',
+    backgroundColor: v2Colors.spruce,
+    borderRadius: dp(17),
+    color: v2Colors.paper,
+    fontFamily: v2Fonts.mono,
+    fontSize: 13,
+    height: dp(34),
+    lineHeight: dp(34),
+    textAlign: 'center',
+    width: dp(34),
   },
   headerRow: {
     alignItems: 'flex-end',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: v2Spacing[22],
+    paddingBottom: dp(15),
+    paddingLeft: H_PAD,
+    paddingRight: dp(66),
   },
   overline: {
     color: v2Colors.ink3,
@@ -276,43 +356,45 @@ const styles = StyleSheet.create({
   title: {
     color: v2Colors.ink,
     fontFamily: v2Fonts.display,
-    fontSize: 36,
+    fontSize: 38,
     includeFontPadding: false,
     lineHeight: 38,
-    marginTop: 6,
+    marginTop: dp(8),
   },
   dateText: {
     color: v2Colors.ink2,
     fontFamily: v2Fonts.mono,
-    fontSize: 11,
-    marginBottom: 7,
+    fontSize: 13,
+    marginBottom: dp(7),
   },
   chipRow: {
-    gap: 8,
-    paddingHorizontal: v2Spacing[22],
-    paddingTop: v2Spacing[14],
+    gap: dp(8),
+    paddingBottom: dp(4),
+    paddingHorizontal: H_PAD,
+    paddingTop: dp(14),
   },
   chip: {
     alignItems: 'center',
     borderColor: v2Colors.line2,
     borderRadius: v2Radii.pill,
-    borderWidth: 1,
+    borderWidth: dp(1),
     flexDirection: 'row',
-    gap: 7,
-    height: 32,
-    paddingHorizontal: 13,
+    gap: dp(7),
+    height: dp(34),
+    paddingHorizontal: dp(15),
   },
   chipSelected: {
     backgroundColor: v2Colors.ink,
     borderColor: v2Colors.ink,
+    minWidth: dp(86),
   },
   chipAvatar: {
     alignItems: 'center',
     backgroundColor: v2Colors.spruceSoft,
-    borderRadius: 9,
-    height: 18,
+    borderRadius: dp(9),
+    height: dp(18),
     justifyContent: 'center',
-    width: 18,
+    width: dp(18),
   },
   chipAvatarSelected: {
     backgroundColor: 'rgba(255,255,255,0.14)',
@@ -320,34 +402,35 @@ const styles = StyleSheet.create({
   chipAvatarText: {
     color: v2Colors.spruce,
     fontFamily: v2Fonts.bodyBold,
-    fontSize: 8,
+    fontSize: 9,
   },
   chipText: {
     color: v2Colors.ink2,
     fontFamily: v2Fonts.bodySemiBold,
-    fontSize: 12.5,
+    fontSize: 13,
   },
   chipTextSelected: {
     color: v2Colors.paper,
   },
   heroCard: {
     backgroundColor: v2Colors.spruce,
-    borderRadius: v2Radii.xl,
-    marginHorizontal: v2Spacing[22],
-    marginTop: v2Spacing[18],
-    minHeight: 134,
+    borderRadius: dp(20),
+    marginHorizontal: H_PAD,
+    marginTop: dp(16),
+    minHeight: dp(153),
     overflow: 'hidden',
-    paddingHorizontal: v2Spacing[20],
-    paddingVertical: v2Spacing[18],
+    paddingBottom: dp(20),
+    paddingHorizontal: dp(22),
+    paddingTop: dp(22),
     shadowColor: v2Colors.spruce,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.35,
-    shadowRadius: 20,
+    shadowRadius: dp(20),
   },
   heroWatermark: {
-    bottom: -24,
+    bottom: dp(-46),
     position: 'absolute',
-    right: -20,
+    right: dp(-20),
   },
   heroTop: {
     alignItems: 'center',
@@ -358,63 +441,79 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.62)',
     fontFamily: v2Fonts.bodyBold,
     fontSize: 11,
-    letterSpacing: 1.8,
+    letterSpacing: 2.2,
     textTransform: 'uppercase',
   },
   heroTrend: {
+    alignItems: 'center',
+    color: '#9FD9BE',
+    flexDirection: 'row',
+    fontFamily: v2Fonts.mono,
+    fontSize: 12,
+    gap: dp(4),
+    position: 'absolute',
+    right: dp(22),
+    top: dp(22),
+  },
+  heroTrendText: {
     color: '#9FD9BE',
     fontFamily: v2Fonts.mono,
-    fontSize: 11,
+    fontSize: 12,
   },
   heroNumber: {
     color: v2Colors.paper,
     fontFamily: v2Fonts.mono,
-    fontSize: 58,
+    fontSize: 62,
     includeFontPadding: false,
-    lineHeight: 64,
-    marginTop: 8,
+    lineHeight: 62,
+    marginTop: dp(10),
   },
   heroSub: {
     color: 'rgba(255,255,255,0.78)',
     fontFamily: v2Fonts.bodyMedium,
-    fontSize: 13,
+    fontSize: 13.5,
+    marginTop: dp(6),
   },
   smallKpiRow: {
     flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: v2Spacing[22],
-    paddingTop: 12,
+    gap: dp(12),
+    paddingHorizontal: H_PAD,
+    paddingTop: dp(12),
   },
   smallKpi: {
     backgroundColor: v2Colors.card,
     borderColor: v2Colors.line,
-    borderRadius: v2Radii.card,
-    borderWidth: 1,
+    borderRadius: dp(16),
+    borderWidth: dp(1),
     flex: 1,
-    minHeight: 90,
-    padding: 14,
+    minHeight: dp(116),
+    padding: dp(16),
   },
   smallKpiLabel: {
     color: v2Colors.ink3,
     fontFamily: v2Fonts.bodySemiBold,
-    fontSize: 10,
-    letterSpacing: 1.4,
+    fontSize: 10.5,
+    letterSpacing: 1.6,
     textTransform: 'uppercase',
   },
   smallKpiValue: {
     color: v2Colors.ink,
     fontFamily: v2Fonts.mono,
-    fontSize: 30,
-    marginTop: 8,
+    fontSize: 32,
+    marginTop: dp(8),
   },
   revenueValue: {
     color: v2Colors.brass,
   },
+  revenueCurrency: {
+    color: v2Colors.ink3,
+    fontSize: 18,
+  },
   smallKpiSub: {
     color: v2Colors.ink2,
     fontFamily: v2Fonts.bodyMedium,
-    fontSize: 11,
-    marginTop: 3,
+    fontSize: 12,
+    marginTop: dp(2),
   },
   sectionTitleRow: {
     alignItems: 'center',
@@ -433,52 +532,49 @@ const styles = StyleSheet.create({
   sectionMeta: {
     color: v2Colors.ink3,
     fontFamily: v2Fonts.mono,
-    fontSize: 10,
+    fontSize: 11,
   },
   insightCard: {
     backgroundColor: v2Colors.card,
     borderColor: v2Colors.line,
-    borderRadius: v2Radii.card,
-    borderWidth: 1,
-    marginHorizontal: v2Spacing[22],
-    marginTop: v2Spacing[16],
+    borderRadius: dp(18),
+    borderWidth: dp(1),
+    marginHorizontal: H_PAD,
+    marginTop: dp(14),
     overflow: 'hidden',
+    padding: dp(20),
   },
   insightHeader: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+    marginBottom: dp(4),
   },
   insightRow: {
     alignItems: 'center',
+    borderTopColor: v2Colors.line,
+    borderTopWidth: dp(1),
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+    paddingVertical: dp(15),
   },
   insightLabel: {
     color: v2Colors.ink3,
     fontFamily: v2Fonts.bodySemiBold,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1.4,
     textTransform: 'uppercase',
   },
   insightValue: {
     color: v2Colors.ink,
     fontFamily: v2Fonts.display,
-    fontSize: 20,
-    marginTop: 5,
+    fontSize: 21,
+    marginTop: dp(3),
   },
   insightRight: {
     color: v2Colors.spruce,
     fontFamily: v2Fonts.mono,
-    fontSize: 18,
-  },
-  divider: {
-    backgroundColor: v2Colors.line,
-    height: 1,
+    fontSize: 22,
   },
   staffCard: {
     backgroundColor: v2Colors.card,

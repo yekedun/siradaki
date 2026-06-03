@@ -87,7 +87,7 @@ export default function InviteScreen() {
       return;
     }
 
-    router.replace('/');
+    router.replace('/(app)/onboarding' as any);
   }
 
   if (state === 'checking') {

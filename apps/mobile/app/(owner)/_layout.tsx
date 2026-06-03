@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
-import { BarChart3, CalendarDays, Settings, Users, Wallet } from 'lucide-react-native';
-import { View } from 'react-native';
+import { BarChart3, CalendarDays, Clock, Users, Wallet } from 'lucide-react-native';
+import { Dimensions } from 'react-native';
 import { ShopProvider } from '../../lib/ShopContext';
 import {
   HIDDEN_OWNER_ROUTES,
@@ -8,6 +8,8 @@ import {
   type OwnerTabDefinition,
 } from '../../lib/owner-tabs';
 
+const OWNER_SCALE = Dimensions.get('window').width / 354;
+const dp = (value: number) => Math.round(value * OWNER_SCALE * 100) / 100;
 const ICON_SIZE = 22;
 
 function OwnerTabIcon({
@@ -26,27 +28,14 @@ function OwnerTabIcon({
       <CalendarDays size={ICON_SIZE} color={color} />
     ) : tab.icon === 'wallet' ? (
       <Wallet size={ICON_SIZE} color={color} />
-    ) : tab.icon === 'users' ? (
-      <Users size={ICON_SIZE} color={color} />
+    ) : tab.icon === 'clock' ? (
+      <Clock size={ICON_SIZE} color={color} />
     ) : (
-      <Settings size={ICON_SIZE} color={color} />
+      <Users size={ICON_SIZE} color={color} />
     );
 
   return (
-    <View style={{ alignItems: 'center', height: 32, justifyContent: 'flex-start', width: 30 }}>
-      {icon}
-      {focused ? (
-        <View
-          style={{
-            backgroundColor: '#2D6AE0',
-            borderRadius: 2,
-            height: 4,
-            marginTop: 5,
-            width: 4,
-          }}
-        />
-      ) : null}
-    </View>
+    icon
   );
 }
 
@@ -59,17 +48,21 @@ export default function OwnerLayout() {
           tabBarStyle: {
             backgroundColor: 'rgba(251,248,241,0.92)',
             borderTopColor: '#E5DECF',
-            borderTopWidth: 1,
-            height: 88,
-            paddingTop: 10,
-            paddingBottom: 8,
+            borderTopWidth: dp(1),
+            height: dp(88),
+            paddingTop: dp(6),
+            paddingBottom: dp(24),
           },
           tabBarActiveTintColor: '#184A3A',
           tabBarInactiveTintColor: '#938A7C',
+          tabBarIconStyle: {
+            marginTop: dp(-12),
+          },
           tabBarLabelStyle: {
             fontFamily: 'HankenGrotesk-SemiBold',
             fontSize: 10,
             letterSpacing: 0,
+            marginTop: dp(-8),
           },
         }}
       >

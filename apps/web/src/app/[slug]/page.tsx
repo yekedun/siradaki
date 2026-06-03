@@ -37,7 +37,7 @@ export default async function ShopPage({ params }: Props) {
   // Shop
   const { data: shop } = await supabase
     .from('shops')
-    .select('id, name, display_name, address, slug, timezone')
+    .select('id, name, display_name, address, slug, timezone, phone')
     .eq('slug', slug)
     .eq('status', 'active')
     .maybeSingle();
@@ -67,11 +67,12 @@ export default async function ShopPage({ params }: Props) {
   return (
     <BookingClient
       shop={{
-        id:      shop.id,
-        name:    shop.name || shop.display_name,
-        address: shop.address ?? null,
-        slug:    shop.slug,
+        id:       shop.id,
+        name:     shop.name || shop.display_name,
+        address:  shop.address ?? null,
+        slug:     shop.slug,
         timezone: shop.timezone,
+        phone:    shop.phone ?? null,
       }}
       services={(services ?? []).map(s => ({
         id:           s.id,

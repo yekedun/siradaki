@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { estimatedAppointmentRevenueCents } from '../../lib/revenue-mappers';
@@ -39,6 +41,7 @@ function monthLabel() {
 
 export default function KazancScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { shopId, staffList } = useShop();
   const [refreshing, setRefreshing] = useState(false);
   const [totalCiro, setTotalCiro] = useState(0);
@@ -126,9 +129,17 @@ export default function KazancScreen() {
       : staffRows;
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
+    <View style={styles.screenWrap}>
+      <Pressable
+        accessibilityLabel="Ayarlar ve Profil"
+        onPress={() => router.push('/settings' as never)}
+        style={[styles.profileFab, { top: insets.top + 16 }]}
+      >
+        <Text style={styles.profileFabText}>EK</Text>
+      </Pressable>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={v2Colors.spruce} />}
     >
@@ -140,7 +151,6 @@ export default function KazancScreen() {
         </View>
         <Text style={styles.dateText}>{monthLabel()}</Text>
       </View>
-
       {/* Hero card */}
       <View style={styles.heroCard}>
         <Text style={styles.heroLabel}>Bu Ay · Toplam Ciro</Text>
@@ -195,13 +205,41 @@ export default function KazancScreen() {
         </View>
       )}
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  screenWrap: {
     backgroundColor: v2Colors.paper,
     flex: 1,
+  },
+  screen: {
+    flex: 1,
+  },
+  profileFab: {
+    alignItems: 'center',
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line2,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    height: 40,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 18,
+    width: 40,
+    zIndex: 30,
+  },
+  profileFabText: {
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 17,
+    color: v2Colors.paper,
+    fontFamily: v2Fonts.mono,
+    fontSize: 13,
+    height: 34,
+    lineHeight: 34,
+    textAlign: 'center',
+    width: 34,
   },
   content: {
     paddingBottom: 120,
@@ -239,8 +277,8 @@ const styles = StyleSheet.create({
   heroCard: {
     backgroundColor: v2Colors.spruce,
     borderRadius: v2Radii.card,
-    marginHorizontal: v2Spacing[22],
-    marginTop: v2Spacing[16],
+    marginHorizontal: v2Spacing[16],
+    marginTop: v2Spacing[8],
     padding: v2Spacing[20],
   },
   heroLabel: {
@@ -303,7 +341,7 @@ const styles = StyleSheet.create({
     fontFamily: v2Fonts.bodySemiBold,
     fontSize: 11,
     letterSpacing: 2.2,
-    marginHorizontal: v2Spacing[22],
+    marginHorizontal: v2Spacing[16],
     marginTop: v2Spacing[24],
     marginBottom: v2Spacing[10],
     textTransform: 'uppercase',
@@ -311,7 +349,7 @@ const styles = StyleSheet.create({
   staffCard: {
     backgroundColor: v2Colors.card,
     borderRadius: v2Radii.card,
-    marginHorizontal: v2Spacing[22],
+    marginHorizontal: v2Spacing[16],
     overflow: 'hidden',
   },
   staffRow: {

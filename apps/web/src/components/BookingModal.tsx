@@ -170,23 +170,10 @@ function ModalLoading() {
 }
 
 function ModalSuccess({
-  summary, onClose, staffPhone, appointmentId,
+  summary, onClose, staffPhone, appointmentId, customerPhone,
 }: {
-  summary: string; onClose: () => void; staffPhone?: string | null; appointmentId: string;
+  summary: string; onClose: () => void; staffPhone?: string | null; appointmentId: string; customerPhone?: string | null;
 }) {
-  const [notifState, setNotifState] = useState<'idle' | 'subscribed' | 'denied' | 'unsupported'>(() => {
-    if (typeof window === 'undefined') return 'unsupported';
-    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window) || !VAPID_PUBLIC_KEY) return 'unsupported';
-    if (Notification.permission === 'denied') return 'denied';
-    if (Notification.permission === 'granted') return 'subscribed';
-    return 'idle';
-  });
-
-  async function handleNotifRequest() {
-    setNotifState('subscribed');
-    await subscribeAndSave(appointmentId).catch(() => {});
-  }
-
   return (
     <div className="p-7 pb-6">
       <div className="flex items-center gap-2.5">
@@ -202,19 +189,17 @@ function ModalSuccess({
         {summary}
       </div>
 
-      {notifState === 'idle' && (
-        <button
-          onClick={handleNotifRequest}
-          className="w-full mt-4 h-12 rounded-md border border-brand-200 bg-brand-50 text-brand-700 font-sans font-semibold text-sm cursor-pointer hover:bg-brand-100 transition-colors duration-150"
-        >
-          🔔 Hatırlatma Al
-        </button>
-      )}
-      {notifState === 'subscribed' && (
-        <div className="mt-4 bg-mint-50 border border-mint-200 rounded-md px-3.5 py-3 text-sm text-mint-700 font-semibold">
-          ✓ Randevunuzdan önce hatırlatma gönderilecek
+      <div className="mt-4 flex items-start gap-3 bg-[#F0FDF4] border border-[#86EFAC] rounded-md px-3.5 py-3">
+        <span className="text-lg leading-none mt-0.5">💬</span>
+        <div className="text-sm text-[#166534] leading-snug">
+          <strong>Detaylar WhatsApp&apos;ına gönderildi</strong>
+          <div className="font-normal mt-0.5 opacity-80">
+            {customerPhone
+              ? <>{customerPhone} numarasına randevu detayları iletilecek</>
+              : 'WhatsApp üzerinden randevu detayları gönderilecek'}
+          </div>
         </div>
-      )}
+      </div>
 
       <div className="flex gap-2.5 mt-4">
         <button
@@ -282,6 +267,7 @@ export function BookingModal({
   const [state,          setState]         = useState<ModalState>('form');
   const [errorType,      setErrorType]     = useState<ErrorType>('conflict');
   const [appointmentId,  setAppointmentId] = useState('');
+  const [customerPhone,  setCustomerPhone] = useState('');
   const submittingRef = useRef(false);
 
   if (!open) return null;
@@ -310,6 +296,7 @@ export function BookingModal({
       if (!res.ok)            { setErrorType('generic');  setState('error'); return; }
       const data = await res.json().catch(() => ({}));
       setAppointmentId(data?.appointment_id ?? '');
+      setCustomerPhone(phone.trim());
       setState('success');
       onSuccess();
     } catch {
@@ -339,7 +326,7 @@ export function BookingModal({
       >
         {state === 'form'    && <ModalForm    summary={summary} onClose={handleClose} onConfirm={handleConfirm} />}
         {state === 'loading' && <ModalLoading />}
-        {state === 'success' && <ModalSuccess summary={summary} onClose={handleClose} staffPhone={staffPhone} appointmentId={appointmentId} />}
+        {state === 'success' && <ModalSuccess summary={summary} onClose={handleClose} staffPhone={staffPhone} appointmentId={appointmentId} customerPhone={customerPhone} />}
         {state === 'error'   && <ModalError   errorType={errorType} onClose={handleClose} />}
       </div>
     </div>

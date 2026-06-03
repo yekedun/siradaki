@@ -10,6 +10,7 @@ import {
   Pressable,
 } from 'react-native';
 import { Move, Plus } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { buildLocalAppointmentTimestamp, formatLocalAppointmentDate } from '../../lib/appointment-time';
@@ -93,6 +94,7 @@ function getToday(): Date {
 
 export default function AgendaScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { shopSlug, workingHours, services, staffList: barberList, reload } = useShop();
   const shopWorkingHours = workingHours as AppointmentWorkingHours | null;
 
@@ -238,12 +240,18 @@ export default function AgendaScreen() {
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
+    <View style={styles.screen}>
+      <Pressable
+        accessibilityLabel="Ayarlar ve Profil"
+        onPress={() => router.push('/settings' as never)}
+        style={[styles.profileFab, { top: insets.top + 16 }]}
+      >
+        <Text style={styles.profileFabText}>EK</Text>
+      </Pressable>
+      <View style={[styles.header, { paddingTop: insets.top + v2Spacing[16] }]}>
         <Text style={styles.overline}>Berber · Dükkan Paneli</Text>
         <Text style={styles.title}>Ajanda</Text>
       </View>
-
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -431,6 +439,30 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: v2Colors.paper,
   },
+  profileFab: {
+    alignItems: 'center',
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line2,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    height: 40,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 18,
+    width: 40,
+    zIndex: 30,
+  },
+  profileFabText: {
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 17,
+    color: v2Colors.paper,
+    fontFamily: v2Fonts.mono,
+    fontSize: 13,
+    height: 34,
+    lineHeight: 34,
+    textAlign: 'center',
+    width: 34,
+  },
   header: {
     paddingBottom: 0,
     paddingHorizontal: v2Spacing[40],
@@ -504,10 +536,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   colScroll: {
-    flexGrow: 0,
-    flexShrink: 1,
-    height: 520,
-    maxHeight: 520,
+    flex: 1,
   },
   colContent: {
     alignItems: 'flex-start',

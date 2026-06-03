@@ -20,6 +20,7 @@ export const v2Colors = {
 
 export const v2Fonts = {
   display: 'Newsreader-Medium',
+  displayItalic: 'Newsreader-MediumItalic',
   body: 'HankenGrotesk-Regular',
   bodyMedium: 'HankenGrotesk-Medium',
   bodySemiBold: 'HankenGrotesk-SemiBold',

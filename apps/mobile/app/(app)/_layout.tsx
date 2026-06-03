@@ -18,8 +18,8 @@
  */
 import { Tabs } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
-import { Clock3, MinusCircle, Settings } from 'lucide-react-native';
-import { colors } from '../../lib/theme';
+import { CalendarDays, Ban, User } from 'lucide-react-native';
+import { v2Colors } from '../../lib/v2-tokens';
 
 /**
  * Active-tab indicator — thin 2px line at the top of the active tab.
@@ -32,18 +32,23 @@ function TabIndicator({ focused }: { focused: boolean }) {
   return <View style={styles.indicator} />;
 }
 
+// onboarding: full-screen, no tab bar
+// working-hours: push screen, tab bar stays visible (design S4 shows tab bar)
+const HIDDEN_FROM_TABS = ['working-hours', 'onboarding'] as const;   // href:null for both
+const HIDDEN_TABBAR    = ['onboarding'] as const;                      // hide bar only here
+
 export default function AppLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: colors.ink[900],
-        tabBarInactiveTintColor: colors.slate[500],
+        tabBarActiveTintColor: v2Colors.spruce,
+        tabBarInactiveTintColor: v2Colors.ink3,
         tabBarLabelStyle: styles.tabLabel,
       }}
     >
-      {/* M9 — Randevular */}
+      {/* S1 — Randevular */}
       <Tabs.Screen
         name="index"
         options={{
@@ -51,13 +56,13 @@ export default function AppLayout() {
           tabBarIcon: ({ color, focused }) => (
             <>
               <TabIndicator focused={focused} />
-              <Clock3 size={20} color={color} />
+              <CalendarDays size={20} color={color} />
             </>
           ),
         }}
       />
 
-      {/* M10 — Blok */}
+      {/* S2 — Blok */}
       <Tabs.Screen
         name="block"
         options={{
@@ -65,13 +70,13 @@ export default function AppLayout() {
           tabBarIcon: ({ color, focused }) => (
             <>
               <TabIndicator focused={focused} />
-              <MinusCircle size={20} color={color} />
+              <Ban size={20} color={color} />
             </>
           ),
         }}
       />
 
-      {/* M11 — Hesabım */}
+      {/* S3 — Hesabım */}
       <Tabs.Screen
         name="settings"
         options={{
@@ -79,11 +84,27 @@ export default function AppLayout() {
           tabBarIcon: ({ color, focused }) => (
             <>
               <TabIndicator focused={focused} />
-              <Settings size={20} color={color} />
+              <User size={20} color={color} />
             </>
           ),
         }}
       />
+
+      {/* Routes not shown in tab bar */}
+      {HIDDEN_FROM_TABS.map(route => (
+        <Tabs.Screen
+          key={route}
+          name={route}
+          options={{
+            href: null,
+            // Hide entire tab bar only for onboarding (full-screen flow)
+            // working-hours keeps the tab bar visible per design S4
+            tabBarStyle: HIDDEN_TABBAR.includes(route as any)
+              ? { display: 'none' }
+              : styles.tabBar,
+          }}
+        />
+      ))}
     </Tabs>
   );
 }
@@ -98,32 +119,22 @@ const styles = StyleSheet.create({
    */
   tabBar: {
     borderTopWidth: 1,
-    borderTopColor: colors.slate[200],
-    backgroundColor: 'rgba(247,248,250,0.94)',
+    borderTopColor: v2Colors.line,
+    backgroundColor: 'rgba(251,248,241,0.94)',
     height: 74,
     paddingBottom: 6,
   },
-
-  /**
-   * Tab label: fontSize 10, fontWeight 600, letterSpacing 0.04em
-   * 0.04em at 10px = 0.4
-   */
   tabLabel: {
-    fontFamily: 'Montserrat-SemiBold',
+    fontFamily: 'HankenGrotesk-SemiBold',
     fontSize: 10,
     letterSpacing: 0.4,
   },
-
-  /**
-   * Active indicator: top:0, left~26%, right~26% → 48% width centred,
-   * height 2, borderRadius 1, bg ink-900
-   */
   indicator: {
     position: 'absolute',
     top: 0,
     width: '48%',
     height: 2,
     borderRadius: 1,
-    backgroundColor: colors.ink[900],
+    backgroundColor: v2Colors.spruce,
   },
 });

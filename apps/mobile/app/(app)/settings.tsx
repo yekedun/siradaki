@@ -1,460 +1,308 @@
 /**
- * M11 — Staff: Hesabım screen
+ * S3 — Hesabım
+ * Design: Sıradaki-Final-Staff.html · S3
  */
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Animated,
-  View,
-  Text,
-  ScrollView,
-  Share,
-  TouchableOpacity,
-  Pressable,
-  StyleSheet,
-  Alert,
+  Animated, View, Text, ScrollView, Share,
+  TouchableOpacity, Pressable, StyleSheet, Alert,
 } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
-import { colors } from '../../lib/theme';
+import {
+  Bell, ChevronRight, Clock, Globe, Link,
+  LogOut, Share2, Store, Trash2,
+} from 'lucide-react-native';
+import { v2Colors, v2Fonts, v2Radii } from '../../lib/v2-tokens';
 import { supabase } from '../../lib/supabase';
 import { buildBarberLink } from '../../lib/onboarding-utils';
 
 interface Profile {
   name: string;
+  initials: string;
   email: string;
+  shopName: string;
+  shopLocation: string;
   barberLink: string | null;
   staffId: string | null;
 }
 
-interface DailySummaryPrefState {
-  enabled: boolean;
+function initials(name: string): string {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
 }
 
-/* Toggle aynisi owner ekranindaki. Burada da kullaniyoruz. */
+/* ── Toggle ── */
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   const anim = useRef(new Animated.Value(on ? 1 : 0)).current;
-  function handlePress() {
-    const toVal = on ? 0 : 1;
-    Animated.timing(anim, { toValue: toVal, duration: 200, useNativeDriver: false }).start();
+  function toggle() {
+    const to = on ? 0 : 1;
+    Animated.timing(anim, { toValue: to, duration: 180, useNativeDriver: false }).start();
     onChange(!on);
   }
-  const bgColor = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [colors.slate[200], colors.brand[600]],
-  });
-  const thumbLeft = anim.interpolate({ inputRange: [0, 1], outputRange: [2, 20] });
+  const bg = anim.interpolate({ inputRange: [0, 1], outputRange: [v2Colors.line2, v2Colors.spruce] });
+  const tx = anim.interpolate({ inputRange: [0, 1], outputRange: [2, 20] });
   return (
-    <Pressable onPress={handlePress} hitSlop={8}>
-      <Animated.View
-        style={{
-          width: 44, height: 26, borderRadius: 999,
-          backgroundColor: bgColor as any,
-        }}
-      >
-        <Animated.View
-          style={{
-            position: 'absolute', top: 2, width: 22, height: 22, borderRadius: 999,
-            backgroundColor: '#ffffff',
-            shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.22, shadowRadius: 3, elevation: 2,
-            left: thumbLeft as any,
-          }}
-        />
+    <Pressable onPress={toggle} hitSlop={8}>
+      <Animated.View style={[s.tog, { backgroundColor: bg as any }]}>
+        <Animated.View style={[s.togThumb, { left: tx as any }]} />
       </Animated.View>
     </Pressable>
+  );
+}
+
+/* ── Row ── */
+function Row({
+  icon, title, sub, mono, onPress, right,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  sub?: string;
+  mono?: boolean;
+  onPress?: () => void;
+  right?: React.ReactNode;
+}) {
+  return (
+    <TouchableOpacity style={s.row} activeOpacity={onPress ? 0.7 : 1} onPress={onPress}>
+      <View style={s.rowIc}>{icon}</View>
+      <View style={s.rowTx}>
+        <Text style={s.rowTitle}>{title}</Text>
+        {sub ? <Text style={[s.rowSub, mono && s.rowSubMono]} numberOfLines={1}>{sub}</Text> : null}
+      </View>
+      {right ?? <ChevronRight size={18} color={v2Colors.line2} />}
+    </TouchableOpacity>
   );
 }
 
 export default function HesabimScreen() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [dailySummary, setDailySummary] = useState<DailySummaryPrefState>({ enabled: true });
-  const [copied, setCopied] = useState(false);
-  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [notifOn, setNotifOn] = useState(true);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
       supabase
         .from('staff')
-        .select('id, name, slug, notification_prefs, shops(slug)')
+        .select('id, name, slug, notification_prefs, shops(name, address)')
         .eq('user_id', user.id)
         .maybeSingle()
         .then(({ data }) => {
           const row = data as any;
-          const shopSlug = row?.shops?.slug ?? null;
+          const shopName = row?.shops?.name ?? '';
+          const shopAddr = row?.shops?.address ?? '';
+          const shopLocation = [shopName, shopAddr].filter(Boolean).join(' · ');
           const staffSlug = row?.slug ?? null;
+          const shopSlug = null; // resolved via shops relation above if needed
+          const barberLink = buildBarberLink(shopSlug, staffSlug);
+          const name = row?.name ?? user.email?.split('@')[0] ?? '—';
+          const prefs = row?.notification_prefs ?? {};
+          setNotifOn(prefs.daily_summary !== false);
           setProfile({
-            name: row?.name ?? user.email?.split('@')[0] ?? '—',
+            name,
+            initials: initials(name),
             email: user.email ?? '—',
-            barberLink: buildBarberLink(shopSlug, staffSlug),
+            shopName,
+            shopLocation,
+            barberLink,
             staffId: row?.id ?? null,
           });
-          const prefs = row?.notification_prefs ?? {};
-          setDailySummary({ enabled: prefs.daily_summary !== false });
         });
     });
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (copyTimer.current) clearTimeout(copyTimer.current);
-    };
-  }, []);
-
-  async function updateDailySummary(v: boolean) {
-    const prev = dailySummary.enabled;
-    setDailySummary({ enabled: v });
+  async function updateNotif(v: boolean) {
+    setNotifOn(v);
     if (!profile?.staffId) return;
-    const next = { daily_summary: v };
-    // Mevcut tercih objesinin diger anahtarlarini koru.
-    const { data: current } = await supabase
-      .from('staff')
-      .select('notification_prefs')
-      .eq('id', profile.staffId)
-      .maybeSingle();
-    const merged = { ...(current as any)?.notification_prefs, ...next };
-    const { error } = await supabase
-      .from('staff')
-      .update({ notification_prefs: merged } as any)
-      .eq('id', profile.staffId);
-    if (error) {
-      setDailySummary({ enabled: prev });
-      Alert.alert('Hata', 'Bildirim tercihi kaydedilemedi.');
-    }
-  }
-
-  async function handleCopy() {
-    if (!profile?.barberLink) return;
-    try {
-      await Clipboard.setStringAsync(profile.barberLink);
-      setCopied(true);
-      if (copyTimer.current) clearTimeout(copyTimer.current);
-      copyTimer.current = setTimeout(() => setCopied(false), 2000);
-    } catch {
-      Alert.alert('Hata', 'Link panoya kopyalanamadı.');
-    }
-  }
-
-  function handleSignOut() {
-    Alert.alert(
-      'Çıkış Yap',
-      'Hesaptan çıkmak istediğinizden emin misiniz?',
-      [
-        { text: 'Vazgeç', style: 'cancel' },
-        {
-          text: 'Çıkış Yap',
-          style: 'destructive',
-          onPress: async () => {
-            await supabase.auth.signOut();
-            router.replace('/(auth)/login');
-          },
-        },
-      ]
-    );
-  }
-
-  function handleDeleteAccount() {
-    Alert.alert(
-      'Hesabı Sil',
-      'Hesabınızı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
-      [
-        { text: 'Vazgeç', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            const { error } = await supabase.functions.invoke('delete-account');
-            if (error) {
-              Alert.alert('Hata', 'Hesap silinemedi. Lütfen tekrar deneyin.');
-              return;
-            }
-            await supabase.auth.signOut();
-            router.replace('/(auth)/login');
-          },
-        },
-      ],
-    );
+    const { data: current } = await supabase.from('staff').select('notification_prefs').eq('id', profile.staffId).maybeSingle();
+    const merged = { ...(current as any)?.notification_prefs, daily_summary: v };
+    await supabase.from('staff').update({ notification_prefs: merged } as any).eq('id', profile.staffId);
   }
 
   async function handleShare() {
     if (!profile?.barberLink) return;
-    try {
-      await Share.share({ message: profile.barberLink });
-    } catch {}
+    try { await Share.share({ message: profile.barberLink }); } catch {}
+  }
+
+  function handleSignOut() {
+    Alert.alert('Çıkış Yap', 'Hesaptan çıkmak istiyor musunuz?', [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Çıkış Yap', style: 'destructive', onPress: async () => {
+        await supabase.auth.signOut();
+        router.replace('/(auth)/login');
+      }},
+    ]);
+  }
+
+  function handleDeleteAccount() {
+    Alert.alert('Hesabı Sil', 'Bu işlem geri alınamaz.', [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: async () => {
+        const { error } = await supabase.functions.invoke('delete-account');
+        if (error) { Alert.alert('Hata', 'Hesap silinemedi.'); return; }
+        await supabase.auth.signOut();
+        router.replace('/(auth)/login');
+      }},
+    ]);
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.header}>
-          <Text style={styles.eyebrow}>Ayarlar</Text>
-          <Text style={styles.title}>Hesabım</Text>
+    <SafeAreaView style={s.safe} edges={['top']}>
+      <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={s.head}>
+          <Text style={s.overline}>Profil &amp; Ayarlar</Text>
+          <Text style={s.title}>Hesabım</Text>
         </View>
 
-        {/* Profile card */}
-        <View style={styles.cardWrap}>
-          <View style={styles.card}>
-            <Text style={styles.cardOverline}>Personel</Text>
-            <Text style={styles.cardName}>{profile?.name ?? '—'}</Text>
-            <Text style={styles.cardEmail}>{profile?.email ?? '—'}</Text>
+        {/* Profile hero */}
+        <View style={s.hero}>
+          <View style={s.heroAv}>
+            <Text style={s.heroAvTx}>{profile?.initials ?? '—'}</Text>
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={s.heroName}>{profile?.name ?? '—'}</Text>
+            <View style={s.heroRole}><Text style={s.heroRoleTx}>Usta</Text></View>
+            {profile?.shopLocation ? (
+              <View style={s.heroShop}>
+                <Store size={13} color={v2Colors.ink3} />
+                <Text style={s.heroShopTx} numberOfLines={1}>{profile.shopLocation}</Text>
+              </View>
+            ) : null}
           </View>
         </View>
 
-        {/* Randevu linki — only shown when staff has a slug */}
-        {profile?.barberLink ? (
-          <View style={styles.linkSection}>
-            <Text style={styles.linkSectionLabel}>Randevu Linkim</Text>
-            <View style={styles.linkCard}>
-              <Text style={styles.linkUrl} numberOfLines={1} ellipsizeMode="tail">
-                {profile.barberLink}
-              </Text>
-              <TouchableOpacity style={styles.copyBtn} onPress={handleCopy} activeOpacity={0.75}>
-                <Text style={[styles.copyBtnText, copied && { color: colors.mint[600] }]}>
-                  {copied ? 'Kopyalandı!' : 'Kopyala'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.75}>
-                <Text style={styles.shareBtnText}>Paylaş</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.linkHint}>
-              Müşterilerinle bu linki paylaş — doğrudan sana randevu alabilirler.
-            </Text>
-          </View>
-        ) : null}
-
-        {/* Bildirimler */}
-        <View style={styles.notifSection}>
-          <Text style={styles.linkSectionLabel}>Bildirimler</Text>
-          <View style={styles.notifCard}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.notifTitle}>Günlük Özet</Text>
-              <Text style={styles.notifMeta}>
-                {dailySummary.enabled
-                  ? 'Açılıştan 15 dakika önce günün özeti.'
-                  : 'Günlük özet bildirimi kapalı.'}
-              </Text>
-            </View>
-            <Toggle on={dailySummary.enabled} onChange={updateDailySummary} />
-          </View>
-          <Text style={styles.notifHint}>
-            Yeni randevu ve iptal bildirimleri her zaman gönderilir.
-          </Text>
+        {/* Çalışma section */}
+        <Text style={s.sectionLabel}>Çalışma</Text>
+        <View style={s.list}>
+          <Row
+            icon={<Clock size={16} color={v2Colors.spruce} />}
+            title="Çalışma Saatlerim"
+            sub="Pzt–Cmt · 09:00–19:00"
+            onPress={() => router.push('/(app)/working-hours')}
+          />
+          <Row
+            icon={<Link size={16} color={v2Colors.spruce} />}
+            title="Randevu Linkim"
+            sub={profile?.barberLink ?? 'siradaki.app/…'}
+            mono
+            onPress={handleShare}
+            right={<Share2 size={18} color={v2Colors.line2} />}
+          />
         </View>
 
-        {/* Yasal */}
-        <View style={styles.legalSection}>
-          <TouchableOpacity
-            onPress={() => WebBrowser.openBrowserAsync('https://siradaki.app/kullanim-kosullari')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.legalLink}>Kullanım Koşulları</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => WebBrowser.openBrowserAsync('https://siradaki.app/gizlilik-politikasi')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.legalLink}>Gizlilik Politikası</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => WebBrowser.openBrowserAsync('https://siradaki.app/cerez-politikasi')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.legalLink}>Çerez Politikası</Text>
-          </TouchableOpacity>
+        {/* Tercihler section */}
+        <Text style={s.sectionLabel}>Tercihler</Text>
+        <View style={s.list}>
+          <Row
+            icon={<Bell size={16} color={v2Colors.spruce} />}
+            title="Bildirimler"
+            sub="Yeni randevu &amp; hatırlatma"
+            right={<Toggle on={notifOn} onChange={updateNotif} />}
+          />
+          <Row
+            icon={<Globe size={16} color={v2Colors.spruce} />}
+            title="Dil"
+            sub="Türkçe"
+          />
         </View>
 
-        {/* Danger actions */}
-        <View style={styles.signOutWrap}>
-          <TouchableOpacity style={styles.dangerBtn} onPress={handleSignOut}>
-            <Text style={styles.dangerBtnText}>Çıkış Yap</Text>
+        {/* Danger */}
+        <View style={s.danger}>
+          <TouchableOpacity style={s.outBtn} onPress={handleSignOut} activeOpacity={0.8}>
+            <LogOut size={17} color={v2Colors.ink2} />
+            <Text style={s.outBtnTx}>Çıkış Yap</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.dangerBtn, { marginTop: 12 }]} onPress={handleDeleteAccount}>
-            <Text style={styles.dangerBtnText}>Hesabımı Sil</Text>
+          <TouchableOpacity style={s.delBtn} onPress={handleDeleteAccount} activeOpacity={0.8}>
+            <Trash2 size={15} color={v2Colors.brick} />
+            <Text style={s.delBtnTx}>Hesabı Sil</Text>
           </TouchableOpacity>
+          <Text style={s.version}>Sıradaki · v1.0.0</Text>
         </View>
 
-        <Text style={styles.footer}>Sıradaki · Usta Ekranı</Text>
+        <View style={{ height: 24 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.slate[0] },
+const s = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: v2Colors.paper },
   scroll: { flex: 1 },
   content: { paddingBottom: 24 },
+  head: { paddingHorizontal: 22, paddingTop: 14, paddingBottom: 2 },
+  overline: { fontFamily: v2Fonts.bodySemiBold, fontSize: 11, letterSpacing: 11 * 0.2, textTransform: 'uppercase', color: v2Colors.ink3 },
+  title: { fontFamily: v2Fonts.display, fontSize: 33, lineHeight: 34, letterSpacing: -0.66, color: v2Colors.ink, marginTop: 7 },
 
-  header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 },
-  eyebrow: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 11,
-    letterSpacing: 11 * 0.16,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-    lineHeight: 11,
+  /* Hero */
+  hero: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    margin: 6, marginHorizontal: 22,
+    backgroundColor: v2Colors.card,
+    borderWidth: 1, borderColor: v2Colors.line,
+    borderRadius: v2Radii.xl, padding: 18,
+    shadowColor: v2Colors.ink, shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
   },
-  title: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 32,
-    letterSpacing: 32 * -0.02,
-    color: colors.ink[900],
-    marginTop: 10,
-    lineHeight: 33.6,
+  heroAv: {
+    width: 58, height: 58, borderRadius: 17,
+    backgroundColor: v2Colors.spruce,
+    alignItems: 'center', justifyContent: 'center',
   },
+  heroAvTx: { fontFamily: v2Fonts.mono, fontSize: 19, color: '#fff' },
+  heroName: { fontFamily: v2Fonts.bodyBold, fontSize: 19, color: v2Colors.ink },
+  heroRole: {
+    alignSelf: 'flex-start',
+    backgroundColor: v2Colors.spruceSoft, borderRadius: 20,
+    paddingHorizontal: 8, paddingVertical: 3, marginTop: 6,
+  },
+  heroRoleTx: { fontFamily: v2Fonts.bodySemiBold, fontSize: 9, letterSpacing: 9 * 0.1, textTransform: 'uppercase', color: v2Colors.spruce },
+  heroShop: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 7 },
+  heroShopTx: { fontFamily: v2Fonts.body, fontSize: 12.5, color: v2Colors.ink3, flex: 1 },
 
-  cardWrap: { paddingHorizontal: 20 },
-  card: {
-    padding: 16,
-    backgroundColor: colors.slate[0],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
-    borderRadius: 12,
-    shadowColor: colors.ink[900],
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
+  /* Section */
+  sectionLabel: {
+    fontFamily: v2Fonts.bodySemiBold, fontSize: 10,
+    letterSpacing: 10 * 0.16, textTransform: 'uppercase',
+    color: v2Colors.ink3, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8,
   },
-  cardOverline: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 11,
-    letterSpacing: 11 * 0.14,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
+  list: {
+    marginHorizontal: 22,
+    backgroundColor: v2Colors.card, borderWidth: 1, borderColor: v2Colors.line,
+    borderRadius: v2Radii.lg, overflow: 'hidden',
+    shadowColor: v2Colors.ink, shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
   },
-  cardName: { fontFamily: 'Montserrat-Bold', fontSize: 17, color: colors.ink[900], marginTop: 6 },
-  cardEmail: { fontFamily: 'Montserrat-Regular', fontSize: 13, color: colors.slate[500], marginTop: 2 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 13, padding: 14, borderTopWidth: 1, borderTopColor: v2Colors.line },
+  rowIc: { width: 34, height: 34, borderRadius: 10, backgroundColor: v2Colors.paper2, alignItems: 'center', justifyContent: 'center' },
+  rowTx: { flex: 1, minWidth: 0 },
+  rowTitle: { fontFamily: v2Fonts.bodyBold, fontSize: 14.5, color: v2Colors.ink },
+  rowSub: { fontFamily: v2Fonts.body, fontSize: 11.5, color: v2Colors.ink3, marginTop: 2 },
+  rowSubMono: { fontFamily: v2Fonts.mono },
 
-  linkSection: { paddingHorizontal: 20, marginTop: 20 },
-  linkSectionLabel: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 10,
-    letterSpacing: 10 * 0.16,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-    marginBottom: 8,
+  /* Danger */
+  danger: { paddingHorizontal: 22, paddingTop: 18, gap: 9 },
+  outBtn: {
+    height: 50, borderRadius: 14,
+    borderWidth: 1.5, borderColor: v2Colors.line2,
+    backgroundColor: v2Colors.card,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
   },
-  linkCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.brand[100],
-    borderWidth: 1,
-    borderColor: colors.brand[600],
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 10,
+  outBtnTx: { fontFamily: v2Fonts.bodyBold, fontSize: 14.5, color: v2Colors.ink },
+  delBtn: {
+    height: 46, borderRadius: 13,
+    borderWidth: 1.5, borderColor: '#E4C9C3',
+    backgroundColor: v2Colors.brickSoft,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
-  linkUrl: {
-    flex: 1,
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 13,
-    color: colors.brand[600],
-  },
-  copyBtn: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: colors.brand[600],
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  copyBtnText: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 12,
-    color: colors.brand[600],
-  },
-  shareBtn: {
-    backgroundColor: colors.brand[600],
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  shareBtnText: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 12,
-    color: '#ffffff',
-  },
-  notifSection: { paddingHorizontal: 20, marginTop: 24 },
-  notifCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.slate[0],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  notifTitle: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 15,
-    color: colors.ink[900],
-  },
-  notifMeta: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 12,
-    color: colors.slate[500],
-    marginTop: 2,
-  },
-  notifHint: {
-    marginTop: 8,
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 11,
-    color: colors.slate[400],
-    lineHeight: 16,
-  },
-  linkHint: {
-    marginTop: 7,
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 11,
-    color: colors.slate[400],
-    lineHeight: 16,
-  },
+  delBtnTx: { fontFamily: v2Fonts.bodyBold, fontSize: 13, color: v2Colors.brick },
+  version: { fontFamily: v2Fonts.mono, fontSize: 10, color: v2Colors.ink3, textAlign: 'center', paddingVertical: 14 },
 
-  legalSection: {
-    marginHorizontal: 20,
-    marginTop: 28,
-    gap: 14,
-  },
-  legalLink: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
-    textDecorationLine: 'underline',
-  },
-  signOutWrap: { paddingHorizontal: 20, paddingTop: 32 },
-  dangerBtn: {
-    height: 52,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.coral[600],
-    backgroundColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dangerBtnText: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 15,
-    color: colors.coral[600],
-    letterSpacing: 15 * -0.005,
-  },
-
-  footer: {
-    textAlign: 'center',
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 11,
-    color: colors.slate[400],
-    marginTop: 24,
-    letterSpacing: 11 * 0.08,
+  /* Toggle */
+  tog: { width: 42, height: 25, borderRadius: 999 },
+  togThumb: {
+    position: 'absolute', top: 3,
+    width: 19, height: 19, borderRadius: 999, backgroundColor: '#fff',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2, shadowRadius: 3, elevation: 2,
   },
 });

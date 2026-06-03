@@ -283,9 +283,8 @@ const styles = StyleSheet.create({
   },
   titleItalic: {
     color: v2Colors.spruce,
-    fontFamily: v2Fonts.display,
+    fontFamily: v2Fonts.displayItalic,
     fontSize: 40,
-    fontStyle: 'italic',
     includeFontPadding: false,
     lineHeight: 44,
   },

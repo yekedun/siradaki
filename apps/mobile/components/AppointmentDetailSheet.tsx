@@ -1,33 +1,26 @@
-/**
- * AppointmentDetailSheet
- * Source: screens.jsx → AppointmentDetailSheet + Sheet (components.jsx)
- *
- * Structure (exact from source):
- *   Sheet open={open} onClose={onClose} title="Randevu Detayı"
- *   ├─ Header row:
- *   │   overline  "10:30 · 45DK"     (11px SemiBold 0.18em uppercase slate-500)
- *   │   name      "Ahmet Yılmaz"     (22px Bold marginTop 8 ink-900)
- *   │   service   "Saç + Sakal · 45 dk · 280₺" (14px Regular fg-3 marginTop 4)
- *   ├─ Action buttons row (gap 8, marginTop 20):
- *   │   Button variant="secondary" full "Ara"
- *   │   Button variant="secondary" full "Mesaj"
- *   │   Button variant="secondary" full "Düzenle"
- *   └─ Footer buttons row (gap 10, marginTop 24):
- *       Button variant="danger"  full size="lg" "İptal Et"
- *       Button variant="accent"  full size="lg" "Tamamlandı"
- */
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Linking,
+  CheckCircle2,
+  ChevronLeft,
+  MessageSquare,
+  MoreVertical,
+  Phone,
+  Scissors,
+  User,
+  X,
+} from 'lucide-react-native';
+import {
   Alert,
+  Linking,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-import { Sheet } from './ds/Sheet';
-import { colors } from '../lib/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
+import { v2Colors, v2Fonts, v2Radii } from '../lib/v2-tokens';
 
 function toWAPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '');
@@ -37,6 +30,15 @@ function toWAPhone(phone: string): string {
   return digits;
 }
 
+function initials(name: string): string {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('');
+}
+
 export interface AppointmentDetail {
   id: string;
   time: string;
@@ -44,6 +46,7 @@ export interface AppointmentDetail {
   customerName: string;
   customerPhone: string | null;
   serviceName: string;
+  staffName?: string | null;
   notes?: string | null;
 }
 
@@ -60,10 +63,10 @@ export function AppointmentDetailSheet({
   visible,
   onClose,
   appointment,
-  onEdit,
   onCancel,
   onComplete,
 }: AppointmentDetailSheetProps) {
+  const insets = useSafeAreaInsets();
   const [busy, setBusy] = useState(false);
   if (!appointment) return null;
 
@@ -73,11 +76,6 @@ export function AppointmentDetailSheet({
   function handleCall() {
     if (!hasPhone) return;
     Linking.openURL(`tel:${appt.customerPhone}`);
-  }
-
-  function handleSMS() {
-    if (!hasPhone) return;
-    Linking.openURL(`sms:${appt.customerPhone}`);
   }
 
   async function doCancel(withWhatsApp: boolean) {
@@ -101,23 +99,16 @@ export function AppointmentDetailSheet({
   }
 
   function handleCancel() {
-    if (!hasPhone) {
-      Alert.alert(
-        'Randevuyu İptal Et',
-        `${appt.customerName} için randevuyu iptal etmek istiyor musunuz?`,
-        [
-          { text: 'Vazgeç', style: 'cancel' },
-          { text: 'İptal Et', style: 'destructive', onPress: () => doCancel(false) },
-        ],
-      );
-      return;
-    }
     Alert.alert(
       'Randevuyu İptal Et',
       `${appt.customerName} için randevuyu iptal etmek istiyor musunuz?`,
       [
         { text: 'Vazgeç', style: 'cancel' },
-        { text: "WhatsApp'tan Bildir ve İptal Et", style: 'destructive', onPress: () => doCancel(true) },
+        {
+          text: hasPhone ? "WhatsApp'tan Bildir ve İptal Et" : 'İptal Et',
+          style: 'destructive',
+          onPress: () => doCancel(hasPhone),
+        },
       ],
     );
   }
@@ -137,187 +128,325 @@ export function AppointmentDetailSheet({
   }
 
   return (
-    <Sheet
+    <Modal
       visible={visible}
-      onClose={onClose}
-      title="Randevu Detayı"
-      footer={
-        /* Footer buttons: display flex row, gap 10, marginTop 24
-           Button variant="danger" full size="lg" "İptal Et"
-           Button variant="accent" full size="lg" "Tamamlandı" */
-        <View style={styles.footerRow}>
-          <TouchableOpacity
-            style={[styles.footerBtn, styles.dangerBtn, busy && styles.footerDisabled]}
-            onPress={busy ? undefined : handleCancel}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.dangerBtnText}>{hasPhone ? 'WhatsApp İptal' : 'İptal Et'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.footerBtn, styles.accentBtn, busy && styles.footerDisabled]}
-            onPress={busy ? undefined : handleComplete}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.accentBtnText}>{busy ? '…' : 'Tamamlandı'}</Text>
-          </TouchableOpacity>
-        </View>
-      }
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
     >
-      {/* Time + duration overline: "10:30 · 45DK"
-          11px SemiBold 0.18em uppercase slate-500 */}
-      <Text style={styles.timeHeader}>
-        {appointment.time} · {appointment.duration}DK
-      </Text>
+      <Pressable style={styles.scrim} onPress={onClose}>
+        <Pressable style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 14) }]} onPress={() => {}}>
+          <View style={styles.handle} />
+          <View style={styles.header}>
+            <Pressable style={styles.headerButton} onPress={onClose}>
+              <ChevronLeft size={18} color={v2Colors.ink2} strokeWidth={2.2} />
+            </Pressable>
+            <Text style={styles.title}>Randevu Detayı</Text>
+            <Pressable style={styles.headerButton} onPress={onClose}>
+              <MoreVertical size={17} color={v2Colors.ink2} strokeWidth={2.2} />
+            </Pressable>
+          </View>
 
-      {/* Customer name: 22px Bold marginTop 8 ink-900 */}
-      <Text style={styles.customerName}>{appointment.customerName}</Text>
+          <View style={styles.statusRow}>
+            <View style={styles.statusBadge}>
+              <View style={styles.statusDot} />
+              <Text style={styles.statusText}>Devam Ediyor</Text>
+            </View>
+            <Text style={styles.timeText}>{appt.time} · {appt.duration} dk</Text>
+          </View>
 
-      {/* Service: 14px Regular fg-3 marginTop 4 */}
-      <Text style={styles.serviceName}>{appointment.serviceName}</Text>
+          <View style={styles.customerRow}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials(appt.customerName)}</Text>
+            </View>
+            <View style={styles.customerCopy}>
+              <Text style={styles.customerName}>{appt.customerName}</Text>
+              <Text style={styles.phoneText}>{appt.customerPhone ?? 'Telefon eklenmemiş'}</Text>
+            </View>
+            <View style={styles.visitBadge}>
+              <Text style={styles.visitText}>3. Randevu</Text>
+            </View>
+          </View>
 
-      {!!appointment.notes && (
-        <Text style={styles.notes}>{appointment.notes}</Text>
-      )}
+          <View style={styles.detailRow}>
+            <View style={styles.detailIcon}>
+              <Scissors size={15} color={v2Colors.spruce} strokeWidth={2.2} />
+            </View>
+            <View>
+              <Text style={styles.detailLabel}>Hizmet</Text>
+              <Text style={styles.detailValue}>{appt.serviceName}</Text>
+            </View>
+          </View>
+          <View style={styles.detailRow}>
+            <View style={styles.detailIcon}>
+              <User size={15} color={v2Colors.spruce} strokeWidth={2.2} />
+            </View>
+            <View>
+              <Text style={styles.detailLabel}>Usta</Text>
+              <Text style={styles.detailValue}>{appt.staffName ?? 'Usta bilgisi yok'}</Text>
+            </View>
+          </View>
+          <View style={styles.detailRow}>
+            <View style={styles.detailIcon}>
+              <MessageSquare size={15} color={v2Colors.spruce} strokeWidth={2.2} />
+            </View>
+            <View style={styles.detailCopy}>
+              <Text style={styles.detailLabel}>Not</Text>
+              <Text style={[styles.noteValue, !appt.notes && styles.noteEmpty]}>
+                {appt.notes || 'Not eklenmemiş'}
+              </Text>
+            </View>
+          </View>
 
-      {/* Action buttons row: flex row, gap 8, marginTop 20
-          Button variant="secondary" full: transparent bg, border ink-900, color ink-900
-          size md: height 44 */}
-      <View style={styles.actionsRow}>
-        {[
-          { label: 'Ara',     onPress: handleCall,  disabled: !hasPhone },
-          { label: 'Mesaj',   onPress: handleSMS,   disabled: !hasPhone },
-          {
-            label: 'Düzenle',
-            onPress: () => { onClose(); onEdit(appointment.id); },
-            disabled: false,
-          },
-        ].map(a => (
-          <TouchableOpacity
-            key={a.label}
-            onPress={a.onPress}
-            disabled={a.disabled}
-            activeOpacity={0.8}
-            style={[styles.actionBtn, a.disabled && styles.actionDisabled]}
-          >
-            <Text style={[styles.actionLabel, a.disabled && styles.actionLabelDisabled]}>
-              {a.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </Sheet>
+          <View style={styles.footer}>
+            <Pressable
+              style={[styles.footerButton, styles.completeButton, busy && styles.disabledButton]}
+              disabled={busy}
+              onPress={handleComplete}
+            >
+              <CheckCircle2 size={15} color={v2Colors.paper} strokeWidth={2.2} />
+              <Text style={styles.completeText}>{busy ? '…' : 'Tamamlandı'}</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.footerButton, styles.callButton, (!hasPhone || busy) && styles.disabledButton]}
+              disabled={!hasPhone || busy}
+              onPress={handleCall}
+            >
+              <Phone size={15} color={v2Colors.ink2} strokeWidth={2.2} />
+              <Text style={styles.callText}>Ara</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.footerButton, styles.cancelButton, busy && styles.disabledButton]}
+              disabled={busy}
+              onPress={handleCancel}
+            >
+              <X size={15} color={v2Colors.brick} strokeWidth={2.4} />
+              <Text style={styles.cancelText}>İptal</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  /* Time overline: "10:30 · 45DK"
-     fontSize 11, fontWeight 600, letterSpacing 0.18em, uppercase, color slate-500 */
-  timeHeader: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 11,
-    letterSpacing: 11 * 0.18,   // 0.18em
+  scrim: {
+    backgroundColor: 'rgba(27,24,19,0.4)',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: v2Colors.paper,
+    borderTopLeftRadius: v2Radii.sheet,
+    borderTopRightRadius: v2Radii.sheet,
+    overflow: 'hidden',
+  },
+  handle: {
+    alignSelf: 'center',
+    backgroundColor: v2Colors.line2,
+    borderRadius: 3,
+    height: 5,
+    marginBottom: 3,
+    marginTop: 11,
+    width: 38,
+  },
+  header: {
+    alignItems: 'center',
+    borderBottomColor: v2Colors.line,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    gap: 11,
+    paddingBottom: 11,
+    paddingHorizontal: 15,
+    paddingTop: 5,
+  },
+  headerButton: {
+    alignItems: 'center',
+    backgroundColor: v2Colors.paper2,
+    borderRadius: 10,
+    height: 34,
+    justifyContent: 'center',
+    width: 34,
+  },
+  title: {
+    color: v2Colors.ink,
+    flex: 1,
+    fontFamily: v2Fonts.display,
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  statusRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 17,
+    paddingTop: 12,
+  },
+  statusBadge: {
+    alignItems: 'center',
+    backgroundColor: v2Colors.emberSoft,
+    borderRadius: v2Radii.pill,
+    flexDirection: 'row',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+  },
+  statusDot: {
+    backgroundColor: v2Colors.ember,
+    borderRadius: 3,
+    height: 6,
+    width: 6,
+  },
+  statusText: {
+    color: v2Colors.ember,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 10,
     textTransform: 'uppercase',
-    color: colors.slate[500],
   },
-
-  /* Customer name: h3 22px Bold marginTop 8 ink-900 */
+  timeText: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.mono,
+    fontSize: 11,
+  },
+  customerRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 17,
+    paddingTop: 18,
+  },
+  avatar: {
+    alignItems: 'center',
+    backgroundColor: v2Colors.paper2,
+    borderColor: v2Colors.line,
+    borderRadius: 13,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: 'center',
+    width: 48,
+  },
+  avatarText: {
+    color: v2Colors.spruce,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 12,
+  },
+  customerCopy: {
+    flex: 1,
+  },
   customerName: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 22,
-    color: colors.ink[900],
-    marginTop: 8,
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 16,
   },
-
-  /* Service: 14px Regular fg-3 marginTop 4 */
-  serviceName: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 14,
-    color: colors.slate[500],
-    marginTop: 4,
+  phoneText: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.mono,
+    fontSize: 11,
+    marginTop: 3,
   },
-
-  notes: {
-    fontFamily: 'Montserrat-Regular',
+  visitBadge: {
+    backgroundColor: v2Colors.spruceSoft,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  visitText: {
+    color: v2Colors.spruce,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 10,
+    textTransform: 'uppercase',
+  },
+  detailRow: {
+    alignItems: 'center',
+    borderTopColor: v2Colors.line,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: 11,
+    marginHorizontal: 17,
+    paddingVertical: 10,
+  },
+  detailIcon: {
+    alignItems: 'center',
+    backgroundColor: v2Colors.paper2,
+    borderRadius: 8,
+    height: 30,
+    justifyContent: 'center',
+    width: 30,
+  },
+  detailCopy: {
+    flex: 1,
+  },
+  detailLabel: {
+    color: v2Colors.ink3,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+  },
+  detailValue: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodyBold,
     fontSize: 13,
-    color: colors.slate[500],
-    marginTop: 8,
-    lineHeight: 20,
+    marginTop: 3,
   },
-
-  /* Actions row: flex row, gap 8, marginTop 20 */
-  actionsRow: {
+  noteValue: {
+    color: v2Colors.ink2,
+    fontFamily: v2Fonts.body,
+    fontSize: 13,
+    marginTop: 3,
+  },
+  noteEmpty: {
+    color: v2Colors.ink3,
+    fontStyle: 'italic',
+  },
+  footer: {
+    borderTopColor: v2Colors.line,
+    borderTopWidth: 1,
     flexDirection: 'row',
     gap: 8,
-    marginTop: 20,
+    marginTop: 24,
+    paddingHorizontal: 15,
+    paddingTop: 12,
   },
-  /* Action button: Button variant="secondary" full
-     transparent bg, border slate-200 (from source: 'var(--slate-200)'), borderRadius 12
-     height 44 (size md) */
-  actionBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.slate[200],
-    backgroundColor: colors.slate[0],
+  footerButton: {
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionDisabled: {
-    opacity: 0.4,
-  },
-  actionLabel: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 14,
-    color: colors.ink[900],
-    letterSpacing: 14 * -0.005,
-  },
-  actionLabelDisabled: {
-    color: colors.slate[400],
-  },
-
-  /* Footer button row: flex row, gap 10
-     (marginTop 24 is from the source: 'display: flex, gap: 10, marginTop: 24')
-     Note: Sheet footer provides paddingTop 18 + borderTop; the marginTop 24 maps there */
-  footerRow: {
+    borderRadius: 13,
+    borderWidth: 1.5,
+    flex: 1,
     flexDirection: 'row',
-    gap: 10,
-  },
-  footerBtn: {
-    flex: 1,
-    height: 52,    // size lg
-    borderRadius: 12,
-    alignItems: 'center',
+    gap: 6,
+    height: 44,
     justifyContent: 'center',
-    borderWidth: 1,
   },
-  footerDisabled: {
+  disabledButton: {
     opacity: 0.5,
   },
-
-  /* Button variant="danger" full size="lg":
-     transparent bg, border coral-600, color coral-600 */
-  dangerBtn: {
-    backgroundColor: 'transparent',
-    borderColor: colors.coral[600],
+  completeButton: {
+    backgroundColor: v2Colors.spruce,
+    borderColor: v2Colors.spruce,
   },
-  dangerBtnText: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 15,
-    color: colors.coral[600],
-    letterSpacing: 15 * -0.005,
+  completeText: {
+    color: v2Colors.paper,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 13,
   },
-
-  /* Button variant="accent" full size="lg":
-     bg brand-600, border brand-700, color #fff */
-  accentBtn: {
-    backgroundColor: colors.brand[600],
-    borderColor: colors.brand[700],
+  callButton: {
+    backgroundColor: v2Colors.paper,
+    borderColor: v2Colors.line2,
   },
-  accentBtnText: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 15,
-    color: '#ffffff',
-    letterSpacing: 15 * -0.005,
+  callText: {
+    color: v2Colors.ink,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 13,
+  },
+  cancelButton: {
+    backgroundColor: v2Colors.brickSoft,
+    borderColor: '#E4C9C3',
+  },
+  cancelText: {
+    color: v2Colors.brick,
+    fontFamily: v2Fonts.bodyBold,
+    fontSize: 13,
   },
 });

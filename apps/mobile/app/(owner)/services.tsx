@@ -64,10 +64,6 @@ const INIT_SERVICES: Service[] = [];
 
 function formatMetricPriceRange(min: number, max: number): string {
   if (min === max) return `₺${min}`;
-  if (max >= 1000) {
-    const maxText = String(max);
-    return `₺${min}-${maxText.slice(0, -3)}\n${maxText.slice(-3)}`;
-  }
   return `₺${min}-${max}`;
 }
 
@@ -469,7 +465,7 @@ export default function ServicesScreen() {
           <Text style={styles.statLabel}>Aktif{'\n'}Hizmet</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statValue}>{priceRange}</Text>
+          <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{priceRange}</Text>
           <Text style={styles.statLabel}>Fiyat{'\n'}Aralığı</Text>
         </View>
         <View style={styles.statCard}>

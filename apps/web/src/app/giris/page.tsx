@@ -3,380 +3,259 @@
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowRight, LockKeyhole, Mail } from 'lucide-react';
 import { createClient } from '@/lib/supabase/browser';
 
 const AUTH_CSS = `
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  .auth {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+  .auth-v2 {
+    --paper: #FBF8F1;
+    --card: #FFFFFF;
+    --ink: #1B1813;
+    --ink-2: #5A534A;
+    --ink-3: #938A7C;
+    --line: #E5DECF;
+    --line-2: #D8CFBC;
+    --spruce: #184A3A;
+    --spruce-2: #23624D;
+    --spruce-soft: #E4ECE7;
+    --ember: #2D6AE0;
+    --ember-soft: #E4ECFB;
+    --brick: #A23A2E;
+    --brick-soft: #F3E2DF;
+    --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+    --grot: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
     min-height: 100vh;
-    font-family: 'Plus Jakarta Sans', var(--font-sans, sans-serif);
+    background: var(--paper);
+    color: var(--ink);
+    display: grid;
+    grid-template-columns: 520px minmax(0, 1fr);
+    font-family: var(--grot);
     -webkit-font-smoothing: antialiased;
   }
-
-  /* ── BRAND ──────────────────────── */
-  .brand {
-    background: #0B1220;
-    color: #F9F9F6;
-    padding: 48px;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .brand-ghost {
-    position: absolute;
-    right: -6%;
-    top: 50%;
-    transform: translateY(-50%);
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 60vw;
-    line-height: 1;
-    color: rgba(255,255,255,.025);
-    pointer-events: none;
-    user-select: none;
-    letter-spacing: -.02em;
-  }
-
-  .brand-logo {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-    text-decoration: none;
-    position: relative;
-    z-index: 1;
-    flex-shrink: 0;
-  }
-
-  .brand-wordmark {
-    font-family: 'Montserrat', 'MontserratLocal', Helvetica, Arial, sans-serif;
-    font-weight: 700;
-    font-size: 20px;
-    letter-spacing: -.3px;
-    color: #F9F9F6;
-  }
-
-  .brand-body {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    position: relative;
-    z-index: 1;
-    padding: 48px 0;
-  }
-
-  .brand-over {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .22em;
-    text-transform: uppercase;
-    color: #FF4D1C;
-    margin-bottom: 16px;
-  }
-
-  .brand-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(52px, 5.5vw, 84px);
-    line-height: .92;
-    text-transform: uppercase;
-    color: #F9F9F6;
-    margin-bottom: 20px;
-  }
-
-  .brand-title .o { color: #FF4D1C; }
-
-  .brand-sub {
-    font-size: 15px;
-    line-height: 1.72;
-    color: rgba(249,249,246,.46);
-    margin-bottom: 28px;
-    max-width: 320px;
-  }
-
-  .brand-points {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .brand-points li {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    color: rgba(249,249,246,.55);
-  }
-
-  .brand-points li::before {
-    content: '';
-    flex-shrink: 0;
-    width: 14px; height: 14px;
-    background: #FF4D1C;
-    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
-  }
-
-  .brand-back {
-    font-size: 13px;
-    font-weight: 600;
-    color: rgba(249,249,246,.28);
-    text-decoration: none;
-    transition: color .15s;
-    position: relative;
-    z-index: 1;
-    flex-shrink: 0;
-  }
-  .brand-back:hover { color: rgba(249,249,246,.6); }
-
-  /* ── PANEL ──────────────────────── */
-  .auth-panel {
-    background: #F9F9F6;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 48px 40px;
-    overflow-y: auto;
-  }
-
-  .form-wrap { width: 100%; max-width: 400px; }
-
-  .form-head { margin-bottom: 36px; }
-
-  .form-over {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .22em;
-    text-transform: uppercase;
-    color: #FF4D1C;
-    margin-bottom: 6px;
-  }
-
-  .form-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(40px, 4vw, 56px);
-    line-height: .92;
-    text-transform: uppercase;
-    color: #0B1220;
-    margin-bottom: 10px;
-  }
-
-  .form-title .o { color: #FF4D1C; }
-
-  .form-lead {
-    font-size: 14px;
-    color: rgba(11,18,32,.5);
-    line-height: 1.6;
-  }
-
-  /* ── FIELDS ─────────────────────── */
-  .auth-field { margin-bottom: 18px; }
-
-  .auth-field label {
-    display: block;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: rgba(11,18,32,.5);
-    margin-bottom: 7px;
-  }
-
-  .auth-field > input {
-    width: 100%;
-    padding: 11px 14px;
-    border: 1.5px solid #D6DBE5;
-    background: #fff;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 14px;
-    color: #0B1220;
-    outline: none;
-    transition: border-color .15s, box-shadow .15s;
-    -webkit-appearance: none;
-  }
-
-  .auth-field > input:focus {
-    border-color: #1E3A8A;
-    box-shadow: 0 0 0 3px rgba(30,58,138,.1);
-  }
-
-  .auth-field > input::placeholder { color: rgba(11,18,32,.25); }
-
-  .pw-wrap {
-    display: flex;
-    align-items: stretch;
-    border: 1.5px solid #D6DBE5;
-    background: #fff;
-    transition: border-color .15s, box-shadow .15s;
-  }
-
-  .pw-wrap:focus-within {
-    border-color: #1E3A8A;
-    box-shadow: 0 0 0 3px rgba(30,58,138,.1);
-  }
-
-  .pw-wrap input {
-    flex: 1;
-    min-width: 0;
-    padding: 11px 14px;
-    border: none;
-    background: transparent;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 14px;
-    color: #0B1220;
-    outline: none;
-  }
-
-  .pw-wrap input::placeholder { color: rgba(11,18,32,.25); }
-
-  .pw-toggle {
-    padding: 0 14px;
-    background: none;
-    border: none;
-    border-left: 1.5px solid #D6DBE5;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .04em;
-    text-transform: uppercase;
-    color: rgba(11,18,32,.4);
-    cursor: pointer;
-    transition: color .15s;
-    white-space: nowrap;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-  }
-
-  .pw-toggle:hover { color: #0B1220; }
-
-  .row-between {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-  }
-
-  .check-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    color: rgba(11,18,32,.6);
-    cursor: pointer;
-  }
-
-  .check-label input[type='checkbox'] {
-    width: 15px; height: 15px;
-    accent-color: #1E3A8A;
-  }
-
-  .link-accent {
-    font-size: 13px;
-    font-weight: 600;
-    color: #1E3A8A;
-    text-decoration: none;
-  }
-  .link-accent:hover { text-decoration: underline; }
-
-  /* ── ACTIONS ────────────────────── */
-  .auth-btn-primary {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
-    padding: 14px 24px;
-    background: #FF4D1C;
+  .auth-v2 * { box-sizing: border-box; }
+  .auth-side {
+    background: var(--spruce);
     color: #fff;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-weight: 700;
-    font-size: 14px;
-    border: none;
-    cursor: pointer;
-    letter-spacing: .02em;
-    transition: opacity .15s, transform .12s;
-    margin-bottom: 16px;
-  }
-
-  .auth-btn-primary:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); }
-  .auth-btn-primary:disabled { opacity: .45; cursor: not-allowed; transform: none; }
-
-  .auth-divider {
     display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow: hidden;
+    padding: 52px;
+    position: relative;
+  }
+  .auth-side-ghost {
+    bottom: -84px;
+    color: rgba(255,255,255,.06);
+    font-family: var(--serif);
+    font-size: 360px;
+    line-height: .8;
+    position: absolute;
+    right: -42px;
+  }
+  .auth-logo {
     align-items: center;
-    gap: 12px;
-    font-size: 11px;
+    color: #fff;
+    display: inline-flex;
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 500;
+    gap: 11px;
+    position: relative;
+    text-decoration: none;
+    z-index: 1;
+  }
+  .auth-logo-mark {
+    align-items: center;
+    background: rgba(255,255,255,.15);
+    border-radius: 12px;
+    display: flex;
+    height: 40px;
+    justify-content: center;
+    width: 40px;
+  }
+  .auth-logo-mark::before {
+    border-bottom: 7px solid transparent;
+    border-left: 9px solid #fff;
+    border-top: 7px solid transparent;
+    content: '';
+    margin-left: 3px;
+  }
+  .auth-copy { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; max-width: 330px; padding-bottom: 48px; position: relative; z-index: 1; }
+  .auth-overline {
+    color: rgba(255,255,255,.5);
+    font-size: 10px;
     font-weight: 700;
-    letter-spacing: .1em;
+    letter-spacing: .22em;
+    margin: 0 0 14px;
     text-transform: uppercase;
-    color: rgba(11,18,32,.28);
+  }
+  .auth-copy h1 {
+    font-family: var(--serif);
+    font-size: 46px;
+    font-weight: 500;
+    letter-spacing: -.02em;
+    line-height: 1.02;
+    margin: 0 0 14px;
+  }
+  .auth-copy h1 em { color: #9FD9BE; font-style: italic; }
+  .auth-copy p {
+    color: rgba(255,255,255,.7);
+    font-size: 15px;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .auth-panel {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    padding: 52px 64px;
+  }
+  .auth-form-wrap { max-width: 792px; width: 100%; }
+  .auth-panel-overline {
+    color: var(--ink-3);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .18em;
+    margin: 0 0 14px;
+    text-transform: uppercase;
+  }
+  .auth-panel h2 {
+    font-family: var(--serif);
+    font-size: 30px;
+    font-weight: 500;
+    letter-spacing: -.01em;
+    line-height: 1.1;
+    margin: 0 0 26px;
+  }
+  .auth-field { margin-bottom: 15px; }
+  .auth-field label {
+    color: var(--ink-3);
+    display: block;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .16em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .auth-input {
+    align-items: center;
+    background: var(--card);
+    border: 1.5px solid var(--line-2);
+    border-radius: 12px;
+    display: flex;
+    gap: 10px;
+    min-height: 42px;
+    padding: 0 13px;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .auth-input:focus-within {
+    border-color: var(--spruce-2);
+    box-shadow: 0 0 0 3px rgba(24,74,58,.08);
+  }
+  .auth-input svg { color: var(--ink-3); flex: 0 0 auto; height: 16px; width: 16px; }
+  .auth-input input {
+    background: transparent;
+    border: 0;
+    color: var(--ink);
+    flex: 1;
+    font-family: var(--grot);
+    font-size: 14px;
+    font-weight: 500;
+    height: 40px;
+    min-width: 0;
+    outline: none;
+  }
+  .auth-input input::placeholder { color: var(--ink-3); font-weight: 400; }
+  .auth-link {
+    color: var(--spruce);
+    font-size: 12.5px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .auth-error {
+    background: var(--brick-soft);
+    border: 1px solid #E4C9C3;
+    border-radius: 12px;
+    color: var(--brick);
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0 0 14px;
+    padding: 10px 12px;
+  }
+  .auth-primary {
+    align-items: center;
+    background: var(--spruce);
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 10px 22px -12px rgba(24,74,58,.75);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    font-family: var(--grot);
+    font-size: 14.5px;
+    font-weight: 800;
+    gap: 9px;
+    height: 46px;
+    justify-content: center;
+    width: 100%;
+  }
+  .auth-primary:disabled { background: var(--line-2); box-shadow: none; color: var(--ink-3); cursor: not-allowed; }
+  .auth-divider {
+    align-items: center;
+    color: var(--ink-3);
+    display: flex;
+    font-size: 12px;
+    gap: 10px;
     margin: 16px 0;
   }
-
-  .auth-divider::before, .auth-divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: #D6DBE5;
-  }
-
-  .btn-google {
-    display: flex;
+  .auth-divider::before, .auth-divider::after { background: var(--line-2); content: ''; flex: 1; height: 1px; }
+  .auth-google {
     align-items: center;
-    justify-content: center;
-    gap: 12px;
-    width: 100%;
-    padding: 12px 24px;
-    background: #fff;
-    border: 1.5px solid #D6DBE5;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-weight: 600;
-    font-size: 14px;
-    color: #0B1220;
-    text-decoration: none;
+    background: var(--card);
+    border: 1.5px solid var(--line-2);
+    border-radius: 12px;
+    color: var(--ink);
     cursor: pointer;
-    transition: border-color .15s, background .15s;
-  }
-
-  .btn-google:hover { border-color: #0B1220; background: #f0f0ec; }
-
-  .form-error {
-    font-size: 12px;
-    color: #A0303F;
-    background: #FAE8EB;
-    padding: 10px 14px;
-    margin-bottom: 14px;
-  }
-
-  .auth-foot {
-    margin-top: 24px;
-    text-align: center;
+    display: flex;
+    font-family: var(--grot);
     font-size: 14px;
-    color: rgba(11,18,32,.5);
+    font-weight: 700;
+    gap: 10px;
+    height: 46px;
+    justify-content: center;
+    width: 100%;
   }
-
-  /* ── RESPONSIVE ─────────────────── */
-  @media (max-width: 768px) {
-    .auth { grid-template-columns: 1fr; }
-    .brand { display: none; }
-    .auth-panel { padding: 32px 20px; min-height: 100vh; }
+  .auth-google-mark {
+    align-items: center;
+    background: var(--ember-soft);
+    border-radius: 999px;
+    color: var(--ember);
+    display: flex;
+    font-family: var(--serif);
+    font-size: 12px;
+    font-weight: 800;
+    height: 20px;
+    justify-content: center;
+    width: 20px;
+  }
+  .auth-foot { color: var(--ink-3); font-size: 13px; margin-top: 16px; text-align: center; }
+  @media (max-width: 820px) {
+    .auth-v2 { display: block; }
+    .auth-side { display: none; }
+    .auth-panel { min-height: 100vh; padding: 34px 20px; }
+    .auth-panel h2 { font-size: 28px; }
   }
 `;
 
 function GirisForm() {
-  const router   = useRouter();
-  const params   = useSearchParams();
+  const router = useRouter();
+  const params = useSearchParams();
   const redirect = params.get('redirect') ?? '/dashboard';
 
-  const [email,    setEmail]    = useState('');
-  const [pass,     setPass]     = useState('');
-  const [showPass, setShowPass] = useState(false);
-  const [remember, setRemember] = useState(true);
-  const [error,    setError]    = useState<string | null>(null);
-  const [loading,  setLoading]  = useState(false);
+  const [email, setEmail] = useState('');
+  const [pass, setPass] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -385,7 +264,10 @@ function GirisForm() {
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: pass });
-      if (error) { setError(error.message); return; }
+      if (error) {
+        setError(error.message);
+        return;
+      }
       router.push(redirect);
       router.refresh();
     } finally {
@@ -403,123 +285,81 @@ function GirisForm() {
 
   return (
     <>
-      <style>{AUTH_CSS}</style>
-
-      <div className="auth">
-
-        {/* BRAND */}
-        <section className="brand">
-          <div className="brand-ghost" aria-hidden="true">›</div>
-
-          <Link href="/" className="brand-logo" aria-label="Sıradaki — Ana Sayfa">
-            <svg width="32" height="32" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-              <rect width="64" height="64" rx="14" fill="#FFFFFF" />
-              <path d="M23 16 L41 32 L23 48" fill="none" stroke="#0B1220" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-              <circle cx="46" cy="48" r="2.8" fill="#1E3A8A" />
-            </svg>
-            <span className="brand-wordmark">Sıradaki</span>
+      <style dangerouslySetInnerHTML={{ __html: AUTH_CSS }} />
+      <main className="auth-v2">
+        <section className="auth-side">
+          <div className="auth-side-ghost" aria-hidden="true">›</div>
+          <Link href="/" className="auth-logo" aria-label="Sıradaki ana sayfa">
+            <span className="auth-logo-mark" />
+            <span>Sıra<strong>daki</strong></span>
           </Link>
 
-          <div className="brand-body">
-            <p className="brand-over">Tekrar hoş geldin</p>
-            <h1 className="brand-title">
-              DÜKKAN<br />
-              <span className="o">SENİ</span><br />
-              BEKLİYOR.
-            </h1>
-            <p className="brand-sub">
-              Randevuların, ekibin ve günün özeti — giriş yap, kaldığın yerden devam et.
-            </p>
-            <ul className="brand-points">
-              <li>Günün randevuları tek ekranda</li>
-              <li>Ekibinin takvimi seninle</li>
-              <li>Kazanç özeti her sabah hazır</li>
-            </ul>
+          <div className="auth-copy">
+            <p className="auth-overline">Berber · Panel Girişi</p>
+            <h1>Sıra <em>sende.</em></h1>
+            <p>Randevu takvimine, ekibine ve kazancına tek ekrandan ulaş.</p>
           </div>
-
-          <Link href="/" className="brand-back">‹ Ana sayfaya dön</Link>
         </section>
 
-        {/* FORM PANEL */}
         <section className="auth-panel">
-          <div className="form-wrap">
-
-            <div className="form-head">
-              <p className="form-over">Giriş Yap</p>
-              <h2 className="form-title">HESABINA<br /><span className="o">GİRİŞ</span> YAP.</h2>
-              <p className="form-lead">Bilgilerini gir, dükkanını yönetmeye devam et.</p>
-            </div>
+          <div className="auth-form-wrap">
+            <p className="auth-panel-overline">Dükkan Paneli</p>
+            <h2>Giriş Yap</h2>
 
             <form onSubmit={handleSubmit}>
-
               <div className="auth-field">
                 <label htmlFor="email">E-posta</label>
-                <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="ornek@dukkanim.com"
-                  autoComplete="email"
-                  required
-                />
+                <div className="auth-input">
+                  <Mail aria-hidden="true" />
+                  <input
+                    type="email"
+                    id="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="berber@dukkan.com"
+                    autoComplete="email"
+                    required
+                  />
+                </div>
               </div>
 
               <div className="auth-field">
                 <label htmlFor="password">Şifre</label>
-                <div className="pw-wrap">
+                <div className="auth-input">
+                  <LockKeyhole aria-hidden="true" />
                   <input
-                    type={showPass ? 'text' : 'password'}
+                    type="password"
                     id="password"
                     value={pass}
                     onChange={e => setPass(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="••••••••••"
                     autoComplete="current-password"
                     required
                   />
-                  <button type="button" className="pw-toggle" onClick={() => setShowPass(v => !v)}>
-                    {showPass ? 'Gizle' : 'Göster'}
-                  </button>
                 </div>
               </div>
 
-              <div className="row-between">
-                <label className="check-label">
-                  <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />
-                  Beni hatırla
-                </label>
-                <a href="#" className="link-accent">Şifremi unuttum</a>
-              </div>
+              {error && <p className="auth-error">{error}</p>}
 
-              {error && <p className="form-error">{error}</p>}
-
-              <button type="submit" className="auth-btn-primary" disabled={loading || !email || !pass}>
-                {loading ? 'Giriş yapılıyor…' : 'Giriş Yap →'}
+              <button type="submit" className="auth-primary" disabled={loading || !email || !pass}>
+                {loading ? 'Giriş yapılıyor…' : 'Giriş Yap'}
+                {!loading && <ArrowRight size={16} aria-hidden="true" />}
               </button>
 
-              <div className="auth-divider">veya</div>
+              <div className="auth-divider"><span>veya</span></div>
 
-              <button type="button" className="btn-google" onClick={handleGoogle}>
-                <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.49h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.63Z" />
-                  <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18Z" />
-                  <path fill="#FBBC05" d="M3.97 10.72A5.4 5.4 0 0 1 3.68 9c0-.6.1-1.18.29-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.35 2.82.96 4.05l3.01-2.33Z" />
-                  <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58Z" />
-                </svg>
-                Google ile giriş yap
+              <button type="button" className="auth-google" onClick={handleGoogle}>
+                <span className="auth-google-mark">G</span>
+                Google ile Giriş Yap
               </button>
-
             </form>
 
             <p className="auth-foot">
-              Hesabın yok mu?{' '}
-              <Link href="/kayit" className="link-accent">Hemen oluştur</Link>
+              Hesabın yok mu? <Link href="/kayit" className="auth-link">Kayıt ol</Link>
             </p>
-
           </div>
         </section>
-
-      </div>
+      </main>
     </>
   );
 }

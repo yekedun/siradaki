@@ -1,155 +1,85 @@
 /**
- * M10 — Staff: Blok / Takvimi Kapat screen
- * Source: screens.jsx → BlokScreen
- *
- * Form state layout:
- *   height: '100%', overflowY: 'auto', paddingBottom: 100, flexCol
- *   OverlineHeader eyebrow="Blok Ekle" title="Takvimi Kapat"
- *     meta="Şu andan itibaren seçtiğin süre boyunca takvim kapalı görünür."
- *   Card (padding 16):
- *     overline "Şu An · 10:42"  (11px SemiBold 0.16em uppercase slate-500)
- *     sub     "Blok başlangıç saati otomatik atanır."  (13px Regular fg-3 marginTop 6)
- *   SectionLabel "Süre"
- *   Duration grid: 3 cols, gap 8, padding '0 20px'
- *     Values: [15, 30, 45, 60, 90, 120]  label: "dakika"
- *     Each chip: paddingVertical 14, borderRadius 12, textAlign center
- *     Number: 20px Bold tabular-nums; Unit: 11px Regular marginTop 2 opacity 0.7 letterSpacing 0.06em
- *   SectionLabel "Sebep"
- *   Reason list (flex col gap 8, padding '0 20px'):
- *     { id: 'anlik',   title: 'Anlık müşteri', meta: 'Şu anda gelen müşteri için' }
- *     { id: 'mola',    title: 'Mola',          meta: 'Kahve / dinlenme arası'     }
- *     { id: 'kisisel', title: 'Kişisel',       meta: 'Telefon, evrak vs.'         }
- *     Row: padding 14, borderRadius 12, flex row gap 12
- *     Title: 15px SemiBold; Meta: 12px Regular opacity 0.6 marginTop 2
- *   SectionLabel "Önizleme"
- *   Preview BlokCard:
- *     bg slate-100 (stripe pattern), border 1px dashed slate-400, borderRadius 12, padding '16px 18px'
- *     12px Bold 0.18em uppercase fg-2: "{curReason.title.toUpperCase()} · {dur}DK"
- *   Button variant="primary" size="lg" full "Kapat"  (padding '24px 20px 0')
- *
- * Blocked / success state:
- *   flex col justifyContent center, gap 16, padding '20px 20px 32px'
- *   Check circle: width 56, height 56, borderRadius 999, bg slate-100, border slate-200
- *     SVG: path "M5 12.5L10 17.5L19 8" stroke ink-900 strokeWidth 2
- *   Title area (textAlign center):
- *     overline "Takvim Kapatıldı" 11px SemiBold 0.16em uppercase slate-500 marginBottom 8
- *     duration "{dur} dakika" 24px Bold letterSpacing -0.02em
- *     sub "{startTime} – {endTime} · {curReason.title}" 14px Regular fg-3 marginTop 6
- *   Block preview card (same stripe pattern):
- *     text "BLOKE · {curReason.title.toUpperCase()} · {dur}DK"
- *   Info text: 13px Regular fg-3 textAlign center lineHeight 1.5
- *   Button variant="secondary" size="lg" full "Yeni Blok Ekle"
+ * S2 — Bloklar · Takvim Bloklama
+ * Design: Sıradaki-Final-Staff.html · S2
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  View,
-  Text,
-  ScrollView,
-  Switch,
-  TouchableOpacity,
-  StyleSheet,
+  View, Text, TouchableOpacity, ScrollView, TextInput,
+  StyleSheet, Alert, Animated,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
-import { colors } from '../../lib/theme';
+import {
+  Ban, CheckCircle2, Coffee, MoreHorizontal, Plane,
+  Plus, Trash2, User, type LucideIcon,
+} from 'lucide-react-native';
+import { v2Colors, v2Fonts, v2Radii } from '../../lib/v2-tokens';
 import { supabase } from '../../lib/supabase';
-import { TextField } from '../../components/ds/TextField';
-const REASON_MAP: Record<'anlik' | 'mola' | 'kisisel', string> = {
-  anlik: 'walkin',
-  mola: 'break',
-  kisisel: 'personal',
+import { formatTime } from '../../lib/utils';
+
+const TR_DAYS_SHORT  = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'] as const;
+const TR_MONTHS      = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'] as const;
+
+type ReasonKey = 'mola' | 'kisisel' | 'izin' | 'diger';
+const REASONS: { id: ReasonKey; label: string; Icon: LucideIcon }[] = [
+  { id: 'mola',    label: 'Mola',    Icon: Coffee        },
+  { id: 'kisisel', label: 'Kişisel', Icon: User          },
+  { id: 'izin',    label: 'İzin',    Icon: Plane         },
+  { id: 'diger',   label: 'Diğer',   Icon: MoreHorizontal },
+];
+const REASON_MAP: Record<ReasonKey, string> = { mola: 'break', kisisel: 'personal', izin: 'vacation', diger: 'other' };
+// Reverse map: DB value → display info
+const REASON_DISPLAY: Record<string, { label: string; Icon: LucideIcon }> = {
+  break:    { label: 'Mola',    Icon: Coffee         },
+  personal: { label: 'Kişisel', Icon: User           },
+  vacation: { label: 'İzin',    Icon: Plane          },
+  other:    { label: 'Diğer',   Icon: MoreHorizontal },
+  // Turkish keys in case stored that way
+  mola:    { label: 'Mola',    Icon: Coffee         },
+  kisisel: { label: 'Kişisel', Icon: User           },
+  izin:    { label: 'İzin',    Icon: Plane          },
+  diger:   { label: 'Diğer',   Icon: MoreHorizontal },
 };
 
-function nowTime(): string {
+interface BlockItem { id: string; startsAt: string; endsAt: string; reason: string; }
+
+function nowHHMM(): string {
   const d = new Date();
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
-function addMins(time: string, mins: number): string {
-  const [h, m] = time.split(':').map(Number);
-  const t = h * 60 + m + mins;
-  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
-}
-
-function formatDur(mins: number): string {
-  if (mins === 24 * 60) return 'Tüm Gün';
-  if (mins >= 60 && mins % 60 === 0) return `${mins / 60} sa`;
-  return `${mins} dk`;
-}
-
-/* Duration options — exact from BlokScreen source */
-const DURATIONS = [15, 30, 45, 60, 90, 120] as const;
-
-/* Preset duration chips for the new all-day / preset section */
-const PRESET_DURATIONS = [30, 60, 120];
-
-/* Reason options — exact from BlokScreen source */
-const REASONS = [
-  { id: 'anlik',   title: 'Anlık müşteri', meta: 'Şu anda gelen müşteri için' },
-  { id: 'mola',    title: 'Mola',          meta: 'Kahve / dinlenme arası'     },
-  { id: 'kisisel', title: 'Kişisel',       meta: 'Telefon, evrak vs.'         },
-] as const;
-
-/* ── OverlineHeader ─────────────────────────────────────────────────
- * Source: components.jsx OverlineHeader
- * padding: '8px 20px 16px'
- * eyebrow: 11px SemiBold 0.16em uppercase slate-500 lineHeight 1
- * title:   32px Bold -0.02em ink-900 marginTop 10 lineHeight 1.05
- * meta:    13px Regular fg-3 marginTop 8
- */
-function OverlineHeader({
-  eyebrow,
-  title,
-  meta,
-}: {
-  eyebrow: string;
-  title: string;
-  meta?: string;
-}) {
-  const insets = useSafeAreaInsets();
+/* ── Toast ── */
+function Toast({ visible, text }: { visible: boolean; text: string }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(anim, { toValue: visible ? 1 : 0, duration: 260, useNativeDriver: true }).start();
+  }, [visible]);
   return (
-    <View style={[styles.ohWrap, { paddingTop: insets.top + 12 }]}>
-      <Text style={styles.ohEyebrow}>{eyebrow}</Text>
-      <Text style={styles.ohTitle}>{title}</Text>
-      {meta != null && <Text style={styles.ohMeta}>{meta}</Text>}
-    </View>
+    <Animated.View
+      pointerEvents="none"
+      style={[b.toast, { opacity: anim, transform: [{ translateY: anim.interpolate({ inputRange:[0,1], outputRange:[14,0] }) }] }]}
+    >
+      <CheckCircle2 size={17} color="#9FD9BE" />
+      <Text style={b.toastTx}>{text}</Text>
+    </Animated.View>
   );
 }
 
-/* ── SectionLabel ───────────────────────────────────────────────────
- * Source: components.jsx SectionLabel
- * 11px SemiBold 0.16em uppercase slate-500, padding '0 20px', margin '24px 0 10px'
- */
-function SectionLabel({ children }: { children: string }) {
-  return <Text style={styles.sectionLabel}>{children}</Text>;
-}
-
-/* ── Card ─────────────────────────────────────────────────────────
- * Source: components.jsx Card
- * bg slate-0, border slate-200, borderRadius 12, boxShadow 0 1px 2px rgba(15,20,16,0.04)
- */
-function Card({ children, padding = 16 }: { children: React.ReactNode; padding?: number }) {
-  return <View style={[styles.card, { padding }]}>{children}</View>;
-}
-
-/* ── SCREEN ──────────────────────────────────────────────────────── */
-export default function BlockScreen() {
-  const [dur, setDur] = useState<number | 'custom'>(30);
-  const [allDay, setAllDay] = useState(false);
-  const [customInput, setCustomInput] = useState('');
-  const [showCustom, setShowCustom] = useState(false);
-  const [reason, setReason] = useState<'anlik' | 'mola' | 'kisisel'>('mola');
-  const [blocked, setBlocked] = useState(false);
-  const [startTime] = useState<string>(nowTime); // captured when screen mounts
+export default function BlokScreen() {
+  const insets = useSafeAreaInsets();
+  const [dayIndex, setDayIndex] = useState(2);
+  const [blocks, setBlocks] = useState<BlockItem[]>([]);
   const [staffId, setStaffId] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [reason, setReason] = useState<ReasonKey>('mola');
+  const [startTime, setStartTime] = useState(nowHHMM());
+  const [endTime, setEndTime] = useState('');
+  const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState({ visible: false, text: '' });
 
-  const effectiveDur = allDay
-    ? 24 * 60
-    : dur === 'custom'
-      ? (parseInt(customInput) || 0)
-      : dur;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(today); d.setDate(today.getDate() - 2 + i); return d; });
+  const selectedDate = days[dayIndex];
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -159,544 +89,220 @@ export default function BlockScreen() {
     });
   }, []);
 
-  const curReason = REASONS.find(r => r.id === reason)!;
-  const endTime = allDay ? '23:59' : addMins(startTime, effectiveDur);
+  useEffect(() => { if (staffId) fetchBlocks(); }, [staffId, dayIndex]);
 
-  /* ── Success / blocked state ────────────────────────────────── */
-  if (blocked) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <View style={styles.successWrap}>
-          <View style={styles.successContent}>
-            {/* Check circle: width 56, height 56, borderRadius 999, bg slate-100, border slate-200 */}
-            <View style={styles.checkCircleWrap}>
-              <View style={styles.checkCircle}>
-                <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-                  <Path
-                    d="M5 12.5L10 17.5L19 8"
-                    stroke={colors.ink[900]}
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </Svg>
-              </View>
-            </View>
-
-            {/* Title area */}
-            <View style={styles.successTitleWrap}>
-              {/* overline "Takvim Kapatıldı" 11px SemiBold 0.16em uppercase slate-500 marginBottom 8 */}
-              <Text style={styles.successOverline}>Takvim Kapatıldı</Text>
-              {/* duration: 24px Bold -0.02em */}
-              <Text style={styles.successDur}>{formatDur(effectiveDur)}</Text>
-              {/* sub: 14px Regular fg-3 marginTop 6 */}
-              <Text style={styles.successSub}>
-                {startTime} – {endTime} · {curReason.title}
-              </Text>
-            </View>
-
-            {/* Block preview card (stripe pattern) */}
-            <View style={styles.previewCard}>
-              <Text style={styles.previewText}>
-                BLOKE · {curReason.title.toUpperCase()} · {formatDur(effectiveDur)}
-              </Text>
-            </View>
-
-            {/* Info text: 13px Regular fg-3 textAlign center lineHeight 1.5 */}
-            <Text style={styles.successInfo}>
-              Müşteri randevu ekranında {startTime}–{endTime} arası kapalı görünecek.
-            </Text>
-          </View>
-
-          {/* Button variant="secondary" size="lg" full "Yeni Blok Ekle" */}
-          <TouchableOpacity
-            style={styles.secondaryBtn}
-            onPress={() => { setBlocked(false); setDur(30); setReason('mola'); setAllDay(false); setShowCustom(false); setCustomInput(''); }}
-          >
-            <Text style={styles.secondaryBtnText}>Yeni Blok Ekle</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
+  async function fetchBlocks() {
+    if (!staffId) return;
+    const dayStart = new Date(selectedDate); dayStart.setHours(0,0,0,0);
+    const dayEnd   = new Date(selectedDate); dayEnd.setDate(selectedDate.getDate()+1); dayEnd.setHours(0,0,0,0);
+    const { data } = await supabase
+      .from('blocks').select('id, starts_at, ends_at, reason')
+      .eq('staff_id', staffId)
+      .gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString())
+      .order('starts_at');
+    setBlocks((data ?? []).map((row: any) => ({ id: row.id, startsAt: row.starts_at, endsAt: row.ends_at, reason: row.reason })));
   }
 
-  /* ── Form state ─────────────────────────────────────────────── */
+  async function handleSaveBlock() {
+    if (!staffId) return;
+    if (!startTime || !endTime) { Alert.alert('Hata', 'Başlangıç ve bitiş saatini gir.'); return; }
+    setSaving(true);
+    const d = selectedDate;
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    try {
+      const { error } = await supabase.functions.invoke('create-manual-block', {
+        body: { staff_id: staffId, date: dateStr, start_time: startTime, end_time: endTime, reason: REASON_MAP[reason], ...(note.trim() ? { note: note.trim() } : {}) },
+      });
+      if (error) throw error;
+      setModalOpen(false); setNote(''); setStartTime(nowHHMM()); setEndTime(''); setReason('mola');
+      await fetchBlocks();
+      setToast({ visible: true, text: 'Blok eklendi' });
+      setTimeout(() => setToast(t => ({ ...t, visible: false })), 2200);
+    } catch { Alert.alert('Hata', 'Blok eklenemedi.'); }
+    finally { setSaving(false); }
+  }
+
+  async function handleDeleteBlock(id: string) {
+    Alert.alert('Bloğu Sil', 'Bu bloğu silmek istiyor musunuz?', [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: async () => {
+        await supabase.from('blocks').delete().eq('id', id);
+        await fetchBlocks();
+      }},
+    ]);
+  }
+
+  const dow = selectedDate.getDay();
+  const dateLabel = `${TR_DAYS_SHORT[(dow+6)%7]} · ${selectedDate.getDate()} ${TR_MONTHS[selectedDate.getMonth()]}`;
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* OverlineHeader eyebrow="Blok Ekle" title="Takvimi Kapat"
-            meta="Şu andan itibaren seçtiğin süre boyunca takvim kapalı görünür." */}
-        <OverlineHeader
-          eyebrow="Blok Ekle"
-          title="Takvimi Kapat"
-          meta="Şu andan itibaren seçtiğin süre boyunca takvim kapalı görünür."
-        />
+    <SafeAreaView style={b.safe} edges={['top']}>
+      <View style={b.head}>
+        <Text style={b.overline}>{dateLabel}</Text>
+        <Text style={b.title}>Bloklar</Text>
+        <Text style={b.sub}>Mola, izin veya kişisel zamanların için takvimini blokla. Bu aralıklarda randevu alınamaz.</Text>
+      </View>
 
-        {/* Current time card */}
-        <View style={styles.px20}>
-          <Card padding={16}>
-            {/* overline "Şu An · 10:42" */}
-            <Text style={styles.currentTimeOverline}>Şu An · {startTime}</Text>
-            {/* sub "Blok başlangıç saati otomatik atanır." */}
-            <Text style={styles.currentTimeSub}>Blok başlangıç saati otomatik atanır.</Text>
-          </Card>
-        </View>
+      {/* Day picker */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={b.dpScroll} contentContainerStyle={b.dpContent}>
+        {days.map((d, i) => {
+          const dowIdx = (d.getDay() + 6) % 7;
+          return (
+            <TouchableOpacity key={i} style={[b.dayCell, i===dayIndex && b.dayCellOn]} onPress={() => setDayIndex(i)} activeOpacity={0.8}>
+              <Text style={[b.dayDow, i===dayIndex && b.dayDowOn]}>{TR_DAYS_SHORT[dowIdx]}</Text>
+              <Text style={[b.dayNum, i===dayIndex && b.dayNumOn]}>{d.getDate()}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
-        {/* All-day toggle */}
-        <View style={styles.allDayRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.allDayTitle}>Bugünü Tamamen Kapat</Text>
-            <Text style={styles.allDaySub}>Tüm gün için blok oluşturur</Text>
+      <View style={b.metaRow}>
+        <Text style={b.metaL}>{blocks.length > 0 ? `${blocks.length} blok` : 'Blok yok'}</Text>
+      </View>
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={b.listContent} showsVerticalScrollIndicator={false}>
+        {blocks.length === 0 ? (
+          <View style={b.empty}>
+            <View style={b.emptyIc}><Ban size={28} color={v2Colors.line2} /></View>
+            <Text style={b.emptyT}>Bu gün blok yok</Text>
+            <Text style={b.emptyS}>Aşağıdaki "Blok Ekle" butonuna bas.</Text>
           </View>
-          <Switch
-            value={allDay}
-            onValueChange={setAllDay}
-            trackColor={{ false: colors.slate[300], true: colors.ink[900] }}
-            thumbColor="#fff"
-          />
-        </View>
-
-        {/* SectionLabel "Süre" — hidden when all-day */}
-        {!allDay && (
-          <>
-            <SectionLabel>Süre</SectionLabel>
-
-            {/* Preset duration chips: 30dk / 1sa / 2sa / Özel */}
-            <View style={styles.durGrid}>
-              {PRESET_DURATIONS.map(d => {
-                const sel = dur === d;
-                return (
-                  <TouchableOpacity
-                    key={d}
-                    style={[styles.durChip, sel ? styles.durChipActive : styles.durChipInactive]}
-                    onPress={() => { setDur(d); setShowCustom(false); }}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.durNum, sel && styles.durNumActive]}>
-                      {d < 60 ? d : d / 60}
-                    </Text>
-                    <Text style={[styles.durUnit, sel && styles.durUnitActive]}>
-                      {d < 60 ? 'dk' : 'sa'}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-              <TouchableOpacity
-                style={[styles.durChip, dur === 'custom' ? styles.durChipActive : styles.durChipInactive]}
-                onPress={() => { setDur('custom'); setShowCustom(true); }}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.durNum, dur === 'custom' && styles.durNumActive]}>Özel</Text>
+        ) : blocks.map(blk => {
+          const disp = REASON_DISPLAY[blk.reason] ?? { label: blk.reason, Icon: Ban };
+          const BlkIcon = disp.Icon;
+          return (
+            <View key={blk.id} style={b.blkCard}>
+              <View style={b.blkIc}><BlkIcon size={18} color={v2Colors.brass} /></View>
+              <View style={b.blkM}>
+                <Text style={b.blkReason}>{disp.label}</Text>
+                <Text style={b.blkTime}>{formatTime(new Date(blk.startsAt))} – {formatTime(new Date(blk.endsAt))}</Text>
+              </View>
+              <View style={b.blkTypeBadge}>
+                <Text style={b.blkTypeTx}>{disp.label.toUpperCase()}</Text>
+              </View>
+              <TouchableOpacity style={b.blkDel} onPress={() => handleDeleteBlock(blk.id)} activeOpacity={0.7}>
+                <Trash2 size={15} color={v2Colors.ink3} />
               </TouchableOpacity>
             </View>
-
-            {/* Custom minutes input */}
-            {showCustom && (
-              <View style={{ paddingHorizontal: 20, marginTop: 8 }}>
-                <TextField
-                  label="Dakika"
-                  value={customInput}
-                  onChangeText={setCustomInput}
-                  keyboardType="number-pad"
-                  placeholder="örn. 45"
-                />
-              </View>
-            )}
-          </>
-        )}
-
-        {/* SectionLabel "Sebep" */}
-        <SectionLabel>Sebep</SectionLabel>
-
-        {/* Reason list: flex col gap 8, padding '0 20px'
-            Each row: padding 14, borderRadius 12, flex row gap 12
-            Title 15px SemiBold; Meta 12px Regular opacity 0.6 marginTop 2 */}
-        <View style={styles.reasonList}>
-          {REASONS.map(r => {
-            const sel = reason === r.id;
-            return (
-              <TouchableOpacity
-                key={r.id}
-                onPress={() => setReason(r.id)}
-                activeOpacity={0.8}
-                style={[styles.reasonRow, sel ? styles.reasonRowActive : styles.reasonRowInactive]}
-              >
-                <View style={styles.reasonIconPlaceholder}>
-                  {/* Icon placeholder — lucide icon name: anlik→user-check, mola→coffee, kisisel→user */}
-                  <Text style={[styles.reasonIconDot, sel && styles.reasonIconDotActive]}>•</Text>
-                </View>
-                <View style={styles.reasonRight}>
-                  <Text style={[styles.reasonTitle, sel && styles.reasonTitleActive]}>
-                    {r.title}
-                  </Text>
-                  <Text style={[styles.reasonMeta, sel && styles.reasonMetaActive]}>
-                    {r.meta}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* SectionLabel "Önizleme" */}
-        <SectionLabel>Önizleme</SectionLabel>
-
-        {/* Preview BlokCard:
-            bg slate-100, 1px dashed slate-400, borderRadius 12, padding '16px 18px'
-            12px Bold 0.18em uppercase fg-2: "{curReason.title.toUpperCase()} · {dur}DK" */}
-        <View style={styles.px20}>
-          <View style={styles.previewCard}>
-            <Text style={styles.previewText}>
-              {curReason.title.toUpperCase()} · {effectiveDur}DK
-            </Text>
-          </View>
-        </View>
-
-        {/* Button variant="primary" size="lg" full "Kapat" */}
-        <View style={styles.btnWrap}>
-          <TouchableOpacity style={styles.primaryBtn} disabled={saving} onPress={async () => {
-            if (!staffId) {
-              Alert.alert('Hata', 'Hesap bilgileri yüklenemedi. Lütfen tekrar deneyin.');
-              return;
-            }
-
-            if (!allDay && dur === 'custom' && effectiveDur === 0) {
-              Alert.alert('Hata', 'Lütfen geçerli bir süre girin.');
-              return;
-            }
-
-            setSaving(true);
-            try {
-              const { error } = await supabase.functions.invoke('create-manual-block', {
-                body: { staff_id: staffId, duration_min: effectiveDur, reason: REASON_MAP[reason] },
-              });
-              if (error) {
-                Alert.alert('Hata', `Blok eklenemedi: ${error.message}`);
-                return;
-              }
-              setBlocked(true);
-            } finally {
-              setSaving(false);
-            }
-          }}>
-            <Text style={styles.primaryBtnText}>{saving ? 'Kaydediliyor...' : 'Kapat'}</Text>
-          </TouchableOpacity>
-        </View>
+          );
+        })}
+        <View style={{ height: 130 }} />
       </ScrollView>
+
+      <TouchableOpacity style={[b.fab, { bottom: insets.bottom + 90 }]} onPress={() => setModalOpen(true)} activeOpacity={0.85}>
+        <Plus size={18} color="#fff" />
+        <Text style={b.fabTx}>Blok Ekle</Text>
+      </TouchableOpacity>
+
+      <Toast visible={toast.visible} text={toast.text} />
+
+      {/* Modal */}
+      {modalOpen && (
+        <TouchableOpacity style={b.scrim} activeOpacity={1} onPress={() => setModalOpen(false)}>
+          <TouchableOpacity activeOpacity={1} style={b.sheet} onPress={e => e.stopPropagation()}>
+            <View style={b.dragWrap}><View style={b.drag} /></View>
+            <View style={b.sheetHdr}>
+              <TouchableOpacity style={b.sheetBtn} onPress={() => setModalOpen(false)}>
+                <Text style={b.sheetBtnTx}>‹</Text>
+              </TouchableOpacity>
+              <Text style={b.sheetTitle}>Blok Ekle</Text>
+              <TouchableOpacity style={b.sheetBtn} onPress={() => setModalOpen(false)}>
+                <Text style={b.sheetBtnTx}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 480 }} contentContainerStyle={b.sheetBody} showsVerticalScrollIndicator={false}>
+              <Text style={b.flabel}>Sebep</Text>
+              <View style={b.reasonChips}>
+                {REASONS.map(r => (
+                  <TouchableOpacity key={r.id} style={[b.chip, reason===r.id && b.chipOn]} onPress={() => setReason(r.id)} activeOpacity={0.8}>
+                    <r.Icon size={15} color={reason===r.id ? v2Colors.spruce : v2Colors.ink3} />
+                    <Text style={[b.chipTx, reason===r.id && b.chipTxOn]}>{r.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={b.flabel}>Zaman Aralığı</Text>
+              <View style={b.timePair}>
+                <View style={b.timePill}>
+                  <Text style={b.timePillL}>Başlangıç</Text>
+                  <TextInput style={b.timePillV} value={startTime} onChangeText={setStartTime} keyboardType="numeric" placeholder="09:00" placeholderTextColor={v2Colors.ink3} maxLength={5} />
+                </View>
+                <Text style={b.timeSep}>→</Text>
+                <View style={b.timePill}>
+                  <Text style={b.timePillL}>Bitiş</Text>
+                  <TextInput style={b.timePillV} value={endTime} onChangeText={setEndTime} keyboardType="numeric" placeholder="10:00" placeholderTextColor={v2Colors.ink3} maxLength={5} />
+                </View>
+              </View>
+              <Text style={b.flabel}>Not (opsiyonel)</Text>
+              <TextInput style={b.noteArea} value={note} onChangeText={setNote} placeholder="Öğle molası…" placeholderTextColor={v2Colors.ink3} multiline numberOfLines={2} />
+            </ScrollView>
+            <View style={[b.sheetFooter, { paddingBottom: insets.bottom + 12 }]}>
+              <TouchableOpacity style={[b.saveBtn, saving && { opacity:0.6 }]} onPress={handleSaveBlock} disabled={saving} activeOpacity={0.85}>
+                <Ban size={18} color="#fff" />
+                <Text style={b.saveBtnTx}>{saving ? 'Kaydediliyor…' : 'Bloğu Kaydet'}</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.slate[50],
-  },
-  scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 100 },
-
-  /* OverlineHeader: paddingHorizontal 20, paddingBottom 16; paddingTop set dynamically via insets */
-  ohWrap: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  ohEyebrow: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 11,
-    letterSpacing: 11 * 0.16,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-    lineHeight: 11,
-  },
-  ohTitle: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 32,
-    letterSpacing: 32 * -0.02,
-    color: colors.ink[900],
-    marginTop: 10,
-    lineHeight: 33.6,
-  },
-  ohMeta: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 13,
-    color: colors.slate[500],
-    marginTop: 8,
-  },
-
-  /* SectionLabel: 11px SemiBold 0.16em uppercase slate-500, paddingHorizontal 20, margin '24px 0 10px' */
-  sectionLabel: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 11,
-    letterSpacing: 11 * 0.16,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-    paddingHorizontal: 20,
-    marginTop: 24,
-    marginBottom: 10,
-  },
-
-  /* Card: bg slate-0, border slate-200, borderRadius 12, shadow 0 1px 2px */
-  card: {
-    backgroundColor: colors.slate[0],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
-    borderRadius: 12,
-    shadowColor: colors.ink[900],
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  px20: { paddingHorizontal: 20 },
-
-  /* All-day toggle row */
-  allDayRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 16,
-    gap: 12,
-  },
-  allDayTitle: {
-    fontSize: 15,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.ink[900],
-  },
-  allDaySub: {
-    fontSize: 12,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
-    marginTop: 2,
-  },
-
-  /* Current time card content */
-  currentTimeOverline: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 11,
-    letterSpacing: 11 * 0.16,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-  },
-  currentTimeSub: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 13,
-    color: colors.slate[500],
-    marginTop: 6,
-  },
-
-  /* Duration grid: paddingHorizontal 20, flex row wrap, gap 8 — 3 cols */
-  durGrid: {
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  /* Each chip is ~1/3 row width accounting for 2 gaps of 8px in 3-col layout */
-  durChip: {
-    width: '30.5%',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
-  durChipActive: {
-    backgroundColor: colors.ink[900],
-    borderColor: colors.ink[900],
-  },
-  durChipInactive: {
-    backgroundColor: colors.slate[0],
-    borderColor: colors.slate[200],
-  },
-  /* Number: 20px Bold tabular-nums */
-  durNum: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 20,
-    color: colors.ink[900],
-  },
-  durNumActive: { color: '#ffffff' },
-  /* Unit: 11px Regular marginTop 2 opacity 0.7 letterSpacing 0.06em */
-  durUnit: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 11,
-    marginTop: 2,
-    opacity: 0.7,
-    letterSpacing: 11 * 0.06,
-    color: colors.ink[900],
-  },
-  durUnitActive: { color: '#ffffff' },
-
-  /* Reason list: paddingHorizontal 20, gap 8 */
-  reasonList: {
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  /* Reason row: padding 14, borderRadius 12, flex row, gap 12, border 1px */
-  reasonRow: {
-    padding: 14,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-  },
-  reasonRowActive: {
-    backgroundColor: colors.ink[900],
-    borderColor: colors.ink[900],
-  },
-  reasonRowInactive: {
-    backgroundColor: colors.slate[0],
-    borderColor: colors.slate[200],
-  },
-  /* Icon placeholder 22×22 */
-  reasonIconPlaceholder: {
-    width: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    opacity: 0.85,
-  },
-  reasonIconDot: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 18,
-    color: colors.ink[900],
-  },
-  reasonIconDotActive: { color: '#ffffff' },
-  reasonRight: { flex: 1 },
-  /* Title: 15px SemiBold */
-  reasonTitle: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 15,
-    color: colors.ink[900],
-  },
-  reasonTitleActive: { color: '#ffffff' },
-  /* Meta: 12px Regular opacity 0.6 marginTop 2 */
-  reasonMeta: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 12,
-    color: colors.slate[500],
-    marginTop: 2,
-    opacity: 0.6,
-  },
-  reasonMetaActive: { color: 'rgba(255,255,255,0.6)', opacity: 1 },
-
-  /* Preview BlokCard: bg slate-100, 1px dashed slate-400, borderRadius 12, padding '16px 18px' */
-  previewCard: {
-    backgroundColor: colors.slate[100],
-    borderWidth: 1,
-    borderColor: colors.slate[400],
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-  },
-  /* Preview text: 12px Bold 0.18em uppercase fg-2 */
-  previewText: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 12,
-    letterSpacing: 12 * 0.18,
-    textTransform: 'uppercase',
-    color: colors.slate[700],
-  },
-
-  /* Primary CTA button: variant="primary" size="lg": bg ink-900, height 52, borderRadius 12 */
-  btnWrap: { paddingHorizontal: 20, paddingTop: 24 },
-  primaryBtn: {
-    height: 52,
-    borderRadius: 12,
-    backgroundColor: colors.ink[900],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryBtnText: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 15,
-    color: '#ffffff',
-    letterSpacing: 15 * -0.005,
-  },
-
-  /* ── Success state ────────────────────────────────────────────── */
-  /* Outer container: flex 1, padding '20px 20px 32px', justifyContent 'space-between' */
-  successWrap: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 32,
-    justifyContent: 'space-between',
-  },
-  /* Content area: flex 1, justifyContent center, gap 16 */
-  successContent: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: 16,
-  },
-  /* Check circle wrapper: alignItems center, marginBottom 8 */
-  checkCircleWrap: {
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  /* Check circle: width 56, height 56, borderRadius 999, bg slate-100, border slate-200 */
-  checkCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 999,
-    backgroundColor: colors.slate[100],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  /* Title area: alignItems center */
-  successTitleWrap: { alignItems: 'center' },
-  /* "Takvim Kapatıldı" overline: 11px SemiBold 0.16em uppercase slate-500 marginBottom 8 */
-  successOverline: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 11,
-    letterSpacing: 11 * 0.16,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-    marginBottom: 8,
-  },
-  /* "{dur} dakika": 24px Bold -0.02em ink-900 */
-  successDur: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 24,
-    letterSpacing: 24 * -0.02,
-    color: colors.ink[900],
-  },
-  /* sub: 14px Regular fg-3 marginTop 6 */
-  successSub: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 14,
-    color: colors.slate[500],
-    marginTop: 6,
-  },
-  /* Info text: 13px Regular fg-3 textAlign center lineHeight 1.5 */
-  successInfo: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 13,
-    color: colors.slate[500],
-    textAlign: 'center',
-    lineHeight: 19.5,
-  },
-  /* Secondary button: variant="secondary" size="lg": transparent bg, border ink-900, height 52 */
-  secondaryBtn: {
-    height: 52,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.ink[900],
-    backgroundColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryBtnText: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 15,
-    color: colors.ink[900],
-    letterSpacing: 15 * -0.005,
-  },
+const b = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: v2Colors.paper },
+  head: { paddingHorizontal: 22, paddingTop: 14, paddingBottom: 4 },
+  overline: { fontFamily: v2Fonts.bodySemiBold, fontSize: 11, letterSpacing: 11*0.2, textTransform: 'uppercase', color: v2Colors.ink3 },
+  title: { fontFamily: v2Fonts.display, fontSize: 33, lineHeight: 34, letterSpacing: -0.66, color: v2Colors.ink, marginTop: 7 },
+  sub: { fontFamily: v2Fonts.body, fontSize: 13.5, lineHeight: 20.9, color: v2Colors.ink2, marginTop: 9 },
+  dpScroll: { flexGrow: 0, flexShrink: 0, height: 80 },
+  dpContent: { gap: 7, paddingHorizontal: 20, paddingVertical: 8, alignItems: 'center' },
+  dayCell: { width: 46, height: 64, borderRadius: 13, alignItems: 'center', justifyContent: 'center', gap: 2, borderWidth: 1, borderColor: v2Colors.line2, backgroundColor: v2Colors.paper },
+  dayCellOn: { backgroundColor: v2Colors.spruce, borderColor: v2Colors.spruce },
+  dayDow: { fontFamily: v2Fonts.bodySemiBold, fontSize: 10, letterSpacing: 10*0.08, textTransform: 'uppercase', color: v2Colors.ink3 },
+  dayDowOn: { color: 'rgba(255,255,255,0.7)' },
+  dayNum: { fontFamily: v2Fonts.mono, fontSize: 17, color: v2Colors.ink },
+  dayNumOn: { color: '#fff' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 22, paddingVertical: 6 },
+  metaL: { fontFamily: v2Fonts.bodyBold, fontSize: 13, color: v2Colors.ink },
+  listContent: { paddingHorizontal: 16, paddingTop: 4, gap: 10 },
+  empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: 64, paddingHorizontal: 34 },
+  emptyIc: { width: 64, height: 64, borderRadius: 20, backgroundColor: v2Colors.paper2, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  emptyT: { fontFamily: v2Fonts.display, fontSize: 21, color: v2Colors.ink2, marginBottom: 6 },
+  emptyS: { fontFamily: v2Fonts.body, fontSize: 13, lineHeight: 19.5, color: v2Colors.ink3, textAlign: 'center' },
+  blkCard: { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: v2Colors.card, borderWidth: 1, borderColor: v2Colors.line, borderLeftWidth: 3, borderLeftColor: v2Colors.brass, borderRadius: v2Radii.lg, padding: 13, shadowColor: v2Colors.ink, shadowOffset: { width:0, height:1 }, shadowOpacity: 0.04, shadowRadius: 2, elevation: 1 },
+  blkIc: { width: 40, height: 40, borderRadius: 12, backgroundColor: v2Colors.brassSoft, alignItems: 'center', justifyContent: 'center' },
+  blkM: { flex: 1, minWidth: 0 },
+  blkReason: { fontFamily: v2Fonts.bodyBold, fontSize: 14.5, color: v2Colors.ink },
+  blkTime: { fontFamily: v2Fonts.mono, fontSize: 11.5, color: v2Colors.ink2, marginTop: 2 },
+  blkTypeBadge: { backgroundColor: v2Colors.brassSoft, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'center' },
+  blkTypeTx: { fontFamily: v2Fonts.mono, fontSize: 9, fontWeight: '700' as const, letterSpacing: 9 * 0.1, color: v2Colors.brass },
+  blkDel: { width: 34, height: 34, borderRadius: 10, backgroundColor: v2Colors.paper2, alignItems: 'center', justifyContent: 'center' },
+  fab: { position: 'absolute', right: 18, height: 52, borderRadius: 16, backgroundColor: v2Colors.spruce, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 18, shadowColor: v2Colors.spruce, shadowOffset: { width:0, height:14 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 8, zIndex: 8 },
+  fabTx: { fontFamily: v2Fonts.bodyBold, fontSize: 14.5, color: '#fff' },
+  toast: { position: 'absolute', left: 18, right: 18, bottom: 110, backgroundColor: v2Colors.ink, borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 11, shadowColor: v2Colors.ink, shadowOffset: { width:0, height:8 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 8, zIndex: 30 },
+  toastTx: { fontFamily: v2Fonts.bodySemiBold, fontSize: 13.5, color: '#fff' },
+  scrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(27,24,19,0.42)', zIndex: 20, justifyContent: 'flex-end' },
+  sheet: { backgroundColor: v2Colors.paper, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '88%' },
+  dragWrap: { alignItems: 'center', paddingTop: 12, paddingBottom: 4 },
+  drag: { width: 40, height: 5, borderRadius: 3, backgroundColor: v2Colors.line2 },
+  sheetHdr: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 12, gap: 12, borderBottomWidth: 1, borderBottomColor: v2Colors.line },
+  sheetBtn: { width: 36, height: 36, borderRadius: 11, backgroundColor: v2Colors.paper2, alignItems: 'center', justifyContent: 'center' },
+  sheetBtnTx: { fontFamily: v2Fonts.bodyBold, fontSize: 18, color: v2Colors.ink2 },
+  sheetTitle: { flex: 1, textAlign: 'center', fontFamily: v2Fonts.display, fontSize: 19, color: v2Colors.ink },
+  sheetBody: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+  flabel: { fontFamily: v2Fonts.bodySemiBold, fontSize: 10.5, letterSpacing: 10.5*0.16, textTransform: 'uppercase', color: v2Colors.ink3, marginBottom: 9 },
+  reasonChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1.5, borderColor: v2Colors.line2, borderRadius: 12, paddingHorizontal: 13, paddingVertical: 10 },
+  chipOn: { borderColor: v2Colors.spruce, backgroundColor: v2Colors.spruceSoft },
+  chipTx: { fontFamily: v2Fonts.bodyBold, fontSize: 13, color: v2Colors.ink },
+  chipTxOn: { color: v2Colors.spruce },
+  timePair: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
+  timePill: { flex: 1, borderWidth: 1.5, borderColor: v2Colors.line2, borderRadius: 12, paddingHorizontal: 13, paddingVertical: 9, backgroundColor: v2Colors.paper },
+  timePillL: { fontFamily: v2Fonts.bodySemiBold, fontSize: 9, letterSpacing: 9*0.12, textTransform: 'uppercase', color: v2Colors.ink3 },
+  timePillV: { fontFamily: v2Fonts.mono, fontSize: 17, color: v2Colors.ink, marginTop: 2 },
+  timeSep: { fontFamily: v2Fonts.bodyBold, fontSize: 16, color: v2Colors.ink3 },
+  noteArea: { borderWidth: 1.5, borderColor: v2Colors.line2, borderRadius: 13, padding: 12, fontFamily: v2Fonts.body, fontSize: 14, color: v2Colors.ink, marginBottom: 20, minHeight: 58, lineHeight: 21 },
+  sheetFooter: { paddingHorizontal: 20, paddingTop: 14, borderTopWidth: 1, borderTopColor: v2Colors.line, backgroundColor: v2Colors.paper },
+  saveBtn: { height: 52, borderRadius: 15, backgroundColor: v2Colors.spruce, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, shadowColor: v2Colors.spruce, shadowOffset: { width:0, height:10 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 },
+  saveBtnTx: { fontFamily: v2Fonts.bodyBold, fontSize: 15.5, color: '#fff' },
 });

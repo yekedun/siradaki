@@ -1,6 +1,9 @@
 import {
+  createAppointmentDraftFromFreeGap,
   getInitialAppointmentServiceId,
+  isAppointmentDraftSaveEnabled,
   isAppointmentModalSaveEnabled,
+  selectedServiceFitsGap,
   resolveAppointmentServiceId,
   type AppointmentModalService,
 } from '../lib/appointment-modal-state';
@@ -34,5 +37,52 @@ describe('appointment modal service selection', () => {
       staffListHasItems: false,
       selectedStaffId: null,
     })).toBe(false);
+  });
+});
+
+describe('v2 appointment draft prefill', () => {
+  it('prefills date, time and staff from a selected free gap', () => {
+    const draft = createAppointmentDraftFromFreeGap({
+      startsAt: '2026-05-20T15:45:00+03:00',
+      staffId: 'staff-1',
+      gapDurationMin: 45,
+    });
+
+    expect(draft).toMatchObject({
+      date: '2026-05-20',
+      time: '15:45',
+      staffId: 'staff-1',
+      gapDurationMin: 45,
+    });
+  });
+
+  it('keeps a shorter service valid inside a larger free gap', () => {
+    expect(selectedServiceFitsGap({ serviceDurationMin: 45, gapDurationMin: 90 })).toBe(true);
+  });
+
+  it('rejects services that do not fit the selected free gap', () => {
+    expect(selectedServiceFitsGap({ serviceDurationMin: 120, gapDurationMin: 90 })).toBe(false);
+  });
+
+  it('requires selected service to fit before saving a prefilled gap appointment', () => {
+    expect(isAppointmentDraftSaveEnabled({
+      customerName: 'Ali',
+      date: '2026-05-20',
+      time: '15:00',
+      serviceId: 'svc-1',
+      staffId: 'staff-1',
+      serviceDurationMin: 120,
+      gapDurationMin: 90,
+    })).toBe(false);
+
+    expect(isAppointmentDraftSaveEnabled({
+      customerName: 'Ali',
+      date: '2026-05-20',
+      time: '15:00',
+      serviceId: 'svc-1',
+      staffId: 'staff-1',
+      serviceDurationMin: 45,
+      gapDurationMin: 90,
+    })).toBe(true);
   });
 });

@@ -32,6 +32,7 @@ import {
   View,
 } from 'react-native';
 import { Pencil, UserPlus } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { v2Colors, v2Fonts, v2Radii } from '../../lib/v2-tokens';
 import { buildOwnerRoleFilter, isMissingColumnError } from '../../lib/supabase-role';
@@ -519,8 +520,8 @@ function StaffRowItem({ member, index, onRowPress, onChevronPress }: StaffRowIte
   const metaText = isOwner
     ? 'Sen · tüm yetkiler'
     : isActive
-      ? (index % 2 === 0 ? '10:00 - 20:00 ·\nSal-Paz' : '09:00 - 19:00 ·\nPzt-Cmt')
-      : 'Davet';
+      ? (index % 2 === 0 ? '10:00 – 20:00 · Sal-Paz' : '09:00 – 19:00 · Pzt-Cmt')
+      : 'Davet bekleniyor';
 
   return (
     <TouchableOpacity
@@ -541,7 +542,7 @@ function StaffRowItem({ member, index, onRowPress, onChevronPress }: StaffRowIte
             </Text>
           </View>
         </View>
-        <Text style={styles.staffMeta}>{metaText}</Text>
+        <Text style={styles.staffMeta} numberOfLines={1}>{metaText}</Text>
       </View>
 
       <View style={styles.staffRight}>
@@ -564,6 +565,7 @@ function StaffRowItem({ member, index, onRowPress, onChevronPress }: StaffRowIte
 /* ─── Main Screen ───────────────────────────────────────────── */
 
 export default function TeamScreen() {
+  const router = useRouter();
   const [staff,          setStaff]          = useState<StaffMember[]>(INIT_STAFF);
   const [addOpen,        setAddOpen]        = useState(false);
   const [scheduleOpen,   setScheduleOpen]   = useState(false);
@@ -778,6 +780,13 @@ export default function TeamScreen() {
 
   return (
     <View style={styles.screen}>
+      <Pressable
+        accessibilityLabel="Ayarlar ve Profil"
+        onPress={() => router.push('/settings' as never)}
+        style={styles.profileFab}
+      >
+        <Text style={styles.profileFabText}>EK</Text>
+      </Pressable>
       <ScrollView
         style={styles.list}
         contentContainerStyle={styles.listContent}
@@ -884,6 +893,31 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: v2Colors.paper,
+  },
+  profileFab: {
+    alignItems: 'center',
+    backgroundColor: v2Colors.card,
+    borderColor: v2Colors.line2,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    height: 40,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: 18,
+    top: 16,
+    width: 40,
+    zIndex: 30,
+  },
+  profileFabText: {
+    backgroundColor: v2Colors.spruce,
+    borderRadius: 17,
+    color: v2Colors.paper,
+    fontFamily: v2Fonts.mono,
+    fontSize: 13,
+    height: 34,
+    lineHeight: 34,
+    textAlign: 'center',
+    width: 34,
   },
 
   /* Header */
@@ -1092,19 +1126,20 @@ const styles = StyleSheet.create({
   },
   staffNameRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 7,
-    flexWrap: 'wrap',
+    flexWrap: 'nowrap',
   },
   staffName: {
     fontSize: 17,
     lineHeight: 20,
     fontFamily: v2Fonts.bodyBold,
     color: v2Colors.ink,
+    flexShrink: 1,
   },
   staffMeta: {
-    fontSize: 13,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 14,
     fontFamily: v2Fonts.mono,
     color: v2Colors.ink3,
     marginTop: 3,
