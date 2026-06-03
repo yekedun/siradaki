@@ -46,16 +46,16 @@ export function StaffSelfEditModal({ visible, onClose, onSaved }: StaffSelfEditM
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      // phone and bio are not in the staff schema yet — select only confirmed columns
       const { data } = await supabase
         .from('staff')
-        .select('id, name, phone, bio')
+        .select('id, name')
         .eq('user_id', user.id)
         .maybeSingle();
       if (data) {
         setStaffId(data.id);
-        setName((data as any).name ?? '');
-        setPhone((data as any).phone ?? '');
-        setBio((data as any).bio ?? '');
+        setName(data.name ?? '');
+        // phone/bio not yet in schema — keep current state values
       }
     }
 
@@ -67,17 +67,13 @@ export function StaffSelfEditModal({ visible, onClose, onSaved }: StaffSelfEditM
     setLoading(true);
     setError(null);
     try {
-      const update: Record<string, unknown> = { name: name.trim(), phone: phone.trim() || null };
-      // bio kolonu varsa ekle (yoksa silent-skip)
-      const { error: bioErr } = await supabase
+      // Only update columns confirmed to exist in the staff schema
+      const { error: saveErr } = await supabase
         .from('staff')
-        .update({ ...update, bio: bio.trim() || null })
+        .update({ name: name.trim() })
         .eq('id', staffId);
 
-      if (bioErr?.code === '42703') {
-        // bio kolonu yok — bio'suz dene
-        await supabase.from('staff').update(update).eq('id', staffId);
-      } else if (bioErr) {
+      if (saveErr) {
         setError('Profil kaydedilemedi. Tekrar dene.');
         return;
       }

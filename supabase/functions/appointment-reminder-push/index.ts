@@ -241,10 +241,24 @@ serve(async (req) => {
     .gte("appointments.starts_at", win1hStart)
     .lt("appointments.starts_at", win1hEnd);
 
+  interface PushSubscriptionRow {
+    id: string;
+    endpoint: string;
+    p256dh: string;
+    auth: string;
+    appointment_id: string;
+    appointments: {
+      starts_at: string;
+      customer_name: string;
+      status: string;
+      services: { name: string } | null;
+    };
+  }
+
   let sent = 0;
 
-  async function processRow(row: any, type: "24h" | "1h") {
-    const appt = row.appointments as any;
+  async function processRow(row: PushSubscriptionRow, type: "24h" | "1h") {
+    const appt = row.appointments;
     const timeStr = new Date(appt.starts_at).toLocaleTimeString("tr-TR", {
       hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul",
     });
@@ -269,8 +283,8 @@ serve(async (req) => {
   }
 
   await Promise.all([
-    ...(rows24 ?? []).map((r: any) => processRow(r, "24h")),
-    ...(rows1h ?? []).map((r: any) => processRow(r, "1h")),
+    ...(rows24 ?? []).map(r => processRow(r as PushSubscriptionRow, "24h")),
+    ...(rows1h ?? []).map(r => processRow(r as PushSubscriptionRow, "1h")),
   ]);
 
   return json({ sent, checked24h: (rows24 ?? []).length, checked1h: (rows1h ?? []).length });

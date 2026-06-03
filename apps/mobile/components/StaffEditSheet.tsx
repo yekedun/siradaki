@@ -41,17 +41,11 @@ export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
     setLoading(true);
     setError(null);
     try {
-      let { error: err } = await supabase
+      // phone column does not exist on staff table — update only confirmed columns
+      const { error: err } = await supabase
         .from('staff')
-        .update({ name: name.trim(), phone: phone.trim() || null, is_active: isActive })
+        .update({ name: name.trim(), is_active: isActive })
         .eq('id', staff.id);
-      if (isMissingColumnError(err, 'staff.phone')) {
-        const fallback = await supabase
-          .from('staff')
-          .update({ name: name.trim(), is_active: isActive })
-          .eq('id', staff.id);
-        err = fallback.error;
-      }
       if (err) { setError(err.message); return; }
       onClose();
       onSaved();

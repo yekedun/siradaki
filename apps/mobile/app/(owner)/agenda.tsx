@@ -163,24 +163,24 @@ export default function AgendaScreen() {
 
     const [{ data: appts, error: apptsErr }, { data: blocks, error: blocksErr }] = await Promise.all([
       supabase.from('appointments').select('id, staff_id, customer_name, starts_at, ends_at, status, notes, customer_notes, services(name, duration_min)')
-        .in('staff_id', barbers.map((b: any) => b.id))
+        .in('staff_id', barbers.map(b => b.id))
         .gte('starts_at', dayRange.start).lt('starts_at', dayRange.end)
         .neq('status', 'cancelled'),
       supabase.from('blocks').select('id, staff_id, starts_at, ends_at, reason')
-        .in('staff_id', barbers.map((b: any) => b.id))
+        .in('staff_id', barbers.map(b => b.id))
         .gte('starts_at', dayRange.start).lt('starts_at', dayRange.end),
     ]);
     if (__DEV__ && apptsErr) console.warn('[agenda] appointments query error:', apptsErr);
     if (__DEV__ && blocksErr) console.warn('[agenda] blocks query error:', blocksErr);
 
     const now = new Date();
-    const newCols: StaffCol[] = (barbers as any[]).map(barber => {
-      const barberAppts = (appts ?? []).filter((a: any) => a.staff_id === barber.id);
-      const barberBlocks = (blocks ?? []).filter((b: any) => b.staff_id === barber.id);
+    const newCols: StaffCol[] = barbers.map(barber => {
+      const barberAppts = (appts ?? []).filter(a => a.staff_id === barber.id);
+      const barberBlocks = (blocks ?? []).filter(b => b.staff_id === barber.id);
 
       const items: ColItem[] = [
-        ...barberAppts.map((a: any) => appointmentRowToAgendaItem(a, now)),
-        ...barberBlocks.map((b: any) => {
+        ...barberAppts.map(a => appointmentRowToAgendaItem(a, now)),
+        ...barberBlocks.map(b => {
           const start = new Date(b.starts_at);
           const end = new Date(b.ends_at);
           const dur = Math.round((end.getTime() - start.getTime()) / 60000);
@@ -457,12 +457,12 @@ export default function AgendaScreen() {
           if (editingAppt) {
             const { error } = await supabase.rpc('update_appointment_atomic', {
               p_appointment_id: editingAppt.id,
-              p_staff_id: data.staffId,
-              p_service_id: data.serviceId,
+              p_staff_id: data.staffId ?? '',
+              p_service_id: data.serviceId ?? '',
               p_starts_at: buildLocalAppointmentTimestamp(data.date, data.time),
               p_customer_name: data.customerName,
-              p_customer_phone: data.customerPhone || null,
-              p_customer_notes: data.notes ?? null,
+              p_customer_phone: data.customerPhone || undefined,
+              p_customer_notes: data.notes ?? undefined,
             });
             if (error) {
               if (__DEV__) console.warn('[agenda] update_appointment_atomic error:', error);

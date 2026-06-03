@@ -96,9 +96,9 @@ export default function EarningsScreen() {
     if (isCancelled()) return;
 
     if (data) {
-      const totalCiro = data.reduce((s: number, a: any) => s + estimatedAppointmentRevenueCents(a), 0);
-      const totalKomisyon = data.reduce((s: number, a: any) => s + (a.completed_commission_cents ?? 0), 0);
-      const totalDukkan = data.reduce((s: number, a: any) => s + (a.completed_shop_share_cents ?? 0), 0);
+      const totalCiro = data.reduce((s, a) => s + estimatedAppointmentRevenueCents(a), 0);
+      const totalKomisyon = data.reduce((s, a) => s + (a.completed_commission_cents ?? 0), 0);
+      const totalDukkan = data.reduce((s, a) => s + (a.completed_shop_share_cents ?? 0), 0);
       setPeriodCiro(data.length === 0 ? '—' : formatCents(totalCiro));
       setPeriodKomisyon(data.length === 0 ? '—' : formatCents(totalKomisyon));
       setPeriodDukkan(data.length === 0 ? '—' : formatCents(totalDukkan));
@@ -139,8 +139,9 @@ export default function EarningsScreen() {
 
     if (isCancelled()) return;
 
-    if (!commErr && commData?.staff) {
-      setCommRows(commData.staff as CommissionStaffRow[]);
+    const commDataObj = commData as { staff?: CommissionStaffRow[] } | null;
+    if (!commErr && commDataObj?.staff) {
+      setCommRows(commDataObj.staff);
     } else {
       setCommRows([]);
     }

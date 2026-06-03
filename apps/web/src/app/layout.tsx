@@ -1,6 +1,21 @@
 import type { Metadata } from 'next';
+import { Bebas_Neue, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { ServiceWorkerRegistrar } from '../components/ServiceWorkerRegistrar';
+
+const bebasNeue = Bebas_Neue({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-bebas-neue',
+  display: 'swap',
+});
+
+const plusJakarta = Plus_Jakarta_Sans({
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-plus-jakarta',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Sıradaki — Berber Randevu & Ekip Yönetimi',
@@ -9,15 +24,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="tr" className={`${bebasNeue.variable} ${plusJakarta.variable}`}>
       <body className="bg-slate-50 font-sans text-ink-900 antialiased">
         <ServiceWorkerRegistrar />
         {children}

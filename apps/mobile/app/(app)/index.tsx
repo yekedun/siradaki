@@ -26,7 +26,8 @@
  *   body "20 Mayıs için randevu bulunmuyor. Yeni randevu ekleyebilirsiniz."
  *   cta "Yeni Randevu" ctaVariant="accent"
  */
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   View,
   Text,
@@ -41,6 +42,7 @@ import { colors } from '../../lib/theme';
 import { AppointmentDetailSheet } from '../../components/AppointmentDetailSheet';
 import { AddAppointmentModal, ServiceOption } from '../../components/AddAppointmentModal';
 import { supabase } from '../../lib/supabase';
+import { createDebounce } from '../../lib/debounce';
 import { formatTime, translateReason, getAppointmentState, buildDayRange } from '../../lib/utils';
 
 /* ── TR day labels ──────────────────────────────────────────────── */
@@ -271,7 +273,7 @@ function EmptyState({ onCta, dateLabel }: { onCta?: () => void; dateLabel?: stri
 type ListItem =
   | { kind: 'section'; label: string; topMargin?: number }
   | { kind: 'appt'; id: string; time: string; duration: number; name: string; service: string; notes?: string | null; state?: ApptState; isDetail?: boolean }
-  | { kind: 'blok'; time: string; duration: number; label: string };
+  | { kind: 'blok'; id: string; time: string; duration: number; label: string };
 
 /* ── TR month names for header meta ─────────────────────────────── */
 const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'] as const;
@@ -316,12 +318,7 @@ export default function RandevularScreen() {
     return () => { isMounted = false; };
   }, []);
 
-  useEffect(() => {
-    if (!staffId) return;
-    fetchAppointments();
-  }, [staffId, dayIndex]);
-
-  async function fetchAppointments() {
+  const fetchAppointments = useCallback(async () => {
     if (!staffId) return;
 
     const today = new Date(); today.setHours(0,0,0,0);
@@ -360,7 +357,7 @@ export default function RandevularScreen() {
       const end = new Date(b.ends_at);
       const dur = Math.round((end.getTime() - start.getTime()) / 60000);
       const label = translateReason(b.reason);
-      upcoming.push({ kind: 'blok', time: formatTime(start), duration: dur, label: `BLOKE · ${label}`, _startMs: start.getTime() } as any);
+      upcoming.push({ kind: 'blok', id: b.id, time: formatTime(start), duration: dur, label: `BLOKE · ${label}`, _startMs: start.getTime() } as any);
     }
 
     upcoming.sort((a, b) => (a as any)._startMs - (b as any)._startMs);
@@ -374,7 +371,46 @@ export default function RandevularScreen() {
     }
 
     setItems(result);
-  }
+  }, [staffId, dayIndex]);
+
+  useEffect(() => {
+    if (!staffId) return;
+    fetchAppointments();
+  }, [staffId, dayIndex, fetchAppointments]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (staffId) fetchAppointments();
+    }, [staffId, fetchAppointments]),
+  );
+
+  useEffect(() => {
+    if (!staffId) return;
+
+    const debounced = createDebounce(fetchAppointments, 200);
+    const apptCh = supabase
+      .channel(`staff-appt-${staffId}`)
+      .on(
+        'postgres_changes' as const,
+        { event: '*', schema: 'public', table: 'appointments', filter: `staff_id=eq.${staffId}` },
+        debounced,
+      )
+      .subscribe();
+
+    const blockCh = supabase
+      .channel(`staff-block-${staffId}`)
+      .on(
+        'postgres_changes' as const,
+        { event: '*', schema: 'public', table: 'blocks', filter: `staff_id=eq.${staffId}` },
+        debounced,
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(apptCh);
+      supabase.removeChannel(blockCh);
+    };
+  }, [staffId, fetchAppointments]);
 
   async function openDetail(item: ListItem & { kind: 'appt' }) {
     const { data } = await supabase
@@ -426,19 +462,19 @@ export default function RandevularScreen() {
           {items.map((item, idx) => {
             if (item.kind === 'section') {
               return (
-                <SectionLabel key={idx} topMargin={item.topMargin ?? 0}>
+                <SectionLabel key={`section-${item.label}-${idx}`} topMargin={item.topMargin ?? 0}>
                   {item.label}
                 </SectionLabel>
               );
             }
             if (item.kind === 'blok') {
               return (
-                <BlokCard key={idx} time={item.time} duration={item.duration} label={item.label} />
+                <BlokCard key={item.id} time={item.time} duration={item.duration} label={item.label} />
               );
             }
             return (
               <AppointmentCard
-                key={idx}
+                key={item.id}
                 time={item.time}
                 duration={item.duration}
                 name={item.name}

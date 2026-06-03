@@ -14,7 +14,7 @@ const AUTH_CSS = `
     display: grid;
     grid-template-columns: 1fr 1fr;
     min-height: 100vh;
-    font-family: 'Plus Jakarta Sans', var(--font-sans, sans-serif);
+    font-family: var(--font-plus-jakarta), var(--font-sans, sans-serif);
     -webkit-font-smoothing: antialiased;
   }
 
@@ -34,7 +34,7 @@ const AUTH_CSS = `
     right: -6%;
     top: 50%;
     transform: translateY(-50%);
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: var(--font-bebas-neue), sans-serif;
     font-size: 60vw;
     line-height: 1;
     color: rgba(255,255,255,.025);
@@ -81,7 +81,7 @@ const AUTH_CSS = `
   }
 
   .brand-title {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: var(--font-bebas-neue), sans-serif;
     font-size: clamp(52px, 5.5vw, 84px);
     line-height: .92;
     text-transform: uppercase;
@@ -159,7 +159,7 @@ const AUTH_CSS = `
   }
 
   .form-title {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: var(--font-bebas-neue), sans-serif;
     font-size: clamp(40px, 4vw, 56px);
     line-height: .92;
     text-transform: uppercase;
@@ -193,7 +193,7 @@ const AUTH_CSS = `
     padding: 11px 14px;
     border: 1.5px solid #D6DBE5;
     background: #fff;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: var(--font-plus-jakarta), sans-serif;
     font-size: 14px;
     color: #0B1220;
     outline: none;
@@ -227,7 +227,7 @@ const AUTH_CSS = `
     padding: 11px 14px;
     border: none;
     background: transparent;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: var(--font-plus-jakarta), sans-serif;
     font-size: 14px;
     color: #0B1220;
     outline: none;
@@ -248,7 +248,7 @@ const AUTH_CSS = `
     cursor: pointer;
     transition: color .15s;
     white-space: nowrap;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: var(--font-plus-jakarta), sans-serif;
   }
 
   .pw-toggle:hover { color: #0B1220; }
@@ -298,7 +298,7 @@ const AUTH_CSS = `
     padding: 14px 24px;
     background: #FF4D1C;
     color: #fff;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: var(--font-plus-jakarta), sans-serif;
     font-weight: 700;
     font-size: 14px;
     border: none;
@@ -339,7 +339,7 @@ const AUTH_CSS = `
     padding: 12px 24px;
     background: #fff;
     border: 1.5px solid #D6DBE5;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: var(--font-plus-jakarta), sans-serif;
     font-weight: 600;
     font-size: 14px;
     color: #0B1220;

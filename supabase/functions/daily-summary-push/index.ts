@@ -134,8 +134,15 @@ serve(async (req) => {
     return error("Sorgu hatasi", 500);
   }
 
+  interface StaffRow {
+    id: string;
+    push_token: string | null;
+    shop_id: string;
+    notification_prefs: Record<string, unknown> | null;
+  }
+
   // daily_summary tercihi false olan staff'i erken elendir.
-  const eligibleStaff = (staffRows ?? []).filter((s: any) => {
+  const eligibleStaff = (staffRows ?? []).filter((s: StaffRow) => {
     if (!s.push_token) return false;
     const prefs = s.notification_prefs ?? {};
     return prefs.daily_summary !== false;
@@ -147,7 +154,7 @@ serve(async (req) => {
   // 2b) Bugunku randevulari topla (Europe/Istanbul gun siniri).
   // PostgREST nested join'da .in("staff.shop_id") filtreleme desteklenmez;
   // bunun yerine staff_id listesi uzerinden dogrudan appointments sorguluyoruz.
-  const eligibleStaffIds = eligibleStaff.map((s: any) => s.id as string);
+  const eligibleStaffIds = eligibleStaff.map(s => s.id);
   const { start, end } = istanbulDayBoundsUtc(tr);
   const { data: appointments, error: apptErr } = await supabase
     .from("appointments")
@@ -166,7 +173,7 @@ serve(async (req) => {
   }
 
   // 3) Staff bazinda randevu say.
-  const staffById = new Map<string, any>(eligibleStaff.map((s: any) => [s.id, s]));
+  const staffById = new Map<string, StaffRow>(eligibleStaff.map(s => [s.id, s]));
   const byStaff = new Map<string, { token: string; count: number }>();
   for (const appt of appointments) {
     const sid = appt.staff_id as string;

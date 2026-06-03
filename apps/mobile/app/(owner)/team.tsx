@@ -755,9 +755,9 @@ export default function TeamScreen() {
         message: `Sıradaki uygulamasına berber olarak katılmak için:\n${invite_link}`,
         url: invite_link, // iOS'ta ayrıca URL olarak gösterilir
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       // Kullanıcı share sheet'i kapattıysa hata verme
-      if (e?.name !== 'AbortError') {
+      if (!(e instanceof Error) || e.name !== 'AbortError') {
         Alert.alert('Hata', 'Beklenmeyen bir hata oluştu.');
       }
     } finally {

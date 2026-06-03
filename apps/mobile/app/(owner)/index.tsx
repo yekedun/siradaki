@@ -259,8 +259,8 @@ export default function OzetScreen() {
 
     if (appts) {
       const total = appts.length;
-      const completed = (appts as any[]).filter((a: any) => a.status === 'completed').length;
-      const revenue = (appts as any[]).reduce((s: number, a: any) => s + estimatedAppointmentRevenueCents(a), 0);
+      const completed = appts.filter(a => a.status === 'completed').length;
+      const revenue = appts.reduce((s, a) => s + estimatedAppointmentRevenueCents(a), 0);
       setKpiTotal(String(total));
       setKpiCompleted(String(completed));
       setKpiRevenue(revenue === 0 ? '—' : (revenue / 100).toLocaleString('tr-TR', { maximumFractionDigits: 0 }));
@@ -279,8 +279,10 @@ export default function OzetScreen() {
       p_staff_ids: allIds,
     });
 
-    if (monthly && (monthly as any[]).length > 0) {
-      const rows = monthly as any[];
+    if (monthly && monthly.length > 0) {
+      // service_name is not in the static RPC schema but may be present at runtime
+      type RevenueRowWithExtras = (typeof monthly)[0] & { service_name?: string };
+      const rows = monthly as RevenueRowWithExtras[];
 
       // En Çok Tercih Edilen hizmet
       const svcCount = new Map<string, number>();
@@ -297,7 +299,7 @@ export default function OzetScreen() {
       const TR_DAYS = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
       const dayCount = new Array(7).fill(0);
       for (const a of rows) {
-        const d = new Date(a.starts_at ?? a.created_at);
+        const d = new Date(a.starts_at);
         dayCount[d.getDay()]++;
       }
       const maxDay = dayCount.indexOf(Math.max(...dayCount));
@@ -311,7 +313,7 @@ export default function OzetScreen() {
     // Usta Bazında — bugünün randevu sayısı
     if (appts) {
       const staffCount = new Map<string, number>();
-      for (const a of appts as any[]) { staffCount.set(a.staff_id, (staffCount.get(a.staff_id) ?? 0) + 1); }
+      for (const a of appts) { staffCount.set(a.staff_id, (staffCount.get(a.staff_id) ?? 0) + 1); }
       setStaffStats(
         barbers.map((b) => ({ id: b.id, name: b.name, count: staffCount.get(b.id) ?? 0 }))
           .sort((a, b) => b.count - a.count),

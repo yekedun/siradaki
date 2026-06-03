@@ -41,8 +41,8 @@ export async function signInWithGoogle(): Promise<{ error?: string }> {
     });
     if (error) return { error: error.message };
     return {};
-  } catch (e: any) {
-    if (e.code === 'SIGN_IN_CANCELLED') return { error: 'İptal edildi' };
+  } catch (e: unknown) {
+    if (e instanceof Error && (e as Error & { code?: string }).code === 'SIGN_IN_CANCELLED') return { error: 'İptal edildi' };
     return { error: 'Google ile giriş başarısız' };
   }
 }

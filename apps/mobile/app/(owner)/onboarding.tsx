@@ -603,7 +603,7 @@ export default function OnboardingScreen() {
           shop_id:   shopId,
           name:      staffName.trim(),
           is_active: true,
-          role:      'barber',
+          role:      'staff',
           slug:      slugify(staffName.trim()),
         });
         if (error) {

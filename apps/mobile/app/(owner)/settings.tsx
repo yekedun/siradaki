@@ -598,7 +598,8 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
               onPress={async () => {
                 if (shopId) {
                   const wh = shopHoursScheduleToWorkingHours(schedule);
-                  const { error } = await supabase.from('shops').update({ working_hours: wh }).eq('id', shopId);
+                  // WorkingHours is JSON-compatible; cast required because the type lacks an index signature
+                  const { error } = await supabase.from('shops').update({ working_hours: wh as unknown as import('@berber/db').Json }).eq('id', shopId);
                   if (error) {
                     Alert.alert('Hata', 'Dükkan saatleri kaydedilemedi.');
                     return;

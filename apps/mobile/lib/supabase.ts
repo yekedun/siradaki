@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@berber/db';
 import { buildOwnerRoleFilter, isMissingStatusColumnError } from './supabase-role';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
@@ -49,7 +50,7 @@ const secureStoreAdapter = {
   removeItem: removeChunkedItem,
 };
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: secureStoreAdapter,
     autoRefreshToken: true,
