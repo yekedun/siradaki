@@ -3,12 +3,10 @@ import { Modal, View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView,
 import { colors } from '../lib/theme';
 import { Button } from './ds/Button';
 import { supabase } from '../lib/supabase';
-import { isMissingColumnError } from '../lib/supabase-role';
 
 export interface StaffMember {
   id: string;
   name: string;
-  phone?: string;
   is_active: boolean;
   role?: string;
 }
@@ -22,7 +20,6 @@ interface Props {
 
 export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
   const [name,     setName]     = useState('');
-  const [phone,    setPhone]    = useState('');
   const [isActive, setIsActive] = useState(true);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
@@ -30,7 +27,6 @@ export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
   useEffect(() => {
     if (staff) {
       setName(staff.name);
-      setPhone(staff.phone ?? '');
       setIsActive(staff.is_active);
       setError(null);
     }
@@ -67,12 +63,6 @@ export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
             <Text style={styles.label}>Ad Soyad</Text>
             <TextInput style={styles.input} value={name} onChangeText={setName}
               placeholder="Berber adı" placeholderTextColor={colors.slate[400]} />
-          </View>
-          <View style={styles.field}>
-            <Text style={styles.label}>Telefon</Text>
-            <TextInput style={styles.input} value={phone} onChangeText={setPhone}
-              placeholder="05XX XXX XX XX" keyboardType="phone-pad"
-              placeholderTextColor={colors.slate[400]} />
           </View>
           <View style={styles.toggleRow}>
             <View style={{ flex: 1 }}>

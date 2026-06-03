@@ -455,10 +455,14 @@ export default function AgendaScreen() {
             return;
           }
           if (editingAppt) {
+            if (!data.staffId || !data.serviceId) {
+              Alert.alert('Hata', 'Berber ve hizmet seçimi zorunludur.');
+              return;
+            }
             const { error } = await supabase.rpc('update_appointment_atomic', {
               p_appointment_id: editingAppt.id,
-              p_staff_id: data.staffId ?? '',
-              p_service_id: data.serviceId ?? '',
+              p_staff_id: data.staffId,
+              p_service_id: data.serviceId,
               p_starts_at: buildLocalAppointmentTimestamp(data.date, data.time),
               p_customer_name: data.customerName,
               p_customer_phone: data.customerPhone || undefined,

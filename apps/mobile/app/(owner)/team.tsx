@@ -799,7 +799,6 @@ export default function TeamScreen() {
                   setEditStaff({
                     id: s.id,
                     name: s.name,
-                    phone: s._phone ?? undefined,
                     is_active: s._is_active ?? s.status === 'Aktif',
                     role: s._role ?? undefined,
                   });

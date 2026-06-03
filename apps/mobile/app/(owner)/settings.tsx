@@ -71,6 +71,7 @@ import {
   shopHoursScheduleToRows,
   shopHoursScheduleToWorkingHours,
 } from '../../lib/staff-schedule';
+import type { Json } from '@berber/db';
 
 /* ─── Constants ─────────────────────────────────────────────── */
 
@@ -599,7 +600,7 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
                 if (shopId) {
                   const wh = shopHoursScheduleToWorkingHours(schedule);
                   // WorkingHours is JSON-compatible; cast required because the type lacks an index signature
-                  const { error } = await supabase.from('shops').update({ working_hours: wh as unknown as import('@berber/db').Json }).eq('id', shopId);
+                  const { error } = await supabase.from('shops').update({ working_hours: wh as unknown as Json }).eq('id', shopId);
                   if (error) {
                     Alert.alert('Hata', 'Dükkan saatleri kaydedilemedi.');
                     return;
