@@ -57,7 +57,11 @@ import { AppointmentCard } from '../../components/ds/AppointmentCard';
 import { BlokCard } from '../../components/ds/BlokCard';
 import { Button } from '../../components/ds/Button';
 import { supabase } from '../../lib/supabase';
-import { buildLocalAppointmentTimestamp, formatLocalAppointmentDate } from '../../lib/appointment-time';
+import {
+  buildIstanbulAppointmentDayRange,
+  buildLocalAppointmentTimestamp,
+  formatLocalAppointmentDate,
+} from '../../lib/appointment-time';
 import type { AppointmentWorkingHours } from '../../lib/appointment-time';
 import { appointmentRowToAgendaItem } from '../../lib/appointment-mappers';
 import { formatTime, translateReason, AppointmentState as AppState } from '../../lib/utils';
@@ -155,17 +159,16 @@ export default function AgendaScreen() {
     const barbers = barberList;
     if (!barbers.length) { setCols([]); return; }
 
-    const dayStart = new Date(selectedDate); dayStart.setHours(0,0,0,0);
-    const dayEnd = new Date(selectedDate); dayEnd.setDate(dayEnd.getDate()+1); dayEnd.setHours(0,0,0,0);
+    const dayRange = buildIstanbulAppointmentDayRange(selectedDate);
 
     const [{ data: appts, error: apptsErr }, { data: blocks, error: blocksErr }] = await Promise.all([
       supabase.from('appointments').select('id, staff_id, customer_name, starts_at, ends_at, status, notes, customer_notes, services(name, duration_min)')
         .in('staff_id', barbers.map((b: any) => b.id))
-        .gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString())
+        .gte('starts_at', dayRange.start).lt('starts_at', dayRange.end)
         .neq('status', 'cancelled'),
       supabase.from('blocks').select('id, staff_id, starts_at, ends_at, reason')
         .in('staff_id', barbers.map((b: any) => b.id))
-        .gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString()),
+        .gte('starts_at', dayRange.start).lt('starts_at', dayRange.end),
     ]);
     if (__DEV__ && apptsErr) console.warn('[agenda] appointments query error:', apptsErr);
     if (__DEV__ && blocksErr) console.warn('[agenda] blocks query error:', blocksErr);

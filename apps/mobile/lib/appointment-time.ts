@@ -28,6 +28,18 @@ export function formatLocalAppointmentDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+export function buildIstanbulAppointmentDayRange(date: Date): { start: string; end: string } {
+  const startDate = formatLocalAppointmentDate(date);
+  const nextDate = new Date(date);
+  nextDate.setDate(date.getDate() + 1);
+  const endDate = formatLocalAppointmentDate(nextDate);
+
+  return {
+    start: `${startDate}T00:00:00+03:00`,
+    end: `${endDate}T00:00:00+03:00`,
+  };
+}
+
 export function generateAppointmentTimes({
   open,
   close,

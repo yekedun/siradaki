@@ -1,4 +1,5 @@
 import {
+  buildIstanbulAppointmentDayRange,
   buildLocalAppointmentTimestamp,
   formatLocalAppointmentDate,
   generateAppointmentTimesForDate,
@@ -18,6 +19,17 @@ describe('formatLocalAppointmentDate', () => {
     const date = new Date(2026, 4, 24, 23, 30, 0, 0);
 
     expect(formatLocalAppointmentDate(date)).toBe('2026-05-24');
+  });
+});
+
+describe('buildIstanbulAppointmentDayRange', () => {
+  it('builds a stable Istanbul calendar-day query range', () => {
+    const date = new Date(2026, 5, 3, 15, 45, 0, 0);
+
+    expect(buildIstanbulAppointmentDayRange(date)).toEqual({
+      start: '2026-06-03T00:00:00+03:00',
+      end: '2026-06-04T00:00:00+03:00',
+    });
   });
 });
 
