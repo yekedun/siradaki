@@ -32,13 +32,25 @@ export default function RootLayout() {
 
   useEffect(() => { segmentRef.current = firstSegment; }, [firstSegment]);
 
-  // Notification tap → navigate to appointments screen
+  // Notification tap → navigate appropriately
   useEffect(() => {
     Notifications.getLastNotificationResponseAsync().then(res => {
       if (res) pendingNotif.current = true;
     });
 
-    const sub = Notifications.addNotificationResponseReceivedListener(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const notifType = response.notification.request.content.data?.type as string | undefined;
+
+      // shop_approved / shop_rejected: rol yeniden sorgula, pending kullanıcıları doğru yönlendir.
+      if (notifType === 'shop_approved' || notifType === 'shop_rejected') {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (!user) { router.replace('/(auth)/login' as Href); return; }
+          determineUserRole(user.id).then(role => router.replace(routeForRole(role)));
+        });
+        return;
+      }
+
+      // Varsayılan: günlük özet vb. diğer bildirimler → randevu ekranı.
       const seg = segmentRef.current;
       if (seg === '(owner)') router.push('/(owner)/agenda' as Href);
       else router.push('/(app)/' as Href);
