@@ -4,6 +4,7 @@
 // 4 states: form | loading | success | error
 
 import { useState, useRef } from 'react';
+import { isValidPhone } from '@/lib/validation';
 
 type ModalState = 'form' | 'loading' | 'success' | 'error';
 type ErrorType  = 'conflict' | 'generic';
@@ -77,7 +78,7 @@ function ModalForm({
   const [phone, setPhone] = useState('');
   const [note,  setNote]  = useState('');
   const [phoneTouched, setPhoneTouched] = useState(false);
-  const ok = name.trim().length >= 2 && phone.trim().length >= 10;
+  const ok = name.trim().length >= 2 && isValidPhone(phone);
 
   const inputCls = 'bg-slate-50 border border-slate-200 rounded-md px-3.5 py-3 text-[15px] text-ink-900 font-sans w-full outline-none transition-[border-color,box-shadow] duration-[140ms] focus:border-brand-600 focus:ring-2 focus:ring-brand-100';
   const labelCls = 'text-2xs font-semibold tracking-widest text-slate-400 uppercase mb-1.5';
@@ -115,8 +116,8 @@ function ModalForm({
             placeholder="0(5xx) xxx xx xx"
             className={inputCls}
           />
-          {phoneTouched && phone.length > 0 && phone.trim().length < 10 && (
-            <div className="text-xs text-coral-600 mt-1">Geçerli bir telefon numarası gir</div>
+          {phoneTouched && phone.length > 0 && !isValidPhone(phone) && (
+            <div className="text-xs text-coral-600 mt-1">Geçerli bir telefon numarası gir (10-11 rakam)</div>
           )}
           {!phoneTouched && phone.length === 0 && name.trim().length >= 2 && (
             <div className="text-xs text-slate-400 mt-1">Randevu onayı için telefon numarası gerekli</div>

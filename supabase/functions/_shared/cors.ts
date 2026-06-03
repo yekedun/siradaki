@@ -1,8 +1,9 @@
 const ALLOWED_ORIGINS = [
   'https://siradaki.app',
   'https://www.siradaki.app',
-  'http://localhost:3000',
-  'http://localhost:8081',
+  ...(Deno.env.get('ENVIRONMENT') === 'development'
+    ? ['http://localhost:3000', 'http://localhost:8081']
+    : []),
 ];
 
 function getAllowOrigin(req?: Request): string {

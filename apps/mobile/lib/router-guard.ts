@@ -19,6 +19,10 @@ export function routeForRole(role: UserRole): Href {
   return '/(auth)/google-onboarding' as Href;
 }
 
+export function inviteAcceptedRoute(): Href {
+  return routeForRole('staff');
+}
+
 export function shouldSkipRoleRouting(segment: RootSegment): boolean {
   return segment === '(owner)' || segment === '(app)' || segment === 'invite';
 }

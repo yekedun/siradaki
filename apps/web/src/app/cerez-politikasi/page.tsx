@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 const LAST_UPDATED = '24 Mayıs 2026';
-const CONTACT_EMAIL = 'emreyek29@gmail.com';
+const CONTACT_EMAIL = 'admin@siradaki.app';
 
 export default function CerezPolitikasiPage() {
   return (

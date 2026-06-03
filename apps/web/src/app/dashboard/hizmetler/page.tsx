@@ -50,6 +50,7 @@ export default function HizmetlerPage() {
   async function handleSave() {
     if (!form || !shopId) return;
     if (!form.name.trim()) { setError('Hizmet adı gerekli'); return; }
+    if (Number(form.price) <= 0) { setError("Fiyat 0'dan büyük olmalıdır."); return; }
     setSaving(true); setError(null);
     try {
       const { error } = await upsertService(supabase, shopId, {
@@ -133,6 +134,7 @@ export default function HizmetlerPage() {
               <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Fiyat (₺)</label>
               <input
                 type="number"
+                min="1"
                 value={form.price}
                 onChange={e => setForm(f => f && ({ ...f, price: e.target.value }))}
                 placeholder="örn. 200"

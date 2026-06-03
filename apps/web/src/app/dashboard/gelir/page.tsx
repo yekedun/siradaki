@@ -34,12 +34,13 @@ export default async function GelirPage({
   const totalCommission = rows.reduce((s, a) => s + (a.completed_commission_cents ?? 0), 0);
   const shopShare       = rows.reduce((s, a) => s + (a.completed_shop_share_cents ?? 0), 0);
 
-  const staffMap = new Map<string, { name: string; count: number; revenue: number; commission: number }>();
+  const staffMap = new Map<string, { id: string; name: string; count: number; revenue: number; commission: number }>();
   for (const a of rows) {
     const s = a.staff as { id: string; name: string } | null;
     if (!s) continue;
-    const existing = staffMap.get(s.id) ?? { name: s.name, count: 0, revenue: 0, commission: 0 };
+    const existing = staffMap.get(s.id) ?? { id: s.id, name: s.name, count: 0, revenue: 0, commission: 0 };
     staffMap.set(s.id, {
+      id:         s.id,
       name:       s.name,
       count:      existing.count + 1,
       revenue:    existing.revenue + (a.completed_price_cents ?? 0),
@@ -99,7 +100,7 @@ export default async function GelirPage({
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Personel Dağılımı</p>
           <div className="bg-white border border-gray-100 rounded-xl divide-y divide-gray-50">
             {staffRows.map(s => (
-              <div key={s.name} className="px-4 py-3.5 flex items-center justify-between">
+              <div key={s.id} className="px-4 py-3.5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-blue-900 text-white text-xs font-bold flex items-center justify-center">
                     {s.name[0]?.toUpperCase()}
@@ -111,7 +112,7 @@ export default async function GelirPage({
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold text-gray-900">{Math.round(s.revenue / 100).toLocaleString('tr-TR')} ₺</p>
-                  <p className="text-xs text-gray-400">Pay: {Math.round(s.commission / 100).toLocaleString('tr-TR')} ₺</p>
+                  <p className="text-xs text-gray-400">Ödeme: {Math.round(s.commission / 100).toLocaleString('tr-TR')} ₺</p>
                 </div>
               </div>
             ))}

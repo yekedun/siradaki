@@ -5,6 +5,7 @@ import { Check, Copy, ExternalLink } from 'lucide-react';
 import { createClient } from '@/lib/supabase/browser';
 import { updateShop } from '@berber/db';
 import type { WorkingHours, WorkingDayHours } from '@berber/shared';
+import { missingWorkingHoursMessage, shopSaveErrorMessage } from './error-messages';
 
 const DAYS: { key: keyof WorkingHours; label: string }[] = [
   { key: 'mon', label: 'Pazartesi' },
@@ -25,6 +26,7 @@ export default function AyarlarPage() {
   const [saving, setSaving]   = useState(false);
   const [saved, setSaved]     = useState(false);
   const [copied, setCopied]   = useState(false);
+  const [error, setError]     = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -52,8 +54,15 @@ export default function AyarlarPage() {
   }
 
   async function handleSave() {
-    if (!shopId || !wh) return;
-    setSaving(true); setSaved(false);
+    if (!wh) {
+      setError(missingWorkingHoursMessage());
+      return;
+    }
+    if (!shopId) {
+      setError('Dükkan bilgisi yüklenemedi. Lütfen sayfayı yenileyin.');
+      return;
+    }
+    setSaving(true); setSaved(false); setError(null);
     try {
       const { error } = await updateShop(supabase, shopId, {
         name,
@@ -61,7 +70,13 @@ export default function AyarlarPage() {
         address,
         working_hours: wh as unknown as import('@berber/db').Json,
       });
-      if (!error) { setSaved(true); setTimeout(() => setSaved(false), 2500); }
+      if (error) {
+        setError(shopSaveErrorMessage(error.message));
+        return;
+      }
+      setSaved(true); setTimeout(() => setSaved(false), 2500);
+    } catch (error) {
+      setError(shopSaveErrorMessage(error instanceof Error ? error.message : undefined));
     } finally {
       setSaving(false);
     }
@@ -173,6 +188,7 @@ export default function AyarlarPage() {
           </span>
         )}
       </div>
+      {error && <p className="text-sm font-medium text-red-600">{error}</p>}
     </div>
   );
 }

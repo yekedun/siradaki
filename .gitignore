@@ -39,6 +39,8 @@ supabase/.temp/
 .codebase-map.txt
 .superpowers/
 .ai/
+reports/
+tmp-mobile-metro-fixture*.log
 
 # Generated / ephemeral docs — auto-generated plans, specs, audit snapshots
 docs/superpowers/

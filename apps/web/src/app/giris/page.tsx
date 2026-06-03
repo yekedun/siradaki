@@ -4,6 +4,8 @@ import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/browser';
+import { mapSupabaseError } from '@/lib/auth-errors';
+import { isValidEmail } from '@/lib/validation';
 
 const AUTH_CSS = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -278,6 +280,11 @@ const AUTH_CSS = `
     font-weight: 600;
     color: #1E3A8A;
     text-decoration: none;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0;
   }
   .link-accent:hover { text-decoration: underline; }
 
@@ -351,6 +358,14 @@ const AUTH_CSS = `
     margin-bottom: 14px;
   }
 
+  .form-success {
+    font-size: 12px;
+    color: #166534;
+    background: #DCFCE7;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+  }
+
   .auth-foot {
     margin-top: 24px;
     text-align: center;
@@ -376,18 +391,46 @@ function GirisForm() {
   const [showPass, setShowPass] = useState(false);
   const [remember, setRemember] = useState(true);
   const [error,    setError]    = useState<string | null>(null);
+  const [success,  setSuccess]  = useState<string | null>(null);
   const [loading,  setLoading]  = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
+    setLoading(true);
+    try {
+      const supabase = createClient({ sessionOnly: !remember });
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: pass });
+      if (error) { setError(mapSupabaseError(error.message)); return; }
+      router.push(redirect);
+      router.refresh();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleForgotPassword() {
+    setError(null);
+    setSuccess(null);
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !isValidEmail(trimmedEmail)) {
+      setError('Lütfen önce e-posta adresinizi girin.');
+      return;
+    }
+
     setLoading(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: pass });
-      if (error) { setError(error.message); return; }
-      router.push(redirect);
-      router.refresh();
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+      if (error) {
+        setError('Şifre sıfırlama e-postası gönderilemedi.');
+      } else {
+        setSuccess('Şifre sıfırlama bağlantısı e-postanıza gönderildi.');
+      }
     } finally {
       setLoading(false);
     }
@@ -488,10 +531,13 @@ function GirisForm() {
                   <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} />
                   Beni hatırla
                 </label>
-                <a href="#" className="link-accent">Şifremi unuttum</a>
+                <button type="button" className="link-accent" onClick={handleForgotPassword} disabled={loading}>
+                  Şifremi unuttum
+                </button>
               </div>
 
               {error && <p className="form-error">{error}</p>}
+              {success && <p className="form-success">{success}</p>}
 
               <button type="submit" className="auth-btn-primary" disabled={loading || !email || !pass}>
                 {loading ? 'Giriş yapılıyor…' : 'Giriş Yap →'}

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/browser';
 import { getAppointments, updateAppointmentStatus } from '@berber/db';
@@ -39,6 +40,9 @@ export default function AjandaPage() {
   const [shopId, setShopId]   = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const dateRef = useRef(date);
+  useEffect(() => { dateRef.current = date; }, [date]);
+
   const supabase = createClient();
 
   const load = useCallback(async (d: string, sid: string) => {
@@ -49,7 +53,9 @@ export default function AjandaPage() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    async function init() {
+    let channel: RealtimeChannel | null = null;
+
+    const setup = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       const { data: shop } = await supabase
@@ -59,20 +65,23 @@ export default function AjandaPage() {
         .maybeSingle();
       if (!shop) return;
       setShopId(shop.id);
-      await load(date, shop.id);
+      await load(dateRef.current, shop.id);
 
-      const channel = supabase
+      channel = supabase
         .channel(`ajanda-${shop.id}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
           table: 'appointments',
-        }, () => load(date, shop.id))
+        }, () => load(dateRef.current, shop.id))
         .subscribe();
+    };
 
-      return () => { supabase.removeChannel(channel); };
-    }
-    init();
+    setup();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

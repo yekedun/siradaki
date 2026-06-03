@@ -1,9 +1,13 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { approveShop, rejectShop, getPendingShops } from './actions';
+import { approveShop, rejectShop, getShops } from './actions';
 
-type Shop = { id: string; name: string; slug: string; status: string; created_at: string };
+type Owner = { name: string; email: string | null } | null;
+type Shop = {
+  id: string; name: string; slug: string; status: string;
+  created_at: string; owner_user_id: string; owner: Owner;
+};
 
 const STATUS_COLOR: Record<string, string> = {
   pending:  '#F59E0B',
@@ -11,29 +15,35 @@ const STATUS_COLOR: Record<string, string> = {
   rejected: '#EF4444',
 };
 
-export default function AdminPage() {
-  const [key,     setKey]     = useState('');
-  const [authed,  setAuthed]  = useState(false);
-  const [shops,   setShops]   = useState<Shop[]>([]);
-  const [isPending, startTransition] = useTransition();
+const PAGE_SIZE = 20;
 
-  async function load(adminKey: string) {
+export default function AdminPage() {
+  const [key,        setKey]        = useState('');
+  const [authed,     setAuthed]     = useState(false);
+  const [shops,      setShops]      = useState<Shop[]>([]);
+  const [page,       setPage]       = useState(0);
+  const [total,      setTotal]      = useState(0);
+  const [isPending,  startTransition] = useTransition();
+
+  async function load(adminKey: string, p = 0) {
     try {
-      const data = await getPendingShops(adminKey);
-      setShops(data);
+      const result = await getShops(adminKey, p, PAGE_SIZE);
+      setShops(result.data);
+      setTotal(result.total);
+      setPage(p);
       setAuthed(true);
     } catch { setAuthed(false); alert('Hatalı anahtar'); }
   }
 
   function handleApprove(shopId: string) {
     startTransition(() => {
-      approveShop(shopId, key).then(() => load(key));
+      approveShop(shopId, key).then(() => load(key, page));
     });
   }
 
   function handleReject(shopId: string) {
     startTransition(() => {
-      rejectShop(shopId, key).then(() => load(key));
+      rejectShop(shopId, key).then(() => load(key, page));
     });
   }
 
@@ -58,6 +68,7 @@ export default function AdminPage() {
 
   const pending = shops.filter(s => s.status === 'pending');
   const rest    = shops.filter(s => s.status !== 'pending');
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
@@ -70,12 +81,35 @@ export default function AdminPage() {
         ))}
       </div>
       <div>
-        <h2 style={{ margin: '0 0 16px' }}>Tüm Kayıtlar</h2>
+        <h2 style={{ margin: '0 0 16px' }}>Tüm Kayıtlar ({total})</h2>
         {rest.map(shop => (
           <ShopRow key={shop.id} shop={shop} onApprove={handleApprove}
             onReject={handleReject} disabled={isPending} />
         ))}
       </div>
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <button
+            disabled={page === 0 || isPending}
+            onClick={() => load(key, page - 1)}
+            style={{ padding: '8px 18px', border: '1px solid #CBD5E1', borderRadius: 7,
+                      background: '#fff', cursor: page === 0 ? 'not-allowed' : 'pointer',
+                      opacity: page === 0 ? 0.4 : 1 }}>
+            ← Önceki
+          </button>
+          <span style={{ fontSize: 13, color: '#64748B' }}>
+            Sayfa {page + 1} / {totalPages}
+          </span>
+          <button
+            disabled={page >= totalPages - 1 || isPending}
+            onClick={() => load(key, page + 1)}
+            style={{ padding: '8px 18px', border: '1px solid #CBD5E1', borderRadius: 7,
+                      background: '#fff', cursor: page >= totalPages - 1 ? 'not-allowed' : 'pointer',
+                      opacity: page >= totalPages - 1 ? 0.4 : 1 }}>
+            Sonraki →
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -93,6 +127,13 @@ function ShopRow({ shop, onApprove, onReject, disabled }: {
         <div style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>
           siradaki.app/{shop.slug} · {new Date(shop.created_at).toLocaleString('tr-TR')}
         </div>
+        {shop.owner && (
+          <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>
+            {shop.owner.name}
+            {shop.owner.email && <> · <a href={`mailto:${shop.owner.email}`}
+              style={{ color: '#1E3A8A' }}>{shop.owner.email}</a></>}
+          </div>
+        )}
       </div>
       <span style={{ background: STATUS_COLOR[shop.status] + '22',
                       color: STATUS_COLOR[shop.status], padding: '3px 10px',

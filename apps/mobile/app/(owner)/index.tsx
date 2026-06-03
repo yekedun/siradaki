@@ -255,7 +255,7 @@ export default function OzetScreen() {
       p_to: dayEnd.toISOString(),
       p_staff_ids: filteredIds,
     });
-    if (apptsErr) { console.warn('[owner-summary] appointments query error:', apptsErr); return; }
+    if (apptsErr) { if (__DEV__) console.warn('[owner-summary] appointments query error:', apptsErr); return; }
 
     if (appts) {
       const total = appts.length;

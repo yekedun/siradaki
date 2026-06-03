@@ -8,7 +8,27 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const supabase = await createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+    const { data: { user }, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (sessionError) {
+      console.error('[auth/callback] exchangeCodeForSession başarısız:', sessionError.message);
+      // Geçersiz veya süresi dolmuş code → tekrar giriş sayfasına yönlendir
+      const url = new URL(`${origin}/giris`);
+      url.searchParams.set('error', 'link_expired');
+      return NextResponse.redirect(url.toString());
+    }
+
+    if (user) {
+      const { data: shop } = await supabase
+        .from('shops')
+        .select('id')
+        .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
+        .maybeSingle();
+
+      if (!shop) {
+        return NextResponse.redirect(`${origin}/kayit/tamamla`);
+      }
+    }
   }
 
   return NextResponse.redirect(`${origin}${redirect}`);

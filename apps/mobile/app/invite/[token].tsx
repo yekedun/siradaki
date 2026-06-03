@@ -5,6 +5,7 @@ import { colors } from '../../lib/theme';
 import { Button } from '../../components/ds/Button';
 import { supabase } from '../../lib/supabase';
 import { configureGoogleSignIn, signInWithGoogle } from '../../lib/google-auth';
+import { inviteAcceptedRoute } from '../../lib/router-guard';
 
 const FN_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1';
 
@@ -87,7 +88,7 @@ export default function InviteScreen() {
       return;
     }
 
-    router.replace('/');
+    router.replace(inviteAcceptedRoute());
   }
 
   if (state === 'checking') {

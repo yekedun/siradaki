@@ -10,6 +10,9 @@ function getAdminClient() {
   );
 }
 
+// Platform erişimi yalnızca ADMIN_SECRET_KEY ile korunur.
+// staff.role='admin' tüm dükkan sahipleri için geçerli olduğundan
+// DB role kontrolü ek güvenlik sağlamaz — timing-safe key karşılaştırması yeterli.
 function assertAdmin(adminKey: string) {
   const secret = process.env.ADMIN_SECRET_KEY ?? '';
   if (!secret) throw new Error('ADMIN_SECRET_KEY env var eksik');
@@ -26,6 +29,14 @@ function assertAdmin(adminKey: string) {
 export async function approveShop(shopId: string, adminKey: string) {
   assertAdmin(adminKey);
   const supabase = getAdminClient();
+
+  const { data: existing } = await supabase
+    .from('shops')
+    .select('status')
+    .eq('id', shopId)
+    .single();
+  if (existing?.status === 'active') return { error: 'Bu dükkan zaten aktif.' };
+
   const { error } = await supabase.from('shops').update({ status: 'active' }).eq('id', shopId);
   if (error) throw new Error('Onay başarısız: ' + error.message);
 
@@ -64,15 +75,36 @@ export async function rejectShop(shopId: string, adminKey: string) {
   if (error) throw new Error('Red başarısız: ' + error.message);
 }
 
-export async function getPendingShops(adminKey: string) {
+// "getShops" çünkü pending + active + rejected tüm durumlar döner
+export async function getShops(adminKey: string, page = 0, pageSize = 20) {
   assertAdmin(adminKey);
   const supabase = getAdminClient();
-  const { data, error } = await supabase
+  const { data, count, error } = await supabase
     .from('shops')
-    .select('id, name, slug, status, created_at, owner_user_id')
+    .select('id, name, slug, status, created_at, owner_user_id', { count: 'exact' })
     .in('status', ['pending', 'active', 'rejected'])
     .order('created_at', { ascending: false })
-    .limit(50);
+    .range(page * pageSize, (page + 1) * pageSize - 1);
   if (error) throw new Error('Shop listesi alınamadı: ' + error.message);
-  return data ?? [];
+
+  const shops = data ?? [];
+  const shopIds = shops.map(s => s.id);
+
+  let ownerByShopId: Record<string, { name: string; email: string | null }> = {};
+  if (shopIds.length > 0) {
+    const { data: staffRows } = await supabase
+      .from('staff')
+      .select('shop_id, name, email')
+      .in('shop_id', shopIds)
+      .eq('role', 'admin');
+    ownerByShopId = Object.fromEntries(
+      (staffRows ?? []).map(s => [s.shop_id, { name: s.name, email: s.email }])
+    );
+  }
+
+  return {
+    data: shops.map(s => ({ ...s, owner: ownerByShopId[s.id] ?? null })),
+    total: count ?? 0,
+    pageSize,
+  };
 }

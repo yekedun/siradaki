@@ -148,7 +148,7 @@ async function sendWebPush(
   const now = Math.floor(Date.now() / 1000);
   const jwt = await signJwt(
     { typ: "JWT", alg: "ES256" },
-    { aud: origin, exp: now + 43200, sub: "mailto:emreyek29@gmail.com" },
+    { aud: origin, exp: now + 43200, sub: Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@siradaki.app" },
     privateKey,
   );
 

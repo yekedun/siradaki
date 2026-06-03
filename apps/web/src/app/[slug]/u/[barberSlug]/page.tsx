@@ -92,6 +92,7 @@ export default async function BarberPage({ params }: Props) {
       }))}
       staff={sortedStaff.map(s => ({ id: s.id, name: s.name, phone: null }))}
       preselectedStaffId={staffMember.id}
+      isPersonalLink
     />
   );
 }

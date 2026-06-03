@@ -4,13 +4,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ServiceSelector, type Service } from '../../components/ServiceSelector';
 import { SlotGrid } from '../../components/SlotGrid';
 import { BookingModal } from '../../components/BookingModal';
-import { nextBookingSuccessState } from './booking-flow-state';
+import { nextBookingSuccessState, shouldShowPersonalLinkBadge } from './booking-flow-state';
 import { toTimeLabel } from './booking-time';
 import { trackWebEvent } from '../../lib/analytics';
 
 interface StaffMember { id: string; name: string; phone: string | null; }
 interface Shop { id: string; name: string; address: string | null; slug: string; timezone: string; }
-interface Props { shop: Shop; services: Service[]; staff: StaffMember[]; preselectedStaffId?: string | null; }
+interface Props { shop: Shop; services: Service[]; staff: StaffMember[]; preselectedStaffId?: string | null; isPersonalLink?: boolean; }
 interface RawSlot { starts_at: string; available: boolean; }
 
 const TR_DAYS = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
@@ -20,21 +20,28 @@ function toDateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 function buildDays(n: number): Date[] {
-  const today = new Date(); today.setHours(0,0,0,0);
+  const todayInIstanbul = new Date(
+    new Date().toLocaleString('en-US', { timeZone: 'Europe/Istanbul' })
+  );
+  todayInIstanbul.setHours(0, 0, 0, 0);
   return Array.from({ length: n }, (_, i) => {
-    const d = new Date(today); d.setDate(today.getDate() + i); return d;
+    const d = new Date(todayInIstanbul); d.setDate(todayInIstanbul.getDate() + i); return d;
   });
 }
 
 const FN_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/functions/v1';
 
-export default function BookingClient({ shop, services, staff, preselectedStaffId }: Props) {
+export default function BookingClient({ shop, services, staff, preselectedStaffId, isPersonalLink = false }: Props) {
   const days = buildDays(14);
   const abortRef = useRef<AbortController | null>(null);
 
   const [selService, setSelService] = useState<string | null>(services[0]?.id ?? null);
   const [selStaff,   setSelStaff]   = useState<string | null>(preselectedStaffId ?? null);
-  const [selDate,    setSelDate]    = useState<Date>(() => { const d=new Date(); d.setHours(0,0,0,0); return d; });
+  const [selDate,    setSelDate]    = useState<Date>(() => {
+    const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Istanbul' }));
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
   const [selSlot,    setSelSlot]    = useState<string | null>(null);
   const [rawSlots,   setRawSlots]   = useState<RawSlot[]>([]);
   const [slotsLoad,  setSlotsLoad]  = useState(false);
@@ -101,7 +108,12 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
     : '';
 
   const preselectedName = preselectedStaffId ? staff.find(s => s.id === preselectedStaffId)?.name : null;
-  const showBarberBadge = preselectedName !== null && preselectedName !== undefined && selStaff === preselectedStaffId;
+  const showBarberBadge = shouldShowPersonalLinkBadge({
+    isPersonalLink,
+    preselectedStaffId,
+    selectedStaffId: selStaff,
+    preselectedName,
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">

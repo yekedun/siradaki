@@ -244,7 +244,7 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
       const { error } = await supabase.from('shops').update({ name: name.trim(), address, bio }).eq('id', shopId);
       if (error) throw error;
       const { error: phoneError } = await supabase.from('shops').update({ phone } as any).eq('id', shopId);
-      if (phoneError) console.warn('[settings] phone update skipped:', phoneError);
+      if (__DEV__ && phoneError) console.warn('[settings] phone update skipped:', phoneError);
       onSaved?.({ name: name.trim(), address, bio, phone });
       setSaved(true);
     } catch {
@@ -695,8 +695,8 @@ export default function SettingsScreen() {
     let isMounted = true;
     supabase.auth.getUser().then(({ data: { user }, error: authErr }) => {
       if (!isMounted) return;
-      if (authErr) console.warn('[settings] auth error:', authErr);
-      if (!user) { console.warn('[settings] no user — not logged in'); return; }
+      if (__DEV__ && authErr) console.warn('[settings] auth error:', authErr);
+      if (!user) { if (__DEV__) console.warn('[settings] no user — not logged in'); return; }
       supabase
         .from('shops')
         .select('id, name, address, bio, slug, commission_enabled, working_hours')
@@ -704,13 +704,13 @@ export default function SettingsScreen() {
         .maybeSingle()
         .then(({ data, error }) => {
           if (!isMounted) return;
-          if (error) { console.warn('[settings] shops query error:', error); Alert.alert('Hata', `Dükkan yüklenemedi: ${error.message}`); return; }
+          if (error) { if (__DEV__) console.warn('[settings] shops query error:', error); Alert.alert('Hata', `Dükkan yüklenemedi: ${error.message}`); return; }
           if (!data) {
-            console.warn('[settings] no shop row for user', user.id);
+            if (__DEV__) console.warn('[settings] no shop row for user', user.id);
             Alert.alert('Hata', 'Bu kullanıcı için dükkan kaydı bulunamadı. Çıkış yapıp yeniden giriş yapın veya onboarding akışını tamamlayın.');
             return;
           }
-          console.log('[settings] loaded shop', data.id, data.slug);
+          if (__DEV__) console.log('[settings] loaded shop', data.id, data.slug);
           setShopId(data.id);
           setShop({
             name: data.name ?? '',

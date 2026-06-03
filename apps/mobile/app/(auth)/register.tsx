@@ -53,6 +53,7 @@ import { colors } from '../../lib/theme';
 import { Button } from '../../components/ds/Button';
 import { supabase } from '../../lib/supabase';
 import { trackEvent } from '../../lib/analytics';
+import { isValidEmail } from '../../lib/validation';
 
 const FN_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1';
 
@@ -199,13 +200,13 @@ export default function RegisterScreen() {
   const confError  = touched && passConf.length > 0 && pass !== passConf
     ? 'Şifreler eşleşmiyor'
     : null;
-  const emailError = touched && email.length > 0 && !email.includes('@')
+  const emailError = touched && email.length > 0 && !isValidEmail(email)
     ? 'Geçerli bir e-posta gir'
     : null;
 
   const canRegister =
     shopName.trim().length >= 2 &&
-    email.includes('@') &&
+    isValidEmail(email) &&
     pass.length >= 8 &&
     pass === passConf;
 

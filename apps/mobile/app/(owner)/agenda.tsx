@@ -149,8 +149,8 @@ export default function AgendaScreen() {
         .in('staff_id', barbers.map((b: any) => b.id))
         .gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString()),
     ]);
-    if (apptsErr) console.warn('[agenda] appointments query error:', apptsErr);
-    if (blocksErr) console.warn('[agenda] blocks query error:', blocksErr);
+    if (__DEV__ && apptsErr) console.warn('[agenda] appointments query error:', apptsErr);
+    if (__DEV__ && blocksErr) console.warn('[agenda] blocks query error:', blocksErr);
 
     const now = new Date();
     const newCols: StaffCol[] = (barbers as any[]).map(barber => {
@@ -382,7 +382,7 @@ export default function AgendaScreen() {
               try { ctxBody = await ctx.clone().json(); } catch { try { ctxBody = await ctx.clone().text(); } catch {} }
               if (!status) status = ctx.status ?? 0;
             }
-            console.warn('[agenda] app-book-appointment error status=', status, 'body=', ctxBody, 'message=', fnErr.message);
+            if (__DEV__) console.warn('[agenda] app-book-appointment error status=', status, 'body=', ctxBody, 'message=', fnErr.message);
             // Backend "error" alanı her zaman gerçek Türkçe mesajı içerir — onu önceliklendiriyoruz
             const serverMsg = (ctxBody && typeof ctxBody === 'object' && typeof ctxBody.error === 'string')
               ? ctxBody.error

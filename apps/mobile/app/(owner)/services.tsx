@@ -163,7 +163,12 @@ function ServiceSheet({ open, onClose, onSave, onDelete, initial }: ServiceSheet
 
   function handleSave() {
     if (!canSave) return;
-    onSave({ name: name.trim(), duration, price: Number(price), active });
+    const priceValue = parseInt(price, 10);
+    if (isNaN(priceValue) || priceValue <= 0) {
+      Alert.alert('Hata', "Fiyat 0'dan büyük olmalıdır.");
+      return;
+    }
+    onSave({ name: name.trim(), duration, price: priceValue, active });
   }
 
   return (

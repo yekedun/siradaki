@@ -26,6 +26,7 @@
 
 import React, { useState, useEffect } from 'react';
 import {
+  Alert,
   ScrollView,
   Share,
   StyleSheet,
@@ -41,6 +42,7 @@ import { buildOnboardingServiceInsert, slugify } from '../../lib/onboarding-util
 import { registerForPushNotifications } from '../../lib/notifications';
 import { routeForRole } from '../../lib/router-guard';
 import { trackEvent } from '../../lib/analytics';
+import { genericSaveErrorMessage } from '../../lib/error-messages';
 
 /* ─── Constants ──────────────────────────────────────────────── */
 
@@ -573,10 +575,20 @@ export default function OnboardingScreen() {
   async function handleNext2() {
     if (shopId && svcName.trim().length >= 2 && svcPrice !== '') {
       setLoading(true);
-      await supabase.from('services').insert(
-        buildOnboardingServiceInsert(shopId, svcName, svcDur, svcPrice),
-      );
-      setLoading(false);
+      try {
+        const { error } = await supabase.from('services').insert(
+          buildOnboardingServiceInsert(shopId, svcName, svcDur, svcPrice),
+        );
+        if (error) {
+          Alert.alert('Hata', genericSaveErrorMessage());
+          return;
+        }
+      } catch {
+        Alert.alert('Hata', genericSaveErrorMessage());
+        return;
+      } finally {
+        setLoading(false);
+      }
     }
     trackEvent('onboarding_step_3');
     setStep(3);
@@ -587,13 +599,20 @@ export default function OnboardingScreen() {
     if (shopId && staffName.trim().length >= 2) {
       setLoading(true);
       try {
-        await supabase.from('staff').insert({
+        const { error } = await supabase.from('staff').insert({
           shop_id:   shopId,
           name:      staffName.trim(),
           is_active: true,
           role:      'barber',
           slug:      slugify(staffName.trim()),
         });
+        if (error) {
+          Alert.alert('Hata', genericSaveErrorMessage());
+          return;
+        }
+      } catch {
+        Alert.alert('Hata', genericSaveErrorMessage());
+        return;
       } finally {
         setLoading(false);
       }

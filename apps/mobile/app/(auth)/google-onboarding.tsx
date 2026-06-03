@@ -8,6 +8,8 @@ import { colors } from '../../lib/theme';
 import { Button } from '../../components/ds/Button';
 import { TextField } from '../../components/ds/TextField';
 import { supabase } from '../../lib/supabase';
+import { mapRegistrationError } from '../../lib/error-messages';
+import { isValidPhone } from '../../lib/validation';
 
 const FN_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1';
 
@@ -17,7 +19,7 @@ export default function GoogleOnboardingScreen() {
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
 
-  const canSubmit = shopName.trim().length >= 2 && phone.trim().length >= 10;
+  const canSubmit = shopName.trim().length >= 2 && isValidPhone(phone);
 
   async function handleSubmit() {
     if (!canSubmit || loading) return;
@@ -40,6 +42,8 @@ export default function GoogleOnboardingScreen() {
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       router.replace('/(auth)/pending' as any);
+    } catch (error) {
+      setError(mapRegistrationError(error));
     } finally {
       setLoading(false);
     }

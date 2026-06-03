@@ -1,4 +1,5 @@
 import {
+  inviteAcceptedRoute,
   isPublicAuthRoute,
   pendingPathForRole,
   routeForRole,
@@ -20,6 +21,10 @@ describe('router guard helpers', () => {
     expect(routeForRole('staff')).toBe('/(app)');
     expect(routeForRole('unknown')).toBe('/(auth)/pending?status=unknown');
     expect(routeForRole('new_user')).toBe('/(auth)/google-onboarding');
+  });
+
+  it('routes accepted invites to the staff app group', () => {
+    expect(inviteAcceptedRoute()).toBe('/(app)');
   });
 
   it('does not re-run role routing while already in app groups or accepting an invite', () => {

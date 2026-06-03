@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/browser';
 import { slugify, DEFAULT_WORKING_HOURS } from '@berber/shared';
+import { mapSupabaseError } from '@/lib/auth-errors';
+import { isValidEmail } from '@/lib/validation';
 
 const AUTH_CSS = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -441,8 +443,8 @@ export default function KayitPage() {
   const slug      = slugify(shopName);
   const passErr   = pass.length > 0 && pass.length < 8 ? 'En az 8 karakter gerekli' : null;
   const confErr   = passConf && pass !== passConf ? 'Şifreler eşleşmiyor' : null;
-  const emailErr  = email && !email.includes('@') ? 'Geçerli bir e-posta gir' : null;
-  const canSubmit = shopName.trim().length >= 2 && email.includes('@') && pass.length >= 8 && pass === passConf;
+  const emailErr  = email && !isValidEmail(email) ? 'Geçerli bir e-posta gir' : null;
+  const canSubmit = shopName.trim().length >= 2 && isValidEmail(email) && pass.length >= 8 && pass === passConf;
 
   const passScore  = pass.length >= 12 ? 3 : pass.length >= 8 ? 2 : pass.length > 0 ? 1 : 0;
   const scoreLabel = ['', 'Zayıf', 'Orta', 'Güçlü'][passScore];
@@ -463,7 +465,7 @@ export default function KayitPage() {
         options: { data: { shop_name: trimmed } },
       });
       if (signUpErr || !authData.user) {
-        setError(signUpErr?.message ?? 'Kayıt başarısız.');
+        setError(signUpErr ? mapSupabaseError(signUpErr.message) : 'Kayıt başarısız.');
         return;
       }
 
@@ -485,6 +487,9 @@ export default function KayitPage() {
 
       router.replace('/dashboard');
       router.refresh();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Kayıt sırasında bir hata oluştu';
+      setError(mapSupabaseError(message));
     } finally {
       setLoading(false);
     }
