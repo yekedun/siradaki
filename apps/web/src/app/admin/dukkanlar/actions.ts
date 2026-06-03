@@ -3,8 +3,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { assertAdmin } from '../lib/assert-admin';
 
-export { assertAdmin };
-
 function getAdminClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -8,7 +8,8 @@ vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => serviceClient),
 }));
 
-import { approveShop, rejectShop, suspendShop, reactivateShop, assertAdmin } from './actions';
+import { approveShop, rejectShop, suspendShop, reactivateShop } from './actions';
+import { assertAdmin } from '../lib/assert-admin';
 
 function mockUpdate(resolveValue: { error: null | { message: string } } = { error: null }) {
   return {

@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
-import { assertAdmin } from '../dukkanlar/actions';
+import { assertAdmin } from '../lib/assert-admin';
 
 function getAdminClient() {
   return createClient(
