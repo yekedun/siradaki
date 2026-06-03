@@ -67,7 +67,7 @@ function istanbulDayBoundsUtc(now: { year: number; month: number; day: number })
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return corsOptions();
+  if (req.method === "OPTIONS") return corsOptions(req);
   if (req.method !== "POST") return error("Method not allowed", 405);
 
   const authHeader = req.headers.get("Authorization") ?? "";
@@ -79,11 +79,15 @@ serve(async (req) => {
     return error("Sunucu yapılandırma hatası", 500);
   }
   const enc = new TextEncoder();
-  const tokenBytes = enc.encode(token);
-  const keyBytes   = enc.encode(svcKey);
-  let mismatch = tokenBytes.length !== keyBytes.length ? 1 : 0;
-  const len = Math.min(tokenBytes.length, keyBytes.length);
-  for (let i = 0; i < len; i++) mismatch |= tokenBytes[i] ^ keyBytes[i];
+  const tokenRaw = enc.encode(token);
+  const keyRaw   = enc.encode(svcKey);
+  const maxLen   = Math.max(tokenRaw.length, keyRaw.length);
+  const tokenBytes = new Uint8Array(maxLen);
+  const keyBytes   = new Uint8Array(maxLen);
+  tokenBytes.set(tokenRaw);
+  keyBytes.set(keyRaw);
+  let mismatch = 0;
+  for (let i = 0; i < maxLen; i++) mismatch |= tokenBytes[i] ^ keyBytes[i];
   if (mismatch !== 0) return error("Yetkisiz", 403);
 
   const supabase = createAdminClient();

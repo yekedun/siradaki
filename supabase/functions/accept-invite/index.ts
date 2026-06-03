@@ -11,7 +11,7 @@ function toSlug(name: string): string {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return corsOptions();
+  if (req.method === "OPTIONS") return corsOptions(req);
   if (req.method !== "POST") return error("Method not allowed", 405);
 
   const guard = bodyGuard(req);

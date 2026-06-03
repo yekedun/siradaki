@@ -13,7 +13,7 @@ interface SendPushRequest {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return corsOptions();
+  if (req.method === "OPTIONS") return corsOptions(req);
   if (req.method !== "POST") return error("Method not allowed", 405);
 
   // Only internal edge function callers (service role key).

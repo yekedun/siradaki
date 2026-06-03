@@ -8,12 +8,18 @@ const ALLOWED_ORIGINS = [
 function getAllowOrigin(req?: Request): string {
   if (!req) return '*';
   const origin = req.headers.get('Origin') ?? '';
-  return ALLOWED_ORIGINS.includes(origin) ? origin : '*';
+  if (!origin) return '*';
+  return ALLOWED_ORIGINS.includes(origin) ? origin : '';
 }
 
 export function cors(response: Response, req?: Request): Response {
   const headers = new Headers(response.headers);
-  headers.set('Access-Control-Allow-Origin', getAllowOrigin(req));
+  const allowOrigin = getAllowOrigin(req);
+  if (allowOrigin) {
+    headers.set('Access-Control-Allow-Origin', allowOrigin);
+  } else {
+    headers.delete('Access-Control-Allow-Origin');
+  }
   headers.set(
     'Access-Control-Allow-Headers',
     'authorization, x-client-info, apikey, content-type',
@@ -26,10 +32,15 @@ export function cors(response: Response, req?: Request): Response {
 }
 
 export function corsOptions(req?: Request): Response {
+  const allowOrigin = getAllowOrigin(req);
+  if (!allowOrigin) {
+    return new Response(null, { status: 403 });
+  }
+
   return new Response(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': getAllowOrigin(req),
+      'Access-Control-Allow-Origin': allowOrigin,
       'Access-Control-Allow-Headers':
         'authorization, x-client-info, apikey, content-type',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',

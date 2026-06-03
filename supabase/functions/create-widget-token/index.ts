@@ -6,7 +6,7 @@ import { createAdminClient, sha256 } from "../_shared/supabase-admin.ts";
 import { corsOptions, error, json } from "../_shared/cors.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return corsOptions();
+  if (req.method === "OPTIONS") return corsOptions(req);
   if (req.method !== "POST") return error("Method not allowed", 405);
 
   // Dükkan sahibinin JWT'si gerekli

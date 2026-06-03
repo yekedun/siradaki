@@ -54,7 +54,7 @@ const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 // ── Ana Handler ───────────────────────────────────────────────────────────────
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return corsOptions();
+  if (req.method === "OPTIONS") return corsOptions(req);
 
   const url          = new URL(req.url);
   const shopSlug     = url.searchParams.get("shop_slug") ?? url.searchParams.get("slug");

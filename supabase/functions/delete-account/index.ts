@@ -4,7 +4,7 @@ import { createAdminClient } from "../_shared/supabase-admin.ts";
 import { corsOptions, error, json } from "../_shared/cors.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return corsOptions();
+  if (req.method === "OPTIONS") return corsOptions(req);
 
   // Require authenticated caller
   const authHeader = req.headers.get("Authorization");
