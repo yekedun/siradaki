@@ -66,7 +66,11 @@ export default function DukkanlarPage() {
   }
 
   function handleAction(fn: () => Promise<unknown>) {
-    startTransition(() => { fn().then(() => load(page, filter)); });
+    startTransition(() => {
+      fn()
+        .then(() => load(page, filter))
+        .catch((e) => setLoadError(e instanceof Error ? e.message : 'İşlem başarısız'));
+    });
   }
 
   const displayed = search.trim()

@@ -51,7 +51,7 @@ export async function getMetrics(adminKey: string): Promise<Metrics> {
   const days: DailyStat[] = Array.from({ length: 30 }, (_, i) => {
     const d = new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000);
     return {
-      date: d.toISOString().slice(0, 10),
+      date: d.toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' }),
       shops: 0,
       appointments: 0,
     };
@@ -59,14 +59,14 @@ export async function getMetrics(adminKey: string): Promise<Metrics> {
 
   // Dükkan kayıtlarını günlere dağıt
   for (const row of dailyShopsRes.data ?? []) {
-    const d = row.created_at.slice(0, 10);
+    const d = new Date(row.created_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
     const entry = days.find(x => x.date === d);
     if (entry) entry.shops += 1;
   }
 
   // Randevuları günlere dağıt
   for (const row of dailyAppRes.data ?? []) {
-    const d = row.created_at.slice(0, 10);
+    const d = new Date(row.created_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Istanbul' });
     const entry = days.find(x => x.date === d);
     if (entry) entry.appointments += 1;
   }
