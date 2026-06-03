@@ -70,8 +70,9 @@ async function main() {
       });
     const allowOrigin = res.headers.get("Access-Control-Allow-Origin");
     return {
-        ok: res.status === 204 && (allowOrigin === "http://localhost:3000" || allowOrigin === "*"),
-        message: `HTTP ${res.status} allow-origin=${allowOrigin}`,
+        ok: res.status === cfg.expectedOptionsAllowedStatus
+          && (res.status !== 204 || allowOrigin === "http://localhost:3000" || allowOrigin === "*"),
+        message: `HTTP ${res.status} expected=${cfg.expectedOptionsAllowedStatus} allow-origin=${allowOrigin}`,
       };
     });
 

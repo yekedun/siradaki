@@ -7,6 +7,8 @@ export interface RpcProbeConfig {
 
 export interface EdgeFnProbeConfig {
   name: string;
+  // Local Supabase enforces JWT before auth-required functions receive OPTIONS.
+  expectedOptionsAllowedStatus: number;
   // Backward-compatible field used by scripts/audit/probe.ts.
   expectedAnonStatus: number;
   // No Authorization header. Auth-required functions should be blocked by the runtime or handler.
@@ -54,21 +56,21 @@ export const RPC_PROBES: RpcProbeConfig[] = [
 ];
 
 export const EDGE_FN_PROBES: EdgeFnProbeConfig[] = [
-  { name: "accept-invite", expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
-  { name: "app-book-appointment", expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
-  { name: "app-cancel-appointment", expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
-  { name: "appointment-reminder-push", expectedAnonStatus: 403, expectedNoAuthStatus: [401], expectedServiceStatus: 500, wrongMethodStatus: [401, 405], body: {} },
-  { name: "block-walkin", expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [405], body: {} },
-  { name: "create-manual-block", expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
-  { name: "create-widget-token", expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
-  { name: "daily-summary-push", expectedAnonStatus: 403, expectedNoAuthStatus: [401], expectedServiceStatus: 200, wrongMethodStatus: [401, 405], body: {} },
-  { name: "delete-account", expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
-  { name: "invite-barber", expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
-  { name: "open-invite", expectedAnonStatus: 400, expectedNoAuthStatus: [400, 429], expectedServiceStatus: 400, wrongMethodStatus: [405], body: {} },
-  { name: "register-shop", expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
-  { name: "save-push-subscription", expectedAnonStatus: 400, expectedNoAuthStatus: [401], expectedServiceStatus: 400, wrongMethodStatus: [401, 405], body: {} },
-  { name: "send-push", expectedAnonStatus: 403, expectedNoAuthStatus: [401], expectedServiceStatus: 200, wrongMethodStatus: [401, 405], body: {} },
-  { name: "staff-cancel-appointment", expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
-  { name: "widget-book-appointment", expectedAnonStatus: 400, expectedNoAuthStatus: [400, 429], expectedServiceStatus: 400, wrongMethodStatus: [405], body: {} },
-  { name: "widget-get-availability", expectedAnonStatus: 400, expectedNoAuthStatus: [400], expectedServiceStatus: 400, wrongMethodStatus: [400], body: {} },
+  { name: "accept-invite", expectedOptionsAllowedStatus: 403, expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
+  { name: "app-book-appointment", expectedOptionsAllowedStatus: 403, expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
+  { name: "app-cancel-appointment", expectedOptionsAllowedStatus: 403, expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
+  { name: "appointment-reminder-push", expectedOptionsAllowedStatus: 403, expectedAnonStatus: 403, expectedNoAuthStatus: [401], expectedServiceStatus: 500, wrongMethodStatus: [401, 405], body: {} },
+  { name: "block-walkin", expectedOptionsAllowedStatus: 204, expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [405], body: {} },
+  { name: "create-manual-block", expectedOptionsAllowedStatus: 403, expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
+  { name: "create-widget-token", expectedOptionsAllowedStatus: 403, expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
+  { name: "daily-summary-push", expectedOptionsAllowedStatus: 403, expectedAnonStatus: 403, expectedNoAuthStatus: [401], expectedServiceStatus: 200, wrongMethodStatus: [401, 405], body: {} },
+  { name: "delete-account", expectedOptionsAllowedStatus: 403, expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
+  { name: "invite-barber", expectedOptionsAllowedStatus: 403, expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
+  { name: "open-invite", expectedOptionsAllowedStatus: 204, expectedAnonStatus: 400, expectedNoAuthStatus: [400, 429], expectedServiceStatus: 400, wrongMethodStatus: [405], body: {} },
+  { name: "register-shop", expectedOptionsAllowedStatus: 403, expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
+  { name: "save-push-subscription", expectedOptionsAllowedStatus: 403, expectedAnonStatus: 400, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
+  { name: "send-push", expectedOptionsAllowedStatus: 403, expectedAnonStatus: 403, expectedNoAuthStatus: [401], expectedServiceStatus: 200, wrongMethodStatus: [401, 405], body: {} },
+  { name: "staff-cancel-appointment", expectedOptionsAllowedStatus: 403, expectedAnonStatus: 401, expectedNoAuthStatus: [401], expectedServiceStatus: 401, wrongMethodStatus: [401, 405], body: {} },
+  { name: "widget-book-appointment", expectedOptionsAllowedStatus: 204, expectedAnonStatus: 400, expectedNoAuthStatus: [400, 429], expectedServiceStatus: 400, wrongMethodStatus: [405], body: {} },
+  { name: "widget-get-availability", expectedOptionsAllowedStatus: 204, expectedAnonStatus: 400, expectedNoAuthStatus: [400], expectedServiceStatus: 400, wrongMethodStatus: [400], body: {} },
 ];
