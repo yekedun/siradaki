@@ -38,9 +38,26 @@ jobs:
       - name: Reset local database
         run: supabase db reset --local
 
+      - name: Export Supabase local env
+        run: |
+          supabase status -o env > supabase.env
+
+          api_url="$(grep '^API_URL=' supabase.env | cut -d= -f2- | sed 's/^"//;s/"$//')"
+          anon_key="$(grep '^ANON_KEY=' supabase.env | cut -d= -f2- | sed 's/^"//;s/"$//')"
+          service_role_key="$(grep '^SERVICE_ROLE_KEY=' supabase.env | cut -d= -f2- | sed 's/^"//;s/"$//')"
+
+          {
+            echo "SUPABASE_URL=${api_url}"
+            echo "SUPABASE_ANON_KEY=${anon_key}"
+            echo "SUPABASE_SERVICE_ROLE_KEY=${service_role_key}"
+          } >> "$GITHUB_ENV"
+
       - name: Create CI edge function env
         run: |
-          cat > supabase/functions/.env.ci <<'EOF'
+          cat > supabase/functions/.env.ci <<EOF
+          SUPABASE_URL=${SUPABASE_URL}
+          SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+          SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
           UPSTASH_REDIS_REST_URL=
           UPSTASH_REDIS_REST_TOKEN=
           PUBLIC_INVITE_BASE_URL=http://localhost:3000/invite
