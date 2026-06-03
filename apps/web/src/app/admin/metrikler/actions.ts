@@ -31,10 +31,10 @@ export async function getMetrics(adminKey: string): Promise<Metrics> {
   // Özet sayılar — paralel sorgular
   const [shopsRes, activeRes, pendingRes, usersRes, dailyShopsRes, dailyAppRes] =
     await Promise.all([
-      supabase.from('shops').select('id', { count: 'exact', head: true }),
-      supabase.from('shops').select('id', { count: 'exact', head: true }).eq('status', 'active'),
-      supabase.from('shops').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-      supabase.from('staff').select('user_id', { count: 'exact', head: true }),
+      supabase.from('shops').select('*', { count: 'exact', head: true }),
+      supabase.from('shops').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+      supabase.from('shops').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('staff').select('*', { count: 'exact', head: true }),
 
       // Son 30 günlük yeni dükkanlar
       supabase.from('shops')

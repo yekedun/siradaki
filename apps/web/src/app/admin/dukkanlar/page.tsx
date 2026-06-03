@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition, useEffect, useCallback } from 'react';
 import { useAdminKey } from '../context';
 import {
   getShops, approveShop, rejectShop, suspendShop, reactivateShop,
@@ -43,7 +43,7 @@ export default function DukkanlarPage() {
   const [isPending,   startTransition] = useTransition();
   const [loadError,   setLoadError]   = useState('');
 
-  async function load(p = 0, f: FilterStatus = filter) {
+  const load = useCallback(async (p: number, f: FilterStatus) => {
     setLoadError('');
     try {
       const result = await getShops(adminKey, p, PAGE_SIZE, f === 'all' ? undefined : f);
@@ -53,12 +53,11 @@ export default function DukkanlarPage() {
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Yüklenemedi');
     }
-  }
+  }, [adminKey]);
 
   useEffect(() => {
-    if (adminKey) load(0, filter);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adminKey]);
+    if (adminKey) load(0, 'all');
+  }, [adminKey, load]);
 
   function handleFilterChange(f: FilterStatus) {
     setFilter(f);
@@ -140,7 +139,7 @@ export default function DukkanlarPage() {
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <button
             disabled={page === 0 || isPending}
-            onClick={() => load(page - 1)}
+            onClick={() => load(page - 1, filter)}
             style={{ padding: '8px 18px', border: '1px solid #CBD5E1', borderRadius: 7,
               background: '#fff', cursor: page === 0 ? 'not-allowed' : 'pointer',
               opacity: page === 0 ? 0.4 : 1 }}
@@ -152,7 +151,7 @@ export default function DukkanlarPage() {
           </span>
           <button
             disabled={page >= totalPages - 1 || isPending}
-            onClick={() => load(page + 1)}
+            onClick={() => load(page + 1, filter)}
             style={{ padding: '8px 18px', border: '1px solid #CBD5E1', borderRadius: 7,
               background: '#fff', cursor: page >= totalPages - 1 ? 'not-allowed' : 'pointer',
               opacity: page >= totalPages - 1 ? 0.4 : 1 }}

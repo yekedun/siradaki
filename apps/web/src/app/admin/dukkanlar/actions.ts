@@ -1,24 +1,15 @@
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
-import { timingSafeEqual } from 'crypto';
+import { assertAdmin } from '../lib/assert-admin';
+
+export { assertAdmin };
 
 function getAdminClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
-}
-
-export function assertAdmin(adminKey: string) {
-  const secret = process.env.ADMIN_SECRET_KEY ?? '';
-  if (!secret) throw new Error('ADMIN_SECRET_KEY env var eksik');
-  const maxLen = Math.max(adminKey.length, secret.length);
-  const a = Buffer.alloc(maxLen);
-  const b = Buffer.alloc(maxLen);
-  Buffer.from(adminKey).copy(a);
-  Buffer.from(secret).copy(b);
-  if (!timingSafeEqual(a, b)) throw new Error('Yetkisiz');
 }
 
 async function sendOwnerPush(
