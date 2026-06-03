@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/browser';
+import { isValidPhone } from '@/lib/validation';
 
 const CSS = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -247,6 +248,8 @@ const CSS = `
 export default function TamamlaPage() {
   const router = useRouter();
   const [shopName, setShopName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [phoneTouched, setPhoneTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -279,7 +282,7 @@ export default function TamamlaPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (shopName.trim().length < 2) return;
+    if (shopName.trim().length < 2 || !isValidPhone(phone)) return;
     setError(null);
     setLoading(true);
     try {
@@ -297,7 +300,7 @@ export default function TamamlaPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ shop_name: shopName.trim() }),
+        body: JSON.stringify({ shop_name: shopName.trim(), phone: phone.trim() }),
       });
 
       if (!res.ok) {
@@ -369,10 +372,26 @@ export default function TamamlaPage() {
                 )}
               </div>
 
+              <div className="auth-field">
+                <label htmlFor="phone">Telefon</label>
+                <input
+                  type="tel"
+                  id="phone"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  onBlur={() => setPhoneTouched(true)}
+                  placeholder="05XX XXX XX XX"
+                  autoComplete="tel"
+                />
+                {phoneTouched && phone.length > 0 && !isValidPhone(phone) && (
+                  <span className="field-hint" style={{ color: '#A0303F' }}>Geçerli bir telefon numarası gir (10-11 rakam)</span>
+                )}
+              </div>
+
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={shopName.trim().length < 2 || loading}
+                disabled={shopName.trim().length < 2 || !isValidPhone(phone) || loading}
               >
                 {loading ? 'Oluşturuluyor…' : 'Dükkanı Oluştur →'}
               </button>

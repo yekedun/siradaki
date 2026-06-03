@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Alert, View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -7,10 +7,29 @@ import { Button } from '../../components/ds/Button';
 import { determineUserRole, supabase } from '../../lib/supabase';
 import { routeForRole } from '../../lib/router-guard';
 
+const POLL_INTERVAL_MS = 30_000; // 30 saniye
+
 export default function PendingScreen() {
   const { status } = useLocalSearchParams<{ status?: string }>();
   const rejected = status === 'rejected';
   const unknown = status === 'unknown';
+
+  // Sadece onay bekleyen durumda otomatik polling
+  useEffect(() => {
+    if (rejected || unknown) return;
+
+    const poll = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const role = await determineUserRole(user.id);
+      // Hâlâ pending veya okunamadıysa beklemeye devam et
+      if (role === 'pending' || role === 'unknown') return;
+      router.replace(routeForRole(role) as any);
+    };
+
+    const id = setInterval(poll, POLL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [rejected, unknown]);
 
   async function handleLogout() {
     await supabase.auth.signOut();

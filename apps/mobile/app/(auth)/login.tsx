@@ -143,6 +143,15 @@ export default function LoginScreen() {
           />
         </View>
 
+        {/* Şifremi unuttum */}
+        <TouchableOpacity
+          style={styles.forgotWrap}
+          onPress={() => router.push('/(auth)/forgot-password' as any)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.forgotText}>Şifremi unuttum</Text>
+        </TouchableOpacity>
+
         {/* Spacer pushes CTA to bottom */}
         <View style={styles.spacer} />
 
@@ -259,6 +268,18 @@ const styles = StyleSheet.create({
   fields: {
     marginTop: 32,
     gap: 14,
+  },
+
+  /* Şifremi unuttum linki */
+  forgotWrap: {
+    alignSelf: 'flex-end',
+    marginTop: 10,
+    paddingVertical: 2,
+  },
+  forgotText: {
+    fontSize: 13,
+    fontFamily: 'Montserrat-SemiBold',
+    color: colors.brand[600],
   },
 
   /* Spacer — pushes CTA to bottom (marginTop:'auto') */

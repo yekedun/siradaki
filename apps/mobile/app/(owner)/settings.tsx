@@ -65,6 +65,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
+import { StaffSelfEditModal } from '../../components/StaffSelfEditModal';
 import {
   shopHoursScheduleFromWorkingHours,
   shopHoursScheduleToRows,
@@ -682,6 +683,7 @@ export default function SettingsScreen() {
   const router = useRouter();
 
   const [profileOpen,        setProfileOpen]        = useState(false);
+  const [selfEditOpen,       setSelfEditOpen]       = useState(false);
   const [hoursOpen,          setHoursOpen]          = useState(false);
   const [widgetLinks,        setWidgetLinks]        = useState<WidgetLink[]>([]);
   const [shop,               setShop]               = useState<ShopData | null>(null);
@@ -998,6 +1000,15 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Profil düzenle */}
+        <TouchableOpacity
+          onPress={() => setSelfEditOpen(true)}
+          style={styles.selfEditBtn}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.selfEditBtnText}>Profilimi Düzenle</Text>
+        </TouchableOpacity>
+
         {/* Sign out */}
         <TouchableOpacity
           onPress={handleSignOut}
@@ -1061,6 +1072,12 @@ export default function SettingsScreen() {
         staffId={ownerStaffId}
         initialSchedule={hoursInitialSchedule}
         onSaved={(s) => setHoursSubtitle(buildHoursSubtitle(s))}
+      />
+
+      {/* Kendi profil düzenleme */}
+      <StaffSelfEditModal
+        visible={selfEditOpen}
+        onClose={() => setSelfEditOpen(false)}
       />
     </View>
   );
@@ -1303,6 +1320,23 @@ const styles = StyleSheet.create({
   },
 
   /* Sign out */
+  selfEditBtn: {
+    marginHorizontal: 20,
+    marginTop: 28,
+    height: 52,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.slate[200],
+    backgroundColor: colors.slate[50],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selfEditBtnText: {
+    fontSize: 15,
+    fontFamily: 'Montserrat-SemiBold',
+    color: colors.ink[900],
+  },
+
   signOutBtn: {
     marginHorizontal: 20,
     marginTop: 28,

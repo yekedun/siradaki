@@ -46,6 +46,8 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
+  RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
 import { colors } from '../../lib/theme';
 import { OverlineHeader } from '../../components/ds/OverlineHeader';
@@ -60,6 +62,7 @@ import { appointmentRowToAgendaItem } from '../../lib/appointment-mappers';
 import { formatTime, translateReason, AppointmentState as AppState } from '../../lib/utils';
 import { AddAppointmentModal, ServiceOption, StaffOption } from '../../components/AddAppointmentModal';
 import { AppointmentDetailSheet, AppointmentDetail } from '../../components/AppointmentDetailSheet';
+import { AddBlockModal } from '../../components/AddBlockModal';
 import { useShop } from '../../lib/ShopContext';
 
 
@@ -120,6 +123,8 @@ export default function AgendaScreen() {
   const [showDetail, setShowDetail] = useState(false);
   const [serverNowMs, setServerNowMs] = useState<number | undefined>(undefined);
   const [selectedAppt, setSelectedAppt] = useState<AppointmentDetail | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showAddBlock, setShowAddBlock] = useState(false);
 
   const isMountedRef = useRef(true);
 
@@ -216,6 +221,12 @@ export default function AgendaScreen() {
     };
   }, [barberList, selectedDate, loadAgenda]);
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadAgenda();
+    setRefreshing(false);
+  }, [loadAgenda]);
+
   function handleAddAppointment() {
     // Sunucu zamanını çek — cihaz saati manipülasyonuna karşı koruma
     supabase.rpc('get_server_time').then(({ data }) => {
@@ -266,6 +277,9 @@ export default function AgendaScreen() {
         showsHorizontalScrollIndicator={false}
         style={styles.colScroll}
         contentContainerStyle={styles.colContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
       >
         {cols.map(col => (
           <View key={col.id} style={styles.col}>
@@ -314,17 +328,24 @@ export default function AgendaScreen() {
         ))}
       </ScrollView>
 
-      {/* FAB — position:absolute bottom:90 right:20
-          variant="accent" size="lg" "+ Randevu Ekle"
-          shadow: 0 12px 24px -10px rgba(30,58,138,0.4) */}
-      <View style={styles.fab}>
-        <Button
-          variant="accent"
-          size="lg"
-          onPress={handleAddAppointment}
+      {/* FAB group — Randevu Ekle + Blok Ekle */}
+      <View style={styles.fabGroup}>
+        <TouchableOpacity
+          style={styles.blockBtn}
+          onPress={() => setShowAddBlock(true)}
+          activeOpacity={0.8}
         >
-          + Randevu Ekle
-        </Button>
+          <Text style={styles.blockBtnText}>Blok Ekle</Text>
+        </TouchableOpacity>
+        <View style={styles.fab}>
+          <Button
+            variant="accent"
+            size="lg"
+            onPress={handleAddAppointment}
+          >
+            + Randevu Ekle
+          </Button>
+        </View>
       </View>
 
       <AppointmentDetailSheet
@@ -347,6 +368,13 @@ export default function AgendaScreen() {
             ),
           })));
         }}
+      />
+
+      <AddBlockModal
+        visible={showAddBlock}
+        onClose={() => setShowAddBlock(false)}
+        staffList={barberList.map(b => ({ id: b.id, name: b.name }))}
+        onSaved={loadAgenda}
       />
 
       <AddAppointmentModal
@@ -483,14 +511,40 @@ const styles = StyleSheet.create({
     color: colors.brand[600],
   },
 
-  /* FAB — position:absolute bottom:90 right:20
-     shadowColor = brand-600 (~rgba(30,58,138,...))
-     shadowOffset y:12, opacity:0.4, radius:14 (≈ 24-10 = spread subtraction) */
-  fab: {
+  /* FAB group — sağ alt köşe */
+  fabGroup: {
     position: 'absolute',
     bottom: 90,
     right: 20,
     zIndex: 10,
+    alignItems: 'flex-end',
+    gap: 10,
+  },
+
+  /* Blok ekle — ghost pill */
+  blockBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: colors.slate[0],
+    borderWidth: 1.5,
+    borderColor: colors.slate[200],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  blockBtnText: {
+    fontSize: 13,
+    fontFamily: 'Montserrat-SemiBold',
+    color: colors.ink[900],
+  },
+
+  /* FAB — position:absolute bottom:90 right:20
+     shadowColor = brand-600 (~rgba(30,58,138,...))
+     shadowOffset y:12, opacity:0.4, radius:14 (≈ 24-10 = spread subtraction) */
+  fab: {
     shadowColor: colors.brand[600],
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.4,

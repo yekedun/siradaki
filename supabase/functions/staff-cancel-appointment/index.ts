@@ -1,6 +1,72 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createAdminClient } from "../_shared/supabase-admin.ts";
 import { corsOptions, error, json, bodyGuard } from "../_shared/cors.ts";
+
+/**
+ * Personel iptali → dükkan sahibine push bildir (eğer iptal eden sahibin kendisi değilse).
+ */
+async function notifyOwnerOnStaffCancel(
+  appointmentId: string,
+  cancellerUserId: string,
+  serviceUrl: string,
+  serviceKey: string,
+): Promise<void> {
+  const admin = createAdminClient();
+
+  const { data: appt } = await admin
+    .from("appointments")
+    .select("customer_name, starts_at, staff_id, staff:staff_id(shop_id, user_id)")
+    .eq("id", appointmentId)
+    .maybeSingle();
+
+  if (!appt) return;
+  const staffMember = appt.staff as any;
+  const shopId: string | null = staffMember?.shop_id ?? null;
+  if (!shopId) return;
+
+  const { data: shop } = await admin
+    .from("shops")
+    .select("owner_user_id")
+    .eq("id", shopId)
+    .maybeSingle();
+
+  const ownerUserId: string | null = (shop as any)?.owner_user_id ?? null;
+  if (!ownerUserId || ownerUserId === cancellerUserId) return; // sahip kendisi iptal etti
+
+  const { data: ownerStaff } = await admin
+    .from("staff")
+    .select("push_token, notification_prefs")
+    .eq("shop_id", shopId)
+    .eq("user_id", ownerUserId)
+    .maybeSingle();
+
+  const token: string | null = (ownerStaff as any)?.push_token ?? null;
+  const prefs = (ownerStaff as any)?.notification_prefs ?? {};
+  if (!token || prefs.cancellation === false) return;
+
+  const timeStr = new Date(appt.starts_at).toLocaleTimeString("tr-TR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Istanbul",
+  });
+
+  await fetch(`${serviceUrl}/functions/v1/send-push`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${serviceKey}`,
+    },
+    body: JSON.stringify({
+      messages: [{
+        to: token,
+        title: "Randevu İptal Edildi",
+        body: `${appt.customer_name} — ${timeStr} randevusu personel tarafından iptal edildi`,
+        data: { appointmentId },
+      }],
+    }),
+  }).catch((e) => console.error("[staff-cancel] Push failed:", e));
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions(req);
@@ -62,6 +128,13 @@ serve(async (req) => {
     console.error("[staff-cancel] cancel_appointment_atomic failed:", rpcError);
     return error("İptal işlemi başarısız", 500);
   }
+
+  // Fire-and-forget: sahibi bildir (personel iptal ettiyse)
+  const svcUrl = Deno.env.get("SUPABASE_URL")!;
+  const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  notifyOwnerOnStaffCancel(appointment_id, user.id, svcUrl, svcKey).catch(
+    (e) => console.error("[staff-cancel] Notification dispatch error:", e),
+  );
 
   return json({ success: true });
 });

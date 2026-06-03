@@ -11,10 +11,10 @@ type ErrorType  = 'conflict' | 'generic';
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '';
 
-function urlBase64ToUint8Array(b64: string): Uint8Array {
+function urlBase64ToUint8Array(b64: string): ArrayBuffer {
   const pad = '='.repeat((4 - (b64.length % 4)) % 4);
   const raw = atob(b64.replace(/-/g, '+').replace(/_/g, '/') + pad);
-  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0)).buffer as ArrayBuffer;
 }
 
 async function subscribeAndSave(appointmentId: string): Promise<void> {
