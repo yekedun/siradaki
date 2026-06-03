@@ -19,7 +19,7 @@ vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => serviceClient),
 }));
 
-import { approveShop } from './actions';
+import { approveShop } from './dukkanlar/actions';
 
 function userStaffRole(role: 'admin' | 'staff' | null) {
   return {

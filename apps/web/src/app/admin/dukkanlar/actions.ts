@@ -10,6 +10,17 @@ function getAdminClient() {
   );
 }
 
+export function assertAdmin(adminKey: string) {
+  const secret = process.env.ADMIN_SECRET_KEY ?? '';
+  if (!secret) throw new Error('ADMIN_SECRET_KEY env var eksik');
+  const maxLen = Math.max(adminKey.length, secret.length);
+  const a = Buffer.alloc(maxLen);
+  const b = Buffer.alloc(maxLen);
+  Buffer.from(adminKey).copy(a);
+  Buffer.from(secret).copy(b);
+  if (!timingSafeEqual(a, b)) throw new Error('Yetkisiz');
+}
+
 async function sendOwnerPush(
   supabase: ReturnType<typeof getAdminClient>,
   shopId: string,
@@ -49,22 +60,6 @@ async function sendOwnerPush(
   }).catch((e) => console.error('[admin] sendOwnerPush failed:', e));
 }
 
-// Platform erişimi yalnızca ADMIN_SECRET_KEY ile korunur.
-// staff.role='admin' tüm dükkan sahipleri için geçerli olduğundan
-// DB role kontrolü ek güvenlik sağlamaz — timing-safe key karşılaştırması yeterli.
-function assertAdmin(adminKey: string) {
-  const secret = process.env.ADMIN_SECRET_KEY ?? '';
-  if (!secret) throw new Error('ADMIN_SECRET_KEY env var eksik');
-  // Pad both buffers to the same length before comparing so an attacker
-  // cannot infer secret length from which branch is taken.
-  const maxLen = Math.max(adminKey.length, secret.length);
-  const a = Buffer.alloc(maxLen);
-  const b = Buffer.alloc(maxLen);
-  Buffer.from(adminKey).copy(a);
-  Buffer.from(secret).copy(b);
-  if (!timingSafeEqual(a, b)) throw new Error('Yetkisiz');
-}
-
 export async function approveShop(shopId: string, adminKey: string) {
   assertAdmin(adminKey);
   const supabase = getAdminClient();
@@ -80,8 +75,7 @@ export async function approveShop(shopId: string, adminKey: string) {
   if (error) throw new Error('Onay başarısız: ' + error.message);
 
   await sendOwnerPush(
-    supabase,
-    shopId,
+    supabase, shopId,
     'Başvurunuz Onaylandı! 🎉',
     'Dükkanınız aktif hale getirildi. Şimdi giriş yapabilirsiniz.',
     { type: 'shop_approved' },
@@ -95,22 +89,58 @@ export async function rejectShop(shopId: string, adminKey: string) {
   if (error) throw new Error('Red başarısız: ' + error.message);
 
   await sendOwnerPush(
-    supabase,
-    shopId,
+    supabase, shopId,
     'Başvuru Sonucu',
     'Dükkan başvurunuz bu sefer onaylanamadı. Detay için destek ekibiyle iletişime geçebilirsiniz.',
     { type: 'shop_rejected' },
   );
 }
 
-// "getShops" çünkü pending + active + rejected tüm durumlar döner
-export async function getShops(adminKey: string, page = 0, pageSize = 20) {
+export async function suspendShop(shopId: string, adminKey: string) {
   assertAdmin(adminKey);
   const supabase = getAdminClient();
+  const { error } = await supabase.from('shops').update({ status: 'suspended' }).eq('id', shopId);
+  if (error) throw new Error('Durdurma başarısız: ' + error.message);
+}
+
+export async function reactivateShop(shopId: string, adminKey: string) {
+  assertAdmin(adminKey);
+  const supabase = getAdminClient();
+  const { error } = await supabase.from('shops').update({ status: 'active' }).eq('id', shopId);
+  if (error) throw new Error('Aktivasyon başarısız: ' + error.message);
+}
+
+export type ShopStatus = 'pending' | 'active' | 'rejected' | 'suspended';
+
+export type Owner = { name: string; email: string | null } | null;
+
+export type Shop = {
+  id: string;
+  name: string;
+  slug: string;
+  status: ShopStatus;
+  created_at: string;
+  owner_user_id: string;
+  owner: Owner;
+};
+
+export async function getShops(
+  adminKey: string,
+  page = 0,
+  pageSize = 20,
+  statusFilter?: ShopStatus,
+) {
+  assertAdmin(adminKey);
+  const supabase = getAdminClient();
+
+  const statuses: ShopStatus[] = statusFilter
+    ? [statusFilter]
+    : ['pending', 'active', 'rejected', 'suspended'];
+
   const { data, count, error } = await supabase
     .from('shops')
     .select('id, name, slug, status, created_at, owner_user_id', { count: 'exact' })
-    .in('status', ['pending', 'active', 'rejected'])
+    .in('status', statuses)
     .order('created_at', { ascending: false })
     .range(page * pageSize, (page + 1) * pageSize - 1);
   if (error) throw new Error('Shop listesi alınamadı: ' + error.message);
@@ -131,7 +161,7 @@ export async function getShops(adminKey: string, page = 0, pageSize = 20) {
   }
 
   return {
-    data: shops.map(s => ({ ...s, owner: ownerByShopId[s.id] ?? null })),
+    data: shops.map(s => ({ ...s, owner: ownerByShopId[s.id] ?? null })) as Shop[],
     total: count ?? 0,
     pageSize,
   };
