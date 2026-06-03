@@ -54,7 +54,7 @@ export function generateAppointmentTimes({
   const start = toMinutes(open);
   const closeMin = toMinutes(close);
   if (isNaN(start) || isNaN(closeMin)) {
-    console.warn('[appointment-time] Invalid time string:', { open, close });
+    if (__DEV__) console.warn('[appointment-time] Invalid time string:', { open, close });
     return [];
   }
   const latestStart = closeMin - durationMinutes;
@@ -101,7 +101,7 @@ export function generateAppointmentTimesForDate(
   nowMs?: number,
 ): string[] {
   if (isNaN(date.getTime())) {
-    console.warn('[appointment-time] Invalid date passed to generateAppointmentTimesForDate');
+    if (__DEV__) console.warn('[appointment-time] Invalid date passed to generateAppointmentTimesForDate');
     return [];
   }
   const key = WORKING_HOUR_KEYS[date.getDay()];

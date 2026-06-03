@@ -445,7 +445,7 @@ function StepDone({ shopName, cityName, svcName, svcDur, svcPrice, onGo, onShare
 
   const summaryRows = [
     { label: 'Dükkan',      value: `${shopName || 'Keskin Berber'} · ${cityName || 'Beşiktaş'}` },
-    { label: 'İlk Hizmet',  value: `${svcName  || 'Saç Kesimi'} · ${svcDur} dk · ${svcPrice || '200'}₺` },
+    { label: 'İlk Hizmet',  value: `${svcName  || 'Saç Kesimi'} · ${svcDur} dk · ${svcPrice || '-'}₺` },
     { label: 'Rezervasyon', value: `siradaki.app/${slug || 'dukkanim'}` },
   ];
 

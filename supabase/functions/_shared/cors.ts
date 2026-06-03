@@ -1,16 +1,27 @@
+const IS_DEV = Deno.env.get('ENVIRONMENT') === 'development';
+
 const ALLOWED_ORIGINS = [
   'https://siradaki.app',
   'https://www.siradaki.app',
-  ...(Deno.env.get('ENVIRONMENT') === 'development'
-    ? ['http://localhost:3000', 'http://localhost:8081']
-    : []),
+  ...(IS_DEV ? ['http://localhost:3000', 'http://localhost:8081'] : []),
 ];
+
+function isAllowedOrigin(origin: string): boolean {
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  // Allow any subdomain of siradaki.app in production
+  try {
+    const url = new URL(origin);
+    return url.protocol === 'https:' && url.hostname.endsWith('.siradaki.app');
+  } catch {
+    return false;
+  }
+}
 
 function getAllowOrigin(req?: Request): string {
   if (!req) return '*';
   const origin = req.headers.get('Origin') ?? '';
   if (!origin) return '*';
-  return ALLOWED_ORIGINS.includes(origin) ? origin : '';
+  return isAllowedOrigin(origin) ? origin : '';
 }
 
 export function cors(response: Response, req?: Request): Response {

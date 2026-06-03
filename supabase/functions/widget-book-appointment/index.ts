@@ -10,7 +10,10 @@ async function isRateLimited(ip: string): Promise<boolean> {
   const url = Deno.env.get("UPSTASH_REDIS_REST_URL");
   const token = Deno.env.get("UPSTASH_REDIS_REST_TOKEN");
   if (!url || !token) {
-    console.warn("[widget-book] Upstash not configured — IP rate limiting is disabled");
+    if (Deno.env.get("ENVIRONMENT") !== "development") {
+      throw new Error("UPSTASH_REDIS_REST_URL / TOKEN not set in production");
+    }
+    console.warn("[widget-book] Upstash not configured — IP rate limiting is disabled (dev only)");
     return false;
   }
 
@@ -71,7 +74,14 @@ serve(async (req) => {
   if (guard) return guard;
 
   const ip = getClientIp(req);
-  if (await isRateLimited(ip)) {
+  let rateLimited: boolean;
+  try {
+    rateLimited = await isRateLimited(ip);
+  } catch (e) {
+    console.error("[widget-book] Rate limit misconfigured:", e);
+    return error("Servis geçici olarak kullanılamıyor.", 503);
+  }
+  if (rateLimited) {
     return error("Çok fazla istek. 10 dakika sonra tekrar deneyin.", 429, {
       code: "RATE_LIMITED",
       retry_after: RATE_LIMIT_WINDOW_SEC,

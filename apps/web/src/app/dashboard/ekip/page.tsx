@@ -22,6 +22,7 @@ export default function EkipPage() {
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [inviting, setInviting]     = useState(false);
   const [error, setError]           = useState<string | null>(null);
+  const [copied, setCopied]         = useState(false);
 
   const supabase = createClient();
 
@@ -56,7 +57,7 @@ export default function EkipPage() {
     }
     const canDeactivate = await canDeactivateStaff(supabase, shopId, s.id);
     if (!canDeactivate) {
-      setError('Başka aktif personel eklemeden kendinizi devre dışı bırakamazsınız.');
+      setError('Son aktif personel devre dışı bırakılamaz. Önce başka bir personel ekleyin.');
       return;
     }
     if (!confirm(`${s.name} adlı personeli pasif yapmak istediğine emin misin?`)) return;
@@ -114,10 +115,14 @@ export default function EkipPage() {
           <div className="flex items-center gap-2">
             <code className="flex-1 text-xs bg-white border border-blue-200 rounded-lg px-3 py-2 break-all">{inviteLink}</code>
             <button
-              onClick={() => navigator.clipboard.writeText(inviteLink)}
+              onClick={() => {
+                navigator.clipboard.writeText(inviteLink);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              }}
               className="text-xs font-semibold text-blue-700 bg-blue-100 hover:bg-blue-200 px-3 py-2 rounded-lg transition-colors whitespace-nowrap"
             >
-              Kopyala
+              {copied ? 'Kopyalandı ✓' : 'Kopyala'}
             </button>
           </div>
         </div>

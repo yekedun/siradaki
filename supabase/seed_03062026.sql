@@ -49,7 +49,7 @@ BEGIN
   SELECT s.id INTO v_shop_id
   FROM public.shops s
   JOIN auth.users u ON u.id = s.owner_user_id
-  WHERE u.email = 'emreyek29@gmail.com'
+  WHERE u.email = 'admin@siradaki.app'
   LIMIT 1;
 
   IF v_shop_id IS NULL THEN
