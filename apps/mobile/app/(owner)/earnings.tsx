@@ -24,6 +24,7 @@ import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { estimatedAppointmentRevenueCents } from '../../lib/revenue-mappers';
 import { useShop } from '../../lib/ShopContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Chip, ChipRow } from '../../components/ds/Chip';
 
 /* ─── Types ─────────────────────────────────────────────────── */
@@ -35,6 +36,7 @@ type Period = 'day' | '7' | '30';
 /* ─── Main Screen ───────────────────────────────────────────── */
 
 export default function EarningsScreen() {
+  const insets = useSafeAreaInsets();
   const { shopId, staffList } = useShop();
   const barberIds = staffList.map(b => b.id);
 
@@ -151,8 +153,7 @@ export default function EarningsScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* OverlineHeader */}
-      <View style={styles.header}>
-        <Text style={styles.eyebrow}>Komisyon</Text>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.pageTitle}>Kazanç</Text>
       </View>
 

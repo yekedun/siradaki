@@ -41,6 +41,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { trackEvent } from '../../lib/analytics';
@@ -362,6 +363,7 @@ function ServiceRow({ service: sv, onPress, onToggle }: ServiceRowProps) {
 /* ─── Main Screen ───────────────────────────────────────────── */
 
 export default function ServicesScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [services, setServices] = useState<Service[]>(INIT_SERVICES);
   const [editing,  setEditing]  = useState<Service | null>(null);
@@ -447,13 +449,12 @@ export default function ServicesScreen() {
     <View style={styles.screen}>
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={10} activeOpacity={0.7}>
           <View style={styles.backChevron1} />
           <View style={styles.backChevron2} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.eyebrow}>Dükkan Ayarları</Text>
           <Text style={styles.pageTitle}>Hizmetler</Text>
         </View>
         <TouchableOpacity

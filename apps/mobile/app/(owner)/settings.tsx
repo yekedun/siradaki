@@ -59,6 +59,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
@@ -677,8 +678,9 @@ function normalizePrefs(raw: unknown): NotificationPrefs {
 }
 
 export default function SettingsScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [commEnabled,        setCommEnabled]        = useState(false);
+
   const [profileOpen,        setProfileOpen]        = useState(false);
   const [hoursOpen,          setHoursOpen]          = useState(false);
   const [widgetLinks,        setWidgetLinks]        = useState<WidgetLink[]>([]);
@@ -719,7 +721,6 @@ export default function SettingsScreen() {
             email: user.email ?? '',
             commission_enabled: data.commission_enabled ?? false,
           });
-          setCommEnabled(data.commission_enabled ?? false);
           supabase
             .from('staff')
             .select('id, notification_prefs')
@@ -849,8 +850,7 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* OverlineHeader */}
-        <View style={styles.header}>
-          <Text style={styles.eyebrow}>Dükkan Ayarları</Text>
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
           <Text style={styles.pageTitle}>Ayarlar</Text>
           <Text style={styles.headerMeta}>
             Widget bağlantılarını yönet ve hesabından çıkış yap.
@@ -897,20 +897,6 @@ export default function SettingsScreen() {
         {/* Section: Operasyon */}
         <Text style={styles.sectionLabel}>Operasyon</Text>
         <View style={styles.operationCard}>
-          {/* Komisyon takibi */}
-          <View style={styles.opRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.opRowTitle}>Komisyon takibi</Text>
-              <Text style={styles.opRowMeta}>
-                {commEnabled ? 'Kazanç raporu açık.' : 'Randevu akışı değişmez.'}
-              </Text>
-            </View>
-            <Toggle on={commEnabled} onChange={async (v) => {
-              setCommEnabled(v);
-              if (shopId) await supabase.from('shops').update({ commission_enabled: v }).eq('id', shopId);
-            }} />
-          </View>
-
           {/* Dükkan Saatleri */}
           <TouchableOpacity
             onPress={() => setHoursOpen(true)}
@@ -1012,6 +998,22 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Sign out */}
+        <TouchableOpacity
+          onPress={handleSignOut}
+          style={styles.signOutBtn}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.signOutBtnText}>Çıkış yap</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleDeleteAccount}
+          style={[styles.signOutBtn, { marginTop: 12 }]}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.signOutBtnText}>Hesabımı Sil</Text>
+        </TouchableOpacity>
+
         {/* Yasal */}
         <View style={styles.legalSection}>
           <TouchableOpacity
@@ -1033,22 +1035,6 @@ export default function SettingsScreen() {
             <Text style={styles.legalLink}>Çerez Politikası</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Sign out */}
-        <TouchableOpacity
-          onPress={handleSignOut}
-          style={styles.signOutBtn}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.signOutBtnText}>Çıkış yap</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handleDeleteAccount}
-          style={[styles.signOutBtn, { marginTop: 12 }]}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.signOutBtnText}>Hesabımı Sil</Text>
-        </TouchableOpacity>
 
         <Text style={styles.footer}>Sıradaki · Dükkan Sahibi</Text>
       </ScrollView>

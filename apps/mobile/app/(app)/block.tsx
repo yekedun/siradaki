@@ -50,10 +50,11 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
+import { OverlineHeader } from '../../components/ds/OverlineHeader';
 import { TextField } from '../../components/ds/TextField';
 const REASON_MAP: Record<'anlik' | 'mola' | 'kisisel', string> = {
   anlik: 'walkin',
@@ -90,32 +91,6 @@ const REASONS = [
   { id: 'mola',    title: 'Mola',          meta: 'Kahve / dinlenme arası'     },
   { id: 'kisisel', title: 'Kişisel',       meta: 'Telefon, evrak vs.'         },
 ] as const;
-
-/* ── OverlineHeader ─────────────────────────────────────────────────
- * Source: components.jsx OverlineHeader
- * padding: '8px 20px 16px'
- * eyebrow: 11px SemiBold 0.16em uppercase slate-500 lineHeight 1
- * title:   32px Bold -0.02em ink-900 marginTop 10 lineHeight 1.05
- * meta:    13px Regular fg-3 marginTop 8
- */
-function OverlineHeader({
-  eyebrow,
-  title,
-  meta,
-}: {
-  eyebrow: string;
-  title: string;
-  meta?: string;
-}) {
-  const insets = useSafeAreaInsets();
-  return (
-    <View style={[styles.ohWrap, { paddingTop: insets.top + 12 }]}>
-      <Text style={styles.ohEyebrow}>{eyebrow}</Text>
-      <Text style={styles.ohTitle}>{title}</Text>
-      {meta != null && <Text style={styles.ohMeta}>{meta}</Text>}
-    </View>
-  );
-}
 
 /* ── SectionLabel ───────────────────────────────────────────────────
  * Source: components.jsx SectionLabel
@@ -222,7 +197,7 @@ export default function BlockScreen() {
 
   /* ── Form state ─────────────────────────────────────────────── */
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -231,7 +206,6 @@ export default function BlockScreen() {
         {/* OverlineHeader eyebrow="Blok Ekle" title="Takvimi Kapat"
             meta="Şu andan itibaren seçtiğin süre boyunca takvim kapalı görünür." */}
         <OverlineHeader
-          eyebrow="Blok Ekle"
           title="Takvimi Kapat"
           meta="Şu andan itibaren seçtiğin süre boyunca takvim kapalı görünür."
         />
@@ -398,34 +372,6 @@ const styles = StyleSheet.create({
   },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 100 },
-
-  /* OverlineHeader: paddingHorizontal 20, paddingBottom 16; paddingTop set dynamically via insets */
-  ohWrap: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  ohEyebrow: {
-    fontFamily: 'Montserrat-SemiBold',
-    fontSize: 11,
-    letterSpacing: 11 * 0.16,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-    lineHeight: 11,
-  },
-  ohTitle: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 32,
-    letterSpacing: 32 * -0.02,
-    color: colors.ink[900],
-    marginTop: 10,
-    lineHeight: 33.6,
-  },
-  ohMeta: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 13,
-    color: colors.slate[500],
-    marginTop: 8,
-  },
 
   /* SectionLabel: 11px SemiBold 0.16em uppercase slate-500, paddingHorizontal 20, margin '24px 0 10px' */
   sectionLabel: {

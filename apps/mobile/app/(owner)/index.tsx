@@ -303,16 +303,20 @@ export default function OzetScreen() {
       const maxDay = dayCount.indexOf(Math.max(...dayCount));
       setBusiestDay({ name: TR_DAYS[maxDay], count: String(dayCount[maxDay]) });
 
-      // Usta Bazında — randevu sayısı
+    } else {
+      setTopService(null);
+      setBusiestDay(null);
+    }
+
+    // Usta Bazında — bugünün randevu sayısı
+    if (appts) {
       const staffCount = new Map<string, number>();
-      for (const a of rows) { staffCount.set(a.staff_id, (staffCount.get(a.staff_id) ?? 0) + 1); }
+      for (const a of appts as any[]) { staffCount.set(a.staff_id, (staffCount.get(a.staff_id) ?? 0) + 1); }
       setStaffStats(
         barbers.map((b) => ({ id: b.id, name: b.name, count: staffCount.get(b.id) ?? 0 }))
           .sort((a, b) => b.count - a.count),
       );
     } else {
-      setTopService(null);
-      setBusiestDay(null);
       setStaffStats(barbers.map((b) => ({ id: b.id, name: b.name, count: 0 })));
     }
   }
@@ -331,7 +335,6 @@ export default function OzetScreen() {
     >
       {/* OverlineHeader — padding:'8px 20px 16px' */}
       <OverlineHeader
-        eyebrow="Dükkan Özet"
         title="Bugün"
         meta={new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'short' })}
       />
@@ -404,7 +407,7 @@ export default function OzetScreen() {
               </View>
               <View style={styles.staffInfo}>
                 <Text style={styles.staffName}>{s.name}</Text>
-                <Text style={styles.staffMeta}>30 günde {s.count} randevu</Text>
+                <Text style={styles.staffMeta}>Bugün {s.count} randevu</Text>
               </View>
               <View style={styles.miniBarWrap}>
                 <Text style={[styles.miniCount, { color: colors.brand[600] }]}>{s.count}</Text>

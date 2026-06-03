@@ -194,7 +194,6 @@ export default function HesabimScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>Ayarlar</Text>
           <Text style={styles.title}>Hesabım</Text>
         </View>
 
@@ -249,6 +248,16 @@ export default function HesabimScreen() {
           </Text>
         </View>
 
+        {/* Danger actions */}
+        <View style={styles.signOutWrap}>
+          <TouchableOpacity style={styles.dangerBtn} onPress={handleSignOut}>
+            <Text style={styles.dangerBtnText}>Çıkış Yap</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.dangerBtn, { marginTop: 12 }]} onPress={handleDeleteAccount}>
+            <Text style={styles.dangerBtnText}>Hesabımı Sil</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Yasal */}
         <View style={styles.legalSection}>
           <TouchableOpacity
@@ -268,16 +277,6 @@ export default function HesabimScreen() {
             activeOpacity={0.7}
           >
             <Text style={styles.legalLink}>Çerez Politikası</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Danger actions */}
-        <View style={styles.signOutWrap}>
-          <TouchableOpacity style={styles.dangerBtn} onPress={handleSignOut}>
-            <Text style={styles.dangerBtnText}>Çıkış Yap</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.dangerBtn, { marginTop: 12 }]} onPress={handleDeleteAccount}>
-            <Text style={styles.dangerBtnText}>Hesabımı Sil</Text>
           </TouchableOpacity>
         </View>
 

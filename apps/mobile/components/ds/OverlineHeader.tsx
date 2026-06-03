@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../lib/theme';
 
 interface OverlineHeaderProps {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   meta?: string;
   trailing?: React.ReactNode;
@@ -20,7 +20,7 @@ export function OverlineHeader({
   return (
     <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
       <View style={styles.left}>
-        <Text style={styles.eyebrow}>{eyebrow}</Text>
+        {eyebrow != null && <Text style={styles.eyebrow}>{eyebrow}</Text>}
         <Text style={styles.title}>{title}</Text>
         {meta != null && <Text style={styles.meta}>{meta}</Text>}
       </View>

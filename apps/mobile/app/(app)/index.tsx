@@ -33,9 +33,9 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Rect, Path, Circle } from 'react-native-svg';
 import { colors } from '../../lib/theme';
 import { AppointmentDetailSheet } from '../../components/AppointmentDetailSheet';
@@ -404,7 +404,6 @@ export default function RandevularScreen() {
     <SafeAreaView style={styles.safe}>
       {/* OverlineHeader */}
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>Berber · Dükkan Paneli</Text>
         <Text style={styles.title}>Randevular</Text>
         <Text style={styles.meta}>{formatMetaDate(selectedDate)}</Text>
       </View>

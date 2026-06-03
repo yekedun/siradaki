@@ -31,6 +31,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { buildOwnerRoleFilter, isMissingColumnError } from '../../lib/supabase-role';
@@ -551,6 +552,7 @@ function StaffRowItem({ member, onRowPress, onChevronPress, isLast }: StaffRowIt
 /* ─── Main Screen ───────────────────────────────────────────── */
 
 export default function TeamScreen() {
+  const insets = useSafeAreaInsets();
   const [staff,          setStaff]          = useState<StaffMember[]>(INIT_STAFF);
   const [addOpen,        setAddOpen]        = useState(false);
   const [scheduleOpen,   setScheduleOpen]   = useState(false);
@@ -766,9 +768,8 @@ export default function TeamScreen() {
   return (
     <View style={styles.screen}>
       {/* OverlineHeader */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.eyebrow}>Ekip Yönetimi</Text>
           <Text style={styles.pageTitle}>Ustalar</Text>
         </View>
         <TouchableOpacity

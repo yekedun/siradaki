@@ -245,7 +245,7 @@ export default function AgendaScreen() {
   return (
     <View style={styles.screen}>
       {/* Header */}
-      <OverlineHeader eyebrow="Berber · Dükkan Paneli" title="Ajanda" />
+      <OverlineHeader title="Ajanda" />
 
       {/* DayPicker — gap:6, padding:'0 16px' */}
       <DayPicker
