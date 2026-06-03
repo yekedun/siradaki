@@ -14,7 +14,12 @@
     "db:check": "node -e \"const fs=require('fs');const a=fs.readFileSync('packages/db/src/database.types.ts','utf8');const b=fs.readFileSync('supabase/functions/_shared/database.types.ts','utf8');if(a!==b){console.error('database.types out of sync - run pnpm db:sync');process.exit(1)}\"",
     "audit:map": "tsx scripts/audit/build-map.ts",
     "audit:probe": "tsx scripts/audit/probe.ts",
-    "audit": "pnpm audit:map && pnpm audit:probe"
+    "audit:edge-smoke": "tsx scripts/audit/edge-smoke.ts",
+    "e2e:booking": "tsx scripts/e2e/booking-flow.ts",
+    "e2e:concurrent-booking": "tsx scripts/e2e/concurrent-booking.ts",
+    "audit:e2e": "pnpm audit:edge-smoke && pnpm e2e:booking && pnpm e2e:concurrent-booking",
+    "test:backend": "pnpm audit:e2e && pnpm db:check",
+    "audit": "pnpm audit:map && pnpm audit:probe && pnpm audit:edge-smoke"
   },
   "devDependencies": {
     "tsx": "^4.22.3",

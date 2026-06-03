@@ -1,0 +1,90 @@
+name: Backend E2E
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  backend-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: 2.101.0
+          github-token: ${{ github.token }}
+
+      - name: Start local Supabase
+        run: supabase start
+
+      - name: Reset local database
+        run: supabase db reset --local
+
+      - name: Create CI edge function env
+        run: |
+          cat > supabase/functions/.env.ci <<'EOF'
+          UPSTASH_REDIS_REST_URL=
+          UPSTASH_REDIS_REST_TOKEN=
+          PUBLIC_INVITE_BASE_URL=http://localhost:3000/invite
+          ADMIN_EMAIL=
+          RESEND_API_KEY=
+          SYSTEM_FROM_EMAIL=
+          ADMIN_EXPO_PUSH_TOKEN=
+          VAPID_PUBLIC_KEY=
+          VAPID_PRIVATE_KEY=
+          EOF
+
+      - name: Serve edge functions
+        run: |
+          supabase functions serve \
+            --env-file supabase/functions/.env.ci \
+            --import-map supabase/functions/import_map.json \
+            > edge-functions.log 2>&1 &
+          echo $! > edge-functions.pid
+
+          for i in {1..60}; do
+            if grep -q "Serving functions on" edge-functions.log; then
+              cat edge-functions.log
+              exit 0
+            fi
+            if ! kill -0 "$(cat edge-functions.pid)" 2>/dev/null; then
+              cat edge-functions.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          cat edge-functions.log
+          echo "Timed out waiting for edge functions"
+          exit 1
+
+      - name: Run backend tests
+        run: pnpm test:backend
+
+      - name: Upload edge function logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: edge-functions-log
+          path: edge-functions.log
+          if-no-files-found: ignore

@@ -36,7 +36,7 @@ function readSupabaseStatusEnv(): Record<string, string> {
 const localEnv = readSupabaseStatusEnv();
 const SUPABASE_URL = process.env.SUPABASE_URL ?? localEnv.API_URL ?? "http://127.0.0.1:54321";
 const ANON_KEY = process.env.SUPABASE_ANON_KEY ?? localEnv.PUBLISHABLE_KEY ?? localEnv.ANON_KEY ?? "";
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? localEnv.SECRET_KEY ?? localEnv.SERVICE_ROLE_KEY ?? "";
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? localEnv.SERVICE_ROLE_KEY ?? localEnv.SECRET_KEY ?? "";
 
 if (!ANON_KEY || !SERVICE_ROLE_KEY) {
   throw new Error("Supabase local keys missing. Run `supabase start` or set SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY.");

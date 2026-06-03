@@ -25,7 +25,7 @@ export interface GapEntry {
 export type ProbeStatus = "PASS" | "FAIL" | "SKIP";
 
 export interface ProbeResult {
-  category: "rpc" | "edge_fn" | "rls" | "trigger" | "realtime";
+  category: "rpc" | "edge_fn" | "cors" | "rls" | "trigger" | "realtime";
   check: string;
   status: ProbeStatus;
   message: string;
