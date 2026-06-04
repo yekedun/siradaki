@@ -65,7 +65,7 @@ export default async function ShopPage({ params }: Props) {
   // Shop — query all statuses so we can show custom pages for pending/rejected
   const { data: shop } = await supabase
     .from('shops')
-    .select('id, name, display_name, address, slug, timezone, status')
+    .select('id, name, display_name, address, slug, timezone, status, phone')
     .eq('slug', slug)
     .maybeSingle();
 
@@ -109,7 +109,7 @@ export default async function ShopPage({ params }: Props) {
         duration_min: s.duration_min,
         price:        Math.round((s.price_cents ?? 0) / 100),
       }))}
-      staff={sortedStaff.map(s => ({ id: s.id, name: s.name, phone: s.phone ?? null }))}
+      staff={sortedStaff.map(s => ({ id: s.id, name: s.name, phone: s.phone ?? shop.phone ?? null }))}
     />
   );
 }
