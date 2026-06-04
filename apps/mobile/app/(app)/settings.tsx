@@ -20,10 +20,12 @@ import { useRouter } from 'expo-router';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { buildBarberLink } from '../../lib/onboarding-utils';
+import { StaffSelfEditModal } from '../../components/StaffSelfEditModal';
 
 interface Profile {
   name: string;
   email: string;
+  phone: string | null;
   barberLink: string | null;
   staffId: string | null;
 }
@@ -72,6 +74,7 @@ export default function HesabimScreen() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [dailySummary, setDailySummary] = useState<DailySummaryPrefState>({ enabled: true });
   const [copied, setCopied] = useState(false);
+  const [editVisible, setEditVisible] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -79,7 +82,7 @@ export default function HesabimScreen() {
       if (!user) return;
       supabase
         .from('staff')
-        .select('id, name, slug, notification_prefs, shops(slug)')
+        .select('id, name, phone, slug, notification_prefs, shops(slug)')
         .eq('user_id', user.id)
         .maybeSingle()
         .then(({ data }) => {
@@ -89,6 +92,7 @@ export default function HesabimScreen() {
           setProfile({
             name: row?.name ?? user.email?.split('@')[0] ?? '—',
             email: user.email ?? '—',
+            phone: row?.phone ?? null,
             barberLink: buildBarberLink(shopSlug, staffSlug),
             staffId: row?.id ?? null,
           });
@@ -200,11 +204,47 @@ export default function HesabimScreen() {
         {/* Profile card */}
         <View style={styles.cardWrap}>
           <View style={styles.card}>
-            <Text style={styles.cardOverline}>Personel</Text>
+            <View style={styles.cardTopRow}>
+              <Text style={styles.cardOverline}>Personel</Text>
+              <TouchableOpacity onPress={() => setEditVisible(true)} activeOpacity={0.7}>
+                <Text style={styles.editLink}>Düzenle</Text>
+              </TouchableOpacity>
+            </View>
             <Text style={styles.cardName}>{profile?.name ?? '—'}</Text>
             <Text style={styles.cardEmail}>{profile?.email ?? '—'}</Text>
+            {profile?.phone ? (
+              <Text style={styles.cardPhone}>{profile.phone}</Text>
+            ) : null}
           </View>
         </View>
+
+        <StaffSelfEditModal
+          visible={editVisible}
+          onClose={() => setEditVisible(false)}
+          onSaved={() => {
+            setEditVisible(false);
+            // Reload profile to reflect changes
+            supabase.auth.getUser().then(({ data: { user } }) => {
+              if (!user) return;
+              supabase
+                .from('staff')
+                .select('id, name, phone, slug, notification_prefs, shops(slug)')
+                .eq('user_id', user.id)
+                .maybeSingle()
+                .then(({ data }) => {
+                  const row = data as any;
+                  const shopSlug = row?.shops?.slug ?? null;
+                  const staffSlug = row?.slug ?? null;
+                  setProfile(prev => prev ? {
+                    ...prev,
+                    name:  row?.name  ?? prev.name,
+                    phone: row?.phone ?? null,
+                    barberLink: buildBarberLink(shopSlug, staffSlug),
+                  } : prev);
+                });
+            });
+          }}
+        />
 
         {/* Randevu linki — only shown when staff has a slug */}
         {profile?.barberLink ? (
@@ -322,6 +362,11 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   cardOverline: {
     fontFamily: 'Montserrat-SemiBold',
     fontSize: 11,
@@ -329,8 +374,14 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: colors.slate[500],
   },
-  cardName: { fontFamily: 'Montserrat-Bold', fontSize: 17, color: colors.ink[900], marginTop: 6 },
+  editLink: {
+    fontFamily: 'Montserrat-SemiBold',
+    fontSize: 13,
+    color: colors.brand[600],
+  },
+  cardName:  { fontFamily: 'Montserrat-Bold',    fontSize: 17, color: colors.ink[900],   marginTop: 6 },
   cardEmail: { fontFamily: 'Montserrat-Regular', fontSize: 13, color: colors.slate[500], marginTop: 2 },
+  cardPhone: { fontFamily: 'Montserrat-Regular', fontSize: 13, color: colors.slate[500], marginTop: 2 },
 
   linkSection: { paddingHorizontal: 20, marginTop: 20 },
   linkSectionLabel: {

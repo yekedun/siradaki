@@ -369,6 +369,7 @@ export type Database = {
       }
       staff: {
         Row: {
+          bio: string | null
           commission_rate_bps: number | null
           commission_type: string
           created_at: string
@@ -385,6 +386,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          bio?: string | null
           commission_rate_bps?: number | null
           commission_type?: string
           created_at?: string
@@ -401,6 +403,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          bio?: string | null
           commission_rate_bps?: number | null
           commission_type?: string
           created_at?: string

@@ -46,16 +46,16 @@ export function StaffSelfEditModal({ visible, onClose, onSaved }: StaffSelfEditM
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      // phone and bio are not in the staff schema yet — select only confirmed columns
       const { data } = await supabase
         .from('staff')
-        .select('id, name')
+        .select('id, name, phone, bio')
         .eq('user_id', user.id)
         .maybeSingle();
       if (data) {
         setStaffId(data.id);
         setName(data.name ?? '');
-        // phone/bio not yet in schema — keep current state values
+        setPhone(data.phone ?? '');
+        setBio(data.bio ?? '');
       }
     }
 
@@ -67,10 +67,13 @@ export function StaffSelfEditModal({ visible, onClose, onSaved }: StaffSelfEditM
     setLoading(true);
     setError(null);
     try {
-      // Only update columns confirmed to exist in the staff schema
       const { error: saveErr } = await supabase
         .from('staff')
-        .update({ name: name.trim() })
+        .update({
+          name:  name.trim(),
+          phone: phone.trim() || null,
+          bio:   bio.trim()   || null,
+        })
         .eq('id', staffId);
 
       if (saveErr) {
