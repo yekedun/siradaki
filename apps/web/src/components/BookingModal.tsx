@@ -283,13 +283,15 @@ export function BookingModal({
   const [state,          setState]         = useState<ModalState>('form');
   const [errorType,      setErrorType]     = useState<ErrorType>('conflict');
   const [appointmentId,  setAppointmentId] = useState('');
-  const submittingRef = useRef(false);
+  const submittingRef    = useRef(false);
+  const confirmedSummary = useRef(summary);
 
   if (!open) return null;
   void shopId;
 
   async function handleConfirm(name: string, phone: string, note: string) {
     if (submittingRef.current) return;
+    confirmedSummary.current = summary; // capture BEFORE any state change or async op
     submittingRef.current = true;
     setState('loading');
     try {
@@ -340,7 +342,7 @@ export function BookingModal({
       >
         {state === 'form'    && <ModalForm    summary={summary} onClose={handleClose} onConfirm={handleConfirm} />}
         {state === 'loading' && <ModalLoading />}
-        {state === 'success' && <ModalSuccess summary={summary} onClose={handleClose} staffPhone={staffPhone} appointmentId={appointmentId} />}
+        {state === 'success' && <ModalSuccess summary={confirmedSummary.current} onClose={handleClose} staffPhone={staffPhone} appointmentId={appointmentId} />}
         {state === 'error'   && <ModalError   errorType={errorType} onClose={handleClose} />}
       </div>
     </div>

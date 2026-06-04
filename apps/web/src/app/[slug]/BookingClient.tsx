@@ -42,8 +42,7 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
     d.setHours(0, 0, 0, 0);
     return d;
   });
-  const [selSlot,        setSelSlot]        = useState<string | null>(null);
-  const [completedSummary, setCompletedSummary] = useState('');
+  const [selSlot,    setSelSlot]    = useState<string | null>(null);
   const [rawSlots,   setRawSlots]   = useState<RawSlot[]>([]);
   const [slotsLoad,  setSlotsLoad]  = useState(false);
   const [slotsErr,   setSlotsErr]   = useState<string | null>(null);
@@ -231,8 +230,8 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
       {/* Booking Modal */}
       <BookingModal
         open={modalOpen}
-        onClose={() => { setModalOpen(false); setSelSlot(null); setCompletedSummary(''); }}
-        summary={completedSummary || summary}
+        onClose={() => { setModalOpen(false); setSelSlot(null); }}
+        summary={summary}
         shopId={shop.id}
         shopSlug={shop.slug}
         staffId={selStaff}
@@ -245,7 +244,6 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
             ...(selService ? { service_id: selService } : {}),
             ...(selStaff   ? { staff_id:   selStaff }   : {}),
           });
-          setCompletedSummary(summary); // freeze before fetchSlots clears selSlot
           fetchSlots();
         }}
       />
