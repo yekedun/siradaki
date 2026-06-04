@@ -62,9 +62,6 @@ import {
   generateAppointmentTimesForDate,
 } from '../lib/appointment-time';
 
-// TODO: connect Supabase — fetch services for this shop: supabase.from('services').select('*').eq('shop_id', shopId).eq('is_active', true)
-// TODO: connect Supabase — on Kaydet, insert appointment: supabase.from('appointments').insert({ ... })
-
 /* ── Design-source service options ─────────────────────────────── */
 export interface ServiceOption {
   id: string;
