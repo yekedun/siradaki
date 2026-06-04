@@ -4,6 +4,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 const PROTECTED = ['/dashboard'];
 const AUTH_ROUTES = ['/giris', '/kayit'];
 
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? '')
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(Boolean);
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -40,6 +45,19 @@ export async function middleware(request: NextRequest) {
     url.pathname = '/giris';
     url.searchParams.set('redirect', pathname);
     return NextResponse.redirect(url);
+  }
+
+  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/giris';
+      url.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(url);
+    }
+    const email = user.email?.toLowerCase() ?? '';
+    if (!ADMIN_EMAILS.includes(email)) {
+      return new NextResponse(null, { status: 404 });
+    }
   }
 
   if (isAuthRoute && user) {
