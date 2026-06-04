@@ -171,10 +171,20 @@ function ModalLoading() {
 }
 
 function ModalSuccess({
-  summary, onClose, staffPhone, appointmentId,
+  summary, startsAt, onClose, staffPhone, appointmentId,
 }: {
-  summary: string; onClose: () => void; staffPhone?: string | null; appointmentId: string;
+  summary: string; startsAt: string; onClose: () => void; staffPhone?: string | null; appointmentId: string;
 }) {
+  // Build display text from startsAt directly — independent of parent state timing
+  const displaySummary = (() => {
+    if (!startsAt) return summary;
+    const timeLabel = new Date(startsAt).toLocaleTimeString('tr-TR', {
+      hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul',
+    });
+    if (!timeLabel || summary.trimEnd().endsWith(timeLabel)) return summary;
+    return `${summary.trimEnd()} ${timeLabel}`;
+  })();
+
   const [notifState, setNotifState] = useState<'idle' | 'subscribed' | 'denied' | 'unsupported'>(() => {
     if (typeof window === 'undefined') return 'unsupported';
     if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window) || !VAPID_PUBLIC_KEY) return 'unsupported';
@@ -200,7 +210,7 @@ function ModalSuccess({
         Randevunuz alındı
       </h2>
       <div className="text-sm text-slate-500 mt-2 leading-relaxed">
-        {summary}
+        {displaySummary}
       </div>
 
       {notifState === 'idle' && (
@@ -236,7 +246,7 @@ function ModalSuccess({
         <button
           onClick={() => {
             const phone = staffPhone.replace(/\D/g, '');
-            const msg = encodeURIComponent(`Merhaba, ${summary} randevusu aldım. Bilginize 🙏`);
+            const msg = encodeURIComponent(`Merhaba, ${displaySummary} randevusu aldım. Bilginize 🙏`);
             window.open(`whatsapp://send?phone=90${phone}&text=${msg}`, '_self');
           }}
           className="w-full px-5 py-3 mt-2 bg-[#25D366] text-white border-none rounded-md text-sm font-semibold cursor-pointer font-sans"
@@ -342,7 +352,7 @@ export function BookingModal({
       >
         {state === 'form'    && <ModalForm    summary={summary} onClose={handleClose} onConfirm={handleConfirm} />}
         {state === 'loading' && <ModalLoading />}
-        {state === 'success' && <ModalSuccess summary={confirmedSummary.current} onClose={handleClose} staffPhone={staffPhone} appointmentId={appointmentId} />}
+        {state === 'success' && <ModalSuccess summary={confirmedSummary.current} startsAt={startsAt} onClose={handleClose} staffPhone={staffPhone} appointmentId={appointmentId} />}
         {state === 'error'   && <ModalError   errorType={errorType} onClose={handleClose} />}
       </div>
     </div>
