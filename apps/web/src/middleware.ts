@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PROTECTED = ['/dashboard', '/admin'];
+const PROTECTED = ['/dashboard'];
 const AUTH_ROUTES = ['/giris', '/kayit'];
 
 export async function middleware(request: NextRequest) {
@@ -40,23 +40,6 @@ export async function middleware(request: NextRequest) {
     url.pathname = '/giris';
     url.searchParams.set('redirect', pathname);
     return NextResponse.redirect(url);
-  }
-
-  if (pathname.startsWith('/admin') && user) {
-    const { data: adminStaff } = await supabase
-      .from('staff')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .eq('is_active', true)
-      .limit(1)
-      .maybeSingle();
-
-    if (adminStaff?.role !== 'admin') {
-      const url = request.nextUrl.clone();
-      url.pathname = '/';
-      return NextResponse.redirect(url);
-    }
   }
 
   if (isAuthRoute && user) {
