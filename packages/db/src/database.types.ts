@@ -377,6 +377,7 @@ export type Database = {
           is_active: boolean
           name: string
           notification_prefs: Json
+          phone: string | null
           push_token: string | null
           role: Database["public"]["Enums"]["staff_role"]
           shop_id: string
@@ -392,6 +393,7 @@ export type Database = {
           is_active?: boolean
           name: string
           notification_prefs?: Json
+          phone?: string | null
           push_token?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
           shop_id: string
@@ -407,6 +409,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           notification_prefs?: Json
+          phone?: string | null
           push_token?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
           shop_id?: string
