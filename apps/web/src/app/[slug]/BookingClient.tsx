@@ -48,8 +48,12 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
   const [slotsErr,   setSlotsErr]   = useState<string | null>(null);
   const [isClosed,   setIsClosed]   = useState(false);
   const [modalOpen,  setModalOpen]  = useState(false);
+  const modalSummaryRef = useRef('');
+  const modalStartsAtRef = useRef('');
 
   function handleBookingStart() {
+    modalSummaryRef.current  = summary;  // freeze at click-time, before any re-render
+    modalStartsAtRef.current = selISO;
     trackWebEvent('web_booking_started', {
       shop_slug: shop.slug,
       ...(selService ? { service_id: selService } : {}),
@@ -230,14 +234,14 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
       {/* Booking Modal */}
       <BookingModal
         open={modalOpen}
-        onClose={() => { setModalOpen(false); setSelSlot(null); }}
-        summary={summary}
+        onClose={() => { setModalOpen(false); setSelSlot(null); modalSummaryRef.current = ''; modalStartsAtRef.current = ''; }}
+        summary={modalSummaryRef.current || summary}
         shopId={shop.id}
         shopSlug={shop.slug}
         staffId={selStaff}
         staffPhone={selectedStaff?.phone ?? null}
         serviceId={selService ?? ''}
-        startsAt={selISO}
+        startsAt={modalStartsAtRef.current || selISO}
         onSuccess={() => {
           trackWebEvent('web_booking_completed', {
             shop_slug: shop.slug,
