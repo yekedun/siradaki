@@ -283,7 +283,8 @@ export function BookingModal({
   const [state,          setState]         = useState<ModalState>('form');
   const [errorType,      setErrorType]     = useState<ErrorType>('conflict');
   const [appointmentId,  setAppointmentId] = useState('');
-  const submittingRef = useRef(false);
+  const submittingRef   = useRef(false);
+  const frozenSummaryRef = useRef(summary);
 
   if (!open) return null;
   void shopId;
@@ -311,6 +312,7 @@ export function BookingModal({
       if (!res.ok)            { setErrorType('generic');  setState('error'); return; }
       const data = await res.json().catch(() => ({}));
       setAppointmentId(data?.appointment_id ?? '');
+      frozenSummaryRef.current = summary;
       setState('success');
       onSuccess();
     } catch {
@@ -340,7 +342,7 @@ export function BookingModal({
       >
         {state === 'form'    && <ModalForm    summary={summary} onClose={handleClose} onConfirm={handleConfirm} />}
         {state === 'loading' && <ModalLoading />}
-        {state === 'success' && <ModalSuccess summary={summary} onClose={handleClose} staffPhone={staffPhone} appointmentId={appointmentId} />}
+        {state === 'success' && <ModalSuccess summary={frozenSummaryRef.current} onClose={handleClose} staffPhone={staffPhone} appointmentId={appointmentId} />}
         {state === 'error'   && <ModalError   errorType={errorType} onClose={handleClose} />}
       </div>
     </div>

@@ -101,7 +101,7 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
   const selRaw    = rawSlots.find(s => toTimeLabel(s.starts_at, shop.timezone) === selSlot);
   const selISO    = selRaw?.starts_at ?? '';
   const svc       = services.find(s => s.id === selService);
-  const selectedStaff = staff.find(s => s.id === selStaff) ?? null;
+  const selectedStaff = staff.find(s => s.id === selStaff) ?? (staff.length === 1 ? staff[0] : null);
   const staffName = selectedStaff?.name;
   const summary   = svc
     ? `${svc.name} · ${svc.duration_min} dk · ${toDateStr(selDate).split('-').reverse().join('.')} ${selSlot ?? ''}${staffName ? ' · '+staffName : ''}`
