@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ServiceSelector, type Service } from '../../components/ServiceSelector';
 import { SlotGrid } from '../../components/SlotGrid';
 import { BookingModal } from '../../components/BookingModal';
-import { nextBookingSuccessState, shouldShowPersonalLinkBadge } from './booking-flow-state';
+import { shouldShowPersonalLinkBadge } from './booking-flow-state';
 import { toTimeLabel } from './booking-time';
 import { trackWebEvent } from '../../lib/analytics';
 
@@ -244,9 +244,8 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
             ...(selService ? { service_id: selService } : {}),
             ...(selStaff   ? { staff_id:   selStaff }   : {}),
           });
-          const next = nextBookingSuccessState({ modalOpen, selectedSlot: selSlot });
-          setModalOpen(next.modalOpen);
-          setSelSlot(next.selectedSlot);
+          // selSlot intentionally NOT cleared here — summary needs it while success screen is visible
+          // slot is cleared in onClose when user dismisses the modal
           fetchSlots();
         }}
       />
