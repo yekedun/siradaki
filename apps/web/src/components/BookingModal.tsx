@@ -246,7 +246,7 @@ function ModalSuccess({
         <button
           onClick={() => {
             const phone = staffPhone.replace(/\D/g, '').replace(/^0/, '');
-            const msg = encodeURIComponent(`Merhaba, ${displaySummary} randevusu aldım. Bilginize 🙏`);
+            const msg = encodeURIComponent(`Merhaba, ${displaySummary} randevusu aldım. Bilginize :)`);
             window.open(`https://wa.me/90${phone}?text=${msg}`, '_blank');
           }}
           className="w-full px-5 py-3 mt-2 bg-[#25D366] text-white border-none rounded-md text-sm font-semibold cursor-pointer font-sans"
