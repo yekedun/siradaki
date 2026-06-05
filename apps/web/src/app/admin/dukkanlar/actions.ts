@@ -74,6 +74,14 @@ export async function approveShop(shopId: string, adminKey: string) {
 export async function rejectShop(shopId: string, adminKey: string) {
   assertAdmin(adminKey);
   const supabase = getAdminClient();
+
+  const { data: existing } = await supabase
+    .from('shops')
+    .select('status')
+    .eq('id', shopId)
+    .single();
+  if (existing?.status === 'rejected') return { error: 'Bu dükkan zaten reddedilmiş.' };
+
   const { error } = await supabase.from('shops').update({ status: 'rejected' }).eq('id', shopId);
   if (error) throw new Error('Red başarısız: ' + error.message);
 

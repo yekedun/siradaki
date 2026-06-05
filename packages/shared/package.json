@@ -9,7 +9,6 @@
     "./slot-utils": "./src/slot-utils.ts",
     "./constants": "./src/constants.ts",
     "./types": "./src/types.ts",
-    "./use-realtime-invalidation": "./src/use-realtime-invalidation.ts",
     "./theme": "./src/theme.ts",
     "./phone-utils": "./src/phone-utils.ts"
   },

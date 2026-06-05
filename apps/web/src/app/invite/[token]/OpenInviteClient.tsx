@@ -7,6 +7,10 @@ import {
   shouldAutoOpen,
 } from './invite-linking';
 
+// Update these when the app is published to stores
+const APP_STORE_URL = 'https://apps.apple.com/app/siradaki/id000000000';
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.siradaki.app';
+
 interface Props {
   token: string;
 }
@@ -58,6 +62,30 @@ export default function OpenInviteClient({ token }: Props) {
         >
           Uygulamada Aç
         </button>
+
+        <div className="mt-10 w-full border-t border-slate-200 pt-8">
+          <p className="mb-4 text-sm text-slate-500">
+            Sıradaki uygulaması telefonunda yüklü değil mi?
+          </p>
+          <div className="flex flex-col gap-3">
+            <a
+              href={APP_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700"
+            >
+              App Store&apos;dan İndir (iPhone)
+            </a>
+            <a
+              href={PLAY_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700"
+            >
+              Google Play&apos;den İndir (Android)
+            </a>
+          </div>
+        </div>
       </section>
     </main>
   );

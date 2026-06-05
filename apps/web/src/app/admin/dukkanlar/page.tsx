@@ -64,10 +64,13 @@ export default function DukkanlarPage() {
     load(0, f);
   }
 
-  function handleAction(fn: () => Promise<unknown>) {
+  function handleAction(fn: () => Promise<void | { error?: string }>) {
     startTransition(() => {
       fn()
-        .then(() => load(page, filter))
+        .then((res) => {
+          if (res?.error) { setLoadError(res.error); return; }
+          load(page, filter);
+        })
         .catch((e) => setLoadError(e instanceof Error ? e.message : 'İşlem başarısız'));
     });
   }
