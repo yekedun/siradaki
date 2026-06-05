@@ -43,7 +43,7 @@ import { AppointmentDetailSheet } from '../../components/AppointmentDetailSheet'
 import { AddAppointmentModal, ServiceOption } from '../../components/AddAppointmentModal';
 import { supabase } from '../../lib/supabase';
 import { createDebounce } from '../../lib/debounce';
-import { formatTime, translateReason, getAppointmentState, buildDayRange } from '../../lib/utils';
+import { buildForwardAgendaDays, formatTime, getForwardAgendaDateByIndex, translateReason } from '../../lib/utils';
 
 /* ── TR day labels ──────────────────────────────────────────────── */
 const TR_DAYS_SHORT = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'] as const;
@@ -64,13 +64,7 @@ function DayPicker({
   selected: number;
   onSelect: (i: number) => void;
 }) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - 2 + i);
-    return d;
-  });
+  const days = buildForwardAgendaDays();
   return (
     <ScrollView
       horizontal
@@ -284,7 +278,7 @@ function formatMetaDate(d: Date): string {
 
 /* ── SCREEN ──────────────────────────────────────────────────────── */
 export default function RandevularScreen() {
-  const [dayIndex, setDayIndex] = useState(2); // index 2 = today
+  const [dayIndex, setDayIndex] = useState(0);
   const [showDetail, setShowDetail] = useState(false);
   const [selectedAppt, setSelectedAppt] = useState<import('../../components/AppointmentDetailSheet').AppointmentDetail | null>(null);
   const [showAdd, setShowAdd]   = useState(false);
@@ -321,8 +315,7 @@ export default function RandevularScreen() {
   const fetchAppointments = useCallback(async () => {
     if (!staffId) return;
 
-    const today = new Date(); today.setHours(0,0,0,0);
-    const targetDate = new Date(today); targetDate.setDate(today.getDate() - 2 + dayIndex);
+    const targetDate = getForwardAgendaDateByIndex(dayIndex);
     const dayStart = new Date(targetDate); dayStart.setHours(0,0,0,0);
     const dayEnd = new Date(targetDate); dayEnd.setDate(targetDate.getDate()+1); dayEnd.setHours(0,0,0,0);
 
@@ -431,10 +424,7 @@ export default function RandevularScreen() {
   }
 
   // Derive displayed date for header meta
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const selectedDate = new Date(today);
-  selectedDate.setDate(today.getDate() - 2 + dayIndex);
+  const selectedDate = getForwardAgendaDateByIndex(dayIndex);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -790,7 +780,7 @@ const styles = StyleSheet.create({
      boxShadow: '0 12px 24px -10px rgba(30,58,138,0.4)' */
   fab: {
     position: 'absolute',
-    bottom: 90,
+    bottom: 28,
     right: 20,
     zIndex: 10,
     height: 52,

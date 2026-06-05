@@ -19,6 +19,17 @@ export function buildDayRange(date: Date): { start: Date; end: Date } {
   return { start, end };
 }
 
+export function getForwardAgendaDateByIndex(index: number, from: Date = new Date()): Date {
+  const date = new Date(from);
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + index);
+  return date;
+}
+
+export function buildForwardAgendaDays(from: Date = new Date(), dayCount = 7): Date[] {
+  return Array.from({ length: dayCount }, (_, index) => getForwardAgendaDateByIndex(index, from));
+}
+
 /* ── Currency ────────────────────────────────────────────────── */
 
 /**

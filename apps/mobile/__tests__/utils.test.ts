@@ -10,6 +10,8 @@ import {
   translateReason,
   getAppointmentState,
   buildDayRange,
+  buildForwardAgendaDays,
+  getForwardAgendaDateByIndex,
 } from '../lib/utils';
 
 /* ── formatTime ──────────────────────────────────────────────── */
@@ -148,5 +150,25 @@ describe('buildDayRange', () => {
     const d = new Date(2026, 4, 7);
     const { start, end } = buildDayRange(d);
     expect(end.getTime() - start.getTime()).toBe(24 * 60 * 60 * 1000);
+  });
+});
+
+describe('forward agenda days', () => {
+  const today = new Date(2026, 5, 5, 14, 51, 0);
+
+  it('starts the agenda day picker at today, not earlier dates', () => {
+    const days = buildForwardAgendaDays(today);
+
+    expect(days.map((d) => d.getDate())).toEqual([5, 6, 7, 8, 9, 10, 11]);
+    expect(days.every((d) => d.getTime() >= new Date(2026, 5, 5).getTime())).toBe(true);
+  });
+
+  it('maps index 0 to today for staff agenda queries and header', () => {
+    const selected = getForwardAgendaDateByIndex(0, today);
+
+    expect(selected.getFullYear()).toBe(2026);
+    expect(selected.getMonth()).toBe(5);
+    expect(selected.getDate()).toBe(5);
+    expect(selected.getHours()).toBe(0);
   });
 });
