@@ -123,7 +123,7 @@ serve(async (req) => {
       return error("Randevu bulunamadı veya yetkiniz yok", 404);
     }
     if (rpcError.code === "22023") {
-      return error(rpcError.message ?? "Bu randevu iptal edilemiyor", 400);
+      return error("Bu randevu iptal edilemiyor", 400);
     }
     console.error("[staff-cancel] cancel_appointment_atomic failed:", rpcError);
     return error("İptal işlemi başarısız", 500);

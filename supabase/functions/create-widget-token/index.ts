@@ -3,11 +3,17 @@ import {
   createClient,
 } from "https://esm.sh/@supabase/supabase-js@2";
 import { createAdminClient, sha256 } from "../_shared/supabase-admin.ts";
-import { corsOptions, error, json } from "../_shared/cors.ts";
+import { corsOptions, error, json, bodyGuard } from "../_shared/cors.ts";
+
+const DEFAULT_WIDGET_LABEL = "Telefon Widget";
+const MAX_WIDGET_LABEL_LENGTH = 80;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions(req);
   if (req.method !== "POST") return error("Method not allowed", 405);
+
+  const guard = bodyGuard(req);
+  if (guard) return guard;
 
   // Dükkan sahibinin JWT'si gerekli
   const authHeader = req.headers.get("Authorization");
@@ -35,7 +41,11 @@ serve(async (req) => {
   if (!shop) return error("Dükkan profili bulunamadı", 404);
 
   const body = await req.json().catch(() => ({}));
-  const label = body.label || "Telefon Widget";
+  const rawLabel = (body as { label?: unknown }).label;
+  if (rawLabel !== undefined && typeof rawLabel !== "string") {
+    return error("Token etiketi geçersiz", 400);
+  }
+  const label = (rawLabel?.trim() || DEFAULT_WIDGET_LABEL).slice(0, MAX_WIDGET_LABEL_LENGTH);
 
   const rawToken  = crypto.randomUUID() + "-" + crypto.randomUUID();
   const tokenHash = await sha256(rawToken);

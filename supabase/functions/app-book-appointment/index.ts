@@ -103,6 +103,15 @@ function mapRpcErrorStatus(code?: string): number {
   return 500;
 }
 
+function mapRpcErrorMessage(status: number): string {
+  if (status === 409) return "Seçilen saat dolu";
+  if (status === 404) return "Randevu bilgileri bulunamadı";
+  if (status === 429) return "Çok fazla istek. Lütfen daha sonra tekrar deneyin";
+  if (status === 400) return "Randevu bilgileri geçersiz";
+  if (status === 403) return "Bu işlem için yetkiniz yok";
+  return "Randevu oluşturulamadı";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions(req);
   if (req.method !== "POST") return error("Method not allowed", 405);
@@ -167,7 +176,7 @@ serve(async (req) => {
   if (rpcError) {
     const status = mapRpcErrorStatus(rpcError.code);
     if (status === 500) console.error("create_appointment_atomic failed:", rpcError);
-    return error(rpcError.message ?? "Randevu oluşturulamadı", status, {
+    return error(mapRpcErrorMessage(status), status, {
       code: status === 409 ? "BOOKING_CONFLICT" : status === 429 ? "RATE_LIMITED" : status === 403 ? "FORBIDDEN" : "BOOKING_ERROR",
       should_refetch_availability: status === 409,
       ...(status === 429 ? { retry_after: 600 } : {}),

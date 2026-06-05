@@ -31,14 +31,14 @@ serve(async (req) => {
 
   const admin = createAdminClient();
 
-  let body: { token: string };
+  let body: { token?: unknown };
   try {
     body = await req.json();
   } catch {
     return error("Geçersiz JSON");
   }
 
-  const { token } = body;
+  const token = typeof body.token === "string" ? body.token.trim() : "";
   if (!token) return error("Token zorunlu");
 
   const { data: inviteRow, error: inviteErr } = await admin
@@ -47,7 +47,10 @@ serve(async (req) => {
     .eq("token", token)
     .maybeSingle();
 
-  if (inviteErr) return error("Token okunamadı: " + inviteErr.message, 500);
+  if (inviteErr) {
+    console.error("[accept-invite] invite lookup failed:", inviteErr);
+    return error("Davet doğrulanamadı", 500);
+  }
   if (
     !inviteRow ||
     inviteRow.used_at ||
@@ -61,7 +64,10 @@ serve(async (req) => {
     .select("id, status")
     .eq("id", inviteRow.shop_id)
     .maybeSingle();
-  if (shopErr) return error("Dükkan okunamadı: " + shopErr.message, 500);
+  if (shopErr) {
+    console.error("[accept-invite] shop lookup failed:", shopErr);
+    return error("Dükkan doğrulanamadı", 500);
+  }
   if (!shop || shop.status !== "active") return error("Davet edilen dükkan aktif değil", 403);
 
   const usedAt = new Date().toISOString();
@@ -71,7 +77,10 @@ serve(async (req) => {
     .eq("user_id", user.id)
     .eq("shop_id", inviteRow.shop_id)
     .maybeSingle();
-  if (existingErr) return error("Personel kaydı kontrol edilemedi: " + existingErr.message, 500);
+  if (existingErr) {
+    console.error("[accept-invite] existing staff lookup failed:", existingErr);
+    return error("Personel kaydı doğrulanamadı", 500);
+  }
   if (existing) {
     await admin
       .from("invite_tokens")
@@ -88,7 +97,10 @@ serve(async (req) => {
     .is("used_at", null)
     .select("id")
     .maybeSingle();
-  if (claimErr) return error("Token kullanılamadı: " + claimErr.message, 500);
+  if (claimErr) {
+    console.error("[accept-invite] invite claim failed:", claimErr);
+    return error("Davet kullanılamadı", 500);
+  }
   if (!claimed) return error("Token zaten kullanılmış", 409);
 
   const name = user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "berber";
@@ -136,7 +148,8 @@ serve(async (req) => {
       .update({ used_at: null, used_by: null })
       .eq("id", inviteRow.id)
       .eq("used_by", user.id);
-    return error("Staff kaydı oluşturulamadı: " + insertErr.message, 500);
+    console.error("[accept-invite] staff insert failed:", insertErr);
+    return error("Personel kaydı oluşturulamadı", 500);
   }
 
   return json({ staff: staffMember }, 201);

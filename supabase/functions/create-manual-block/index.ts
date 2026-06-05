@@ -9,6 +9,12 @@ interface CreateManualBlockRequest {
   reason?: "walkin" | "break" | "personal";
 }
 
+function mapRpcErrorMessage(status: number): string {
+  if (status === 409) return "Seçilen saat dolu";
+  if (status === 404) return "Personel bulunamadı";
+  return "Blok oluşturulamadı";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions(req);
   if (req.method !== "POST") return error("Method not allowed", 405);
@@ -85,7 +91,7 @@ serve(async (req) => {
   if (rpcError) {
     const status = rpcError.code === "P0001" ? 409 : rpcError.code === "P0002" ? 404 : 500;
     if (status === 500) console.error("create_block_atomic failed:", rpcError);
-    return error(rpcError.message ?? "Blok oluşturulamadı", status);
+    return error(mapRpcErrorMessage(status), status);
   }
 
   return json(block, 201);

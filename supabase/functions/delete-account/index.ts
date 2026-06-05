@@ -233,6 +233,7 @@ serve(async (req) => {
 
     return json({ success: true });
   } catch (err) {
-    return error((err as Error).message, 500);
+    console.error("[delete-account] account deletion failed:", err);
+    return error("Hesap silinemedi", 500);
   }
 });

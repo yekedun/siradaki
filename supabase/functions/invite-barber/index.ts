@@ -40,7 +40,10 @@ serve(async (req) => {
     shopErr = fallback.error;
   }
 
-  if (shopErr) return error("Dükkan bilgisi okunamadı: " + shopErr.message, 500);
+  if (shopErr) {
+    console.error("[invite-barber] shop lookup failed:", shopErr);
+    return error("Dükkan bilgisi okunamadı", 500);
+  }
   if (!shop) return error("Dükkan sahibi yetkisi gerekli", 403);
   if (shop.status !== "active") return error("Dükkan aktif olmadan davet oluşturulamaz", 403);
 
@@ -50,7 +53,10 @@ serve(async (req) => {
     .select("token")
     .single();
 
-  if (tokenErr) return error("Token oluşturulamadı: " + tokenErr.message, 500);
+  if (tokenErr) {
+    console.error("[invite-barber] token insert failed:", tokenErr);
+    return error("Token oluşturulamadı", 500);
+  }
 
   const publicInviteBaseUrl = Deno.env.get("PUBLIC_INVITE_BASE_URL") ?? "https://siradaki.app/invite";
   const inviteLink = `${publicInviteBaseUrl.replace(/\/$/, "")}/${tokenRow.token}`;

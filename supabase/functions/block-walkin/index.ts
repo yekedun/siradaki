@@ -9,6 +9,12 @@ type LegacyBlockWalkinRequest = {
   reason?: "walkin" | "break" | "personal";
 };
 
+function mapRpcErrorMessage(status: number): string {
+  if (status === 409) return "Seçilen saat dolu";
+  if (status === 400) return "Blok bilgileri geçersiz";
+  return "Blok oluşturulamadı";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions(req);
   if (req.method !== "POST") return error("Method not allowed", 405);
@@ -96,7 +102,7 @@ serve(async (req) => {
   if (rpcError) {
     const status = rpcError.code === "P0001" ? 409 : rpcError.code === "22023" ? 400 : 500;
     if (status === 500) console.error("create_block_atomic failed:", rpcError);
-    return error(rpcError.message ?? "Blok oluşturulamadı", status, {
+    return error(mapRpcErrorMessage(status), status, {
       code: status === 409 ? "BLOCK_CONFLICT" : "BLOCK_ERROR",
       should_refetch_availability: status === 409,
     });
