@@ -66,7 +66,7 @@ async function fetchAvailability(params: {
   const body = await res.json().catch(() => null);
 
   if (!res.ok) {
-    const message = typeof body?.error === 'string' ? body.error : 'Musaitlik alinamadi.';
+    const message = typeof body?.error === 'string' ? body.error : 'Müsaitlik alınamadı.';
     throw new Error(message);
   }
 
@@ -153,7 +153,7 @@ export function AvailabilityScreen({
       setPerStaffAvailability(perStaff);
     } catch (err) {
       if (__DEV__) console.warn('[availability] load failed:', err);
-      setErrorText(err instanceof Error ? err.message : 'Musaitlik alinamadi.');
+      setErrorText(err instanceof Error ? err.message : 'Müsaitlik alınamadı.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -170,7 +170,7 @@ export function AvailabilityScreen({
       .map((entry) => entry.staffName)
       .filter(Boolean);
 
-    if (names.length === 0) return 'Musait';
+    if (names.length === 0) return 'Müsait';
     if (names.length <= 2) return names.join(', ');
     return `${names.length} personel`;
   }
@@ -180,9 +180,9 @@ export function AvailabilityScreen({
   return (
     <View style={styles.root}>
       <OverlineHeader
-        eyebrow="Berber · Dukkan Paneli"
-        title="Musaitlik"
-        meta={`${duration} dk icin`}
+        eyebrow="Berber · Dükkan Paneli"
+        title="Müsaitlik"
+        meta={`${duration} dk için`}
       />
       <DayPicker selected={selectedDate} onSelect={setSelectedDate} />
 
@@ -197,7 +197,7 @@ export function AvailabilityScreen({
       {mode === 'owner' && (
         <ChipRow>
           <Chip selected={staffFilter === 'any'} onPress={() => setStaffFilter('any')}>
-            Tumu
+            Tümü
           </Chip>
           {staffList.map((staff) => (
             <Chip
@@ -218,7 +218,7 @@ export function AvailabilityScreen({
         <Card style={styles.earliestCard}>
           <View style={styles.cardHeader}>
             <CalendarCheck2 size={18} color={colors.brand[600]} />
-            <Text style={styles.cardTitle}>En erken bos saatler</Text>
+            <Text style={styles.cardTitle}>En erken boş saatler</Text>
           </View>
 
           {isBusy ? (
@@ -232,7 +232,7 @@ export function AvailabilityScreen({
               ))}
             </View>
           ) : (
-            <Text style={styles.mutedText}>Bu secimde yakin bos saat yok.</Text>
+            <Text style={styles.mutedText}>Bu seçimde yakın boş saat yok.</Text>
           )}
         </Card>
 
@@ -243,9 +243,9 @@ export function AvailabilityScreen({
         )}
 
         {closed ? (
-          <Text style={styles.emptyText}>Secilen gun kapali.</Text>
+          <Text style={styles.emptyText}>Seçilen gün kapalı.</Text>
         ) : availableSlots.length === 0 && !isBusy ? (
-          <Text style={styles.emptyText}>Bu sure icin bos saat yok.</Text>
+          <Text style={styles.emptyText}>Bu süre için boş saat yok.</Text>
         ) : (
           <View style={styles.slotList}>
             {availableSlots.map((slot) => (
