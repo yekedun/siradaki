@@ -26,6 +26,11 @@
     "turbo": "^2.0.0",
     "typescript": "^5.4.0"
   },
+  "pnpm": {
+    "overrides": {
+      "@supabase/supabase-js": "2.107.0"
+    }
+  },
   "packageManager": "pnpm@9.0.0",
   "engines": {
     "node": ">=20",

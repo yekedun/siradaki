@@ -369,6 +369,7 @@ export type Database = {
       }
       staff: {
         Row: {
+          bio: string | null
           commission_rate_bps: number | null
           commission_type: string
           created_at: string
@@ -377,6 +378,7 @@ export type Database = {
           is_active: boolean
           name: string
           notification_prefs: Json
+          phone: string | null
           push_token: string | null
           role: Database["public"]["Enums"]["staff_role"]
           shop_id: string
@@ -384,6 +386,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          bio?: string | null
           commission_rate_bps?: number | null
           commission_type?: string
           created_at?: string
@@ -392,6 +395,7 @@ export type Database = {
           is_active?: boolean
           name: string
           notification_prefs?: Json
+          phone?: string | null
           push_token?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
           shop_id: string
@@ -399,6 +403,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          bio?: string | null
           commission_rate_bps?: number | null
           commission_type?: string
           created_at?: string
@@ -407,6 +412,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           notification_prefs?: Json
+          phone?: string | null
           push_token?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
           shop_id?: string
