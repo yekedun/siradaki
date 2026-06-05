@@ -26,6 +26,15 @@ export interface EarliestStaffOption {
   label: string;
 }
 
+export interface StaffSlotOption {
+  staffId: string;
+  staffName: string;
+  initials: string;
+  startsAt: string;
+  endsAt: string;
+  durationMin: AvailabilityDuration;
+}
+
 export function formatAvailabilityTime(value: string): string {
   return new Intl.DateTimeFormat('tr-TR', {
     timeZone: 'Europe/Istanbul',
@@ -66,4 +75,40 @@ export function getEarliestStaffOptions(
     })
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
     .slice(0, limit);
+}
+
+export function getStaffInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  return parts.slice(0, 2).map((part) => part[0]?.toLocaleUpperCase('tr-TR') ?? '').join('');
+}
+
+export function getStaffSlotOptions(
+  staffAvailability: StaffAvailability[],
+  durationMin: AvailabilityDuration,
+): StaffSlotOption[] {
+  return staffAvailability
+    .flatMap((entry) =>
+      getAvailableSlots(entry.slots).map((slot) => ({
+        staffId: entry.staffId,
+        staffName: entry.staffName,
+        initials: getStaffInitials(entry.staffName),
+        startsAt: slot.starts_at,
+        endsAt: slot.ends_at,
+        durationMin,
+      })),
+    )
+    .sort((a, b) => {
+      const timeSort = a.startsAt.localeCompare(b.startsAt);
+      if (timeSort !== 0) return timeSort;
+      return a.staffName.localeCompare(b.staffName, 'tr-TR');
+    });
+}
+
+export function getStaffAvailableSlotCount(staffAvailability: StaffAvailability[], staffId: string): number {
+  return getAvailableSlots(staffAvailability.find((entry) => entry.staffId === staffId)?.slots ?? []).length;
+}
+
+export function getTotalAvailableSlotCount(staffAvailability: StaffAvailability[]): number {
+  return staffAvailability.reduce((total, entry) => total + getAvailableSlots(entry.slots).length, 0);
 }

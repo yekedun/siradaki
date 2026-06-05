@@ -4,6 +4,10 @@ import {
   findServiceIdForDuration,
   getAvailableSlots,
   getEarliestStaffOptions,
+  getStaffAvailableSlotCount,
+  getStaffInitials,
+  getStaffSlotOptions,
+  getTotalAvailableSlotCount,
 } from '../lib/availability';
 
 describe('availability helpers', () => {
@@ -100,5 +104,61 @@ describe('availability helpers', () => {
         label: '14:00 · Mehmet',
       },
     ]);
+  });
+
+  it('builds initials for staff chips and slot cards', () => {
+    expect(getStaffInitials('Emre Keskin')).toBe('EK');
+    expect(getStaffInitials('Soner')).toBe('S');
+    expect(getStaffInitials('')).toBe('?');
+  });
+
+  it('builds staff slot cards sorted by time then staff name', () => {
+    const result = getStaffSlotOptions([
+      {
+        staffId: 'staff-2',
+        staffName: 'Soner Ay',
+        slots: [
+          { starts_at: '2026-06-06T11:00:00.000Z', ends_at: '2026-06-06T12:00:00.000Z', available: true },
+          { starts_at: '2026-06-06T10:00:00.000Z', ends_at: '2026-06-06T11:00:00.000Z', available: true },
+        ],
+      },
+      {
+        staffId: 'staff-1',
+        staffName: 'Emre Keskin',
+        slots: [
+          { starts_at: '2026-06-06T10:00:00.000Z', ends_at: '2026-06-06T11:00:00.000Z', available: true },
+          { starts_at: '2026-06-06T12:00:00.000Z', ends_at: '2026-06-06T13:00:00.000Z', available: false },
+        ],
+      },
+    ], 60);
+
+    expect(result.map((slot) => `${slot.startsAt}-${slot.staffName}-${slot.initials}`)).toEqual([
+      '2026-06-06T10:00:00.000Z-Emre Keskin-EK',
+      '2026-06-06T10:00:00.000Z-Soner Ay-SA',
+      '2026-06-06T11:00:00.000Z-Soner Ay-SA',
+    ]);
+  });
+
+  it('counts available slots for all and per staff', () => {
+    const availability = [
+      {
+        staffId: 'staff-1',
+        staffName: 'Emre',
+        slots: [
+          { starts_at: '2026-06-06T10:00:00.000Z', ends_at: '2026-06-06T10:30:00.000Z', available: true },
+          { starts_at: '2026-06-06T10:30:00.000Z', ends_at: '2026-06-06T11:00:00.000Z', available: false },
+        ],
+      },
+      {
+        staffId: 'staff-2',
+        staffName: 'Soner',
+        slots: [
+          { starts_at: '2026-06-06T11:00:00.000Z', ends_at: '2026-06-06T11:30:00.000Z', available: true },
+        ],
+      },
+    ];
+
+    expect(getStaffAvailableSlotCount(availability, 'staff-1')).toBe(1);
+    expect(getTotalAvailableSlotCount(availability)).toBe(2);
   });
 });
