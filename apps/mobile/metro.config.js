@@ -9,12 +9,17 @@ const config = getDefaultConfig(projectRoot);
 config.resolver.unstable_enablePackageExports = true;
 
 // Watch the entire monorepo so Metro can resolve packages/shared
-config.watchFolders = [workspaceRoot];
+config.watchFolders = Array.from(
+  new Set([...(config.watchFolders ?? []), workspaceRoot]),
+);
 
 // Resolve modules from app-level node_modules first, then workspace root
-config.resolver.nodeModulesPaths = [
-  path.resolve(projectRoot, 'node_modules'),
-  path.resolve(workspaceRoot, 'node_modules'),
-];
+config.resolver.nodeModulesPaths = Array.from(
+  new Set([
+    ...(config.resolver.nodeModulesPaths ?? []),
+    path.resolve(projectRoot, 'node_modules'),
+    path.resolve(workspaceRoot, 'node_modules'),
+  ]),
+);
 
 module.exports = config;

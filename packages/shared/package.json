@@ -21,6 +21,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "react": "19.1.0",
     "typescript": "^5.4.0",
     "vitest": "1"
   }
