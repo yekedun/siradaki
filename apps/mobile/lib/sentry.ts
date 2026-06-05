@@ -1,35 +1,18 @@
 import type { Session } from '@supabase/supabase-js';
-import * as Sentry from '@sentry/react-native';
+import { Fragment, createElement, type ReactNode } from 'react';
 
-let initialized = false;
-
-export function initSentry(dsn = process.env.EXPO_PUBLIC_SENTRY_DSN) {
-  if (initialized) return;
-  if (!dsn) return;
-
-  initialized = true;
-  Sentry.init({
-    dsn,
-    enabled: true,
-    enableAutoSessionTracking: true,
-    tracesSampleRate: 0.1,
-  });
+export function initSentry(_dsn = process.env.EXPO_PUBLIC_SENTRY_DSN) {
+  return;
 }
 
-export function setSentryUserFromSession(session: Session | null) {
-  if (!session) {
-    Sentry.setUser(null);
-    return;
-  }
-
-  Sentry.setUser({
-    id: session.user.id,
-    email: session.user.email ?? undefined,
-  });
+export function setSentryUserFromSession(_session: Session | null) {
+  return;
 }
 
 export function captureSentryVerificationError() {
-  Sentry.captureException(new Error('Sentry mobile verification error'));
+  return;
 }
 
-export const SentryErrorBoundary = Sentry.ErrorBoundary;
+export function SentryErrorBoundary({ children }: { children: ReactNode }) {
+  return createElement(Fragment, null, children);
+}

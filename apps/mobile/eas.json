@@ -33,7 +33,7 @@
       },
       "ios": {
         "resourceClass": "m-medium",
-        "image": "latest"
+        "image": "macos-sequoia-15.3-xcode-16.2"
       },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://lkovehtujarfwcvtahoq.supabase.co",
