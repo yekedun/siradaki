@@ -18,7 +18,7 @@
  */
 import { Tabs } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
-import { Clock3, MinusCircle, Settings } from 'lucide-react-native';
+import { Clock3, CalendarCheck2, MinusCircle, Settings } from 'lucide-react-native';
 import { colors } from '../../lib/theme';
 
 /**
@@ -58,6 +58,19 @@ export default function AppLayout() {
       />
 
       {/* M10 — Blok */}
+      <Tabs.Screen
+        name="availability"
+        options={{
+          title: 'Müsaitlik',
+          tabBarIcon: ({ color, focused }) => (
+            <>
+              <TabIndicator focused={focused} />
+              <CalendarCheck2 size={20} color={color} />
+            </>
+          ),
+        }}
+      />
+
       <Tabs.Screen
         name="block"
         options={{
