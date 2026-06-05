@@ -8,6 +8,11 @@ export interface AvailabilitySlot {
   available: boolean;
 }
 
+export interface AvailabilityServiceOption {
+  id: string;
+  dur: number;
+}
+
 export interface StaffAvailability {
   staffId: string;
   staffName: string;
@@ -32,6 +37,13 @@ export function formatAvailabilityTime(value: string): string {
 
 export function getAvailableSlots(slots: AvailabilitySlot[]): AvailabilitySlot[] {
   return slots.filter((slot) => slot.available);
+}
+
+export function findServiceIdForDuration(
+  services: AvailabilityServiceOption[],
+  duration: AvailabilityDuration,
+): string | null {
+  return services.find((service) => service.dur === duration)?.id ?? null;
 }
 
 export function getEarliestStaffOptions(

@@ -16,8 +16,10 @@ import { OverlineHeader } from '../ds/OverlineHeader';
 import {
   AVAILABILITY_DURATIONS,
   AvailabilityDuration,
+  AvailabilityServiceOption,
   AvailabilitySlot,
   StaffAvailability,
+  findServiceIdForDuration,
   formatAvailabilityTime,
   getAvailableSlots,
   getEarliestStaffOptions,
@@ -45,6 +47,7 @@ interface AvailabilityScreenProps {
   mode: Mode;
   shopSlug: string | null;
   staffList: StaffOption[];
+  services?: AvailabilityServiceOption[];
   staffId?: string | null;
   loadingContext?: boolean;
 }
@@ -54,6 +57,7 @@ async function fetchAvailability(params: {
   date: Date;
   duration: AvailabilityDuration;
   staffId: StaffFilter;
+  serviceId: string | null;
 }): Promise<AvailabilityResponse> {
   const qs = new URLSearchParams({
     shop_slug: params.shopSlug,
@@ -61,6 +65,9 @@ async function fetchAvailability(params: {
     duration_min: String(params.duration),
     staff_id: params.staffId,
   });
+  if (params.serviceId) {
+    qs.set('service_id', params.serviceId);
+  }
 
   const res = await fetch(`${FN_BASE}/widget-get-availability?${qs.toString()}`);
   const body = await res.json().catch(() => null);
@@ -77,6 +84,7 @@ export function AvailabilityScreen({
   mode,
   shopSlug,
   staffList,
+  services = [],
   staffId,
   loadingContext = false,
 }: AvailabilityScreenProps) {
@@ -99,6 +107,10 @@ export function AvailabilityScreen({
   const earliestOptions = useMemo(
     () => getEarliestStaffOptions(perStaffAvailability),
     [perStaffAvailability],
+  );
+  const serviceId = useMemo(
+    () => findServiceIdForDuration(services, duration),
+    [duration, services],
   );
 
   const staffForSummary = useMemo(() => {
@@ -129,6 +141,7 @@ export function AvailabilityScreen({
           date: selectedDate,
           duration,
           staffId: effectiveStaffId,
+          serviceId,
         }),
         Promise.all(
           staffForSummary.map(async (staff) => {
@@ -137,6 +150,7 @@ export function AvailabilityScreen({
               date: selectedDate,
               duration,
               staffId: staff.id,
+              serviceId,
             });
 
             return {
@@ -158,7 +172,7 @@ export function AvailabilityScreen({
       setLoading(false);
       setRefreshing(false);
     }
-  }, [duration, effectiveStaffId, selectedDate, shopSlug, staffForSummary]);
+  }, [duration, effectiveStaffId, selectedDate, serviceId, shopSlug, staffForSummary]);
 
   useEffect(() => {
     load();

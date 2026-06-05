@@ -1,6 +1,7 @@
 import {
   AVAILABILITY_DURATIONS,
   formatAvailabilityTime,
+  findServiceIdForDuration,
   getAvailableSlots,
   getEarliestStaffOptions,
 } from '../lib/availability';
@@ -35,6 +36,21 @@ describe('availability helpers', () => {
         available: true,
       },
     ]);
+  });
+
+  it('finds a matching service id for legacy availability endpoints', () => {
+    expect(
+      findServiceIdForDuration([
+        { id: 'svc-30', dur: 30 },
+        { id: 'svc-45', dur: 45 },
+      ], 45),
+    ).toBe('svc-45');
+  });
+
+  it('returns null when no service matches the selected duration', () => {
+    expect(
+      findServiceIdForDuration([{ id: 'svc-30', dur: 30 }], 60),
+    ).toBeNull();
   });
 
   it('returns earliest staff options sorted by time', () => {

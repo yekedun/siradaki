@@ -44,6 +44,7 @@ export function ChipRow({ children, padded = true, style }: ChipRowProps) {
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.row}
       contentContainerStyle={[styles.rowContent, !padded && styles.rowNoPad, style]}
     >
       {children}
@@ -72,11 +73,17 @@ const styles = StyleSheet.create({
   labelSelected: { color: '#ffffff' },
 
   /* ChipRow */
+  row: {
+    height: 46,
+    flexGrow: 0,
+    flexShrink: 0,
+  },
   rowContent: {
     flexDirection: 'row',
     gap: 8,
     paddingHorizontal: 20,
     paddingVertical: 4,
+    alignItems: 'center',
   },
   rowNoPad: {
     paddingHorizontal: 0,
