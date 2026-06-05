@@ -22,6 +22,7 @@ const baseConfig = ({ config }: ConfigContext): ExpoConfig => ({
         'Yeni randevu ve hatırlatma bildirimleri almak için izin gerekiyor.',
       NSContactsUsageDescription:
         'Rehberden müşteri seçerek telefon numarasını otomatik doldurmak için kişilere erişim gerekiyor.',
+      ITSAppUsesNonExemptEncryption: false,
     },
   },
   android: {
@@ -68,6 +69,15 @@ const baseConfig = ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'expo-contacts',
+    [
+      'expo-build-properties',
+      {
+        ios: {
+          deploymentTarget: '16.0',
+          useFrameworks: 'static',
+        },
+      },
+    ],
   ],
   scheme: 'siradaki',
   updates: {
