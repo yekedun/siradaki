@@ -1,4 +1,4 @@
-import type { WorkingHours } from './types';
+import type { WorkingHours } from './types.ts';
 
 export const DEFAULT_WORKING_HOURS: WorkingHours = {
   mon: { open: '09:00', close: '19:00', enabled: true },

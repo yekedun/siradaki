@@ -191,6 +191,127 @@ describe("computeAvailableSlots", () => {
     });
     expect(slots).toHaveLength(0);
   });
+
+  it("filters slots that start before MIN_BOOKING_NOTICE_MINUTES", () => {
+    vi.setSystemTime(new Date("2026-06-01T05:30:00.000Z")); // 08:30 Istanbul
+
+    const slots = computeAvailableSlots({
+      date: MONDAY,
+      durationMin: 30,
+      workingHours: makeWorkingHours({
+        mon: { open: "09:00", close: "10:30", enabled: true },
+      }),
+      occupied: [],
+      timezone: TZ,
+    });
+
+    const startTimes = slots.map((s) =>
+      s.startsAt.toLocaleTimeString("tr-TR", {
+        timeZone: TZ,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      })
+    );
+    expect(startTimes).toEqual(["09:30", "10:00"]);
+  });
+});
+
+describe("computeAvailableSlots booking grace period", () => {
+  afterAll(() => {
+    vi.doUnmock("../constants.ts");
+    vi.useRealTimers();
+  });
+
+  it("keeps a just-started slot when booking notice is disabled", async () => {
+    vi.resetModules();
+    vi.doMock("../constants.ts", () => ({
+      SLOT_GRANULARITY_MIN: 15,
+      DEFAULT_TIMEZONE: "Europe/Istanbul",
+      BOOKING_GRACE_PERIOD_MIN: 5,
+      MIN_BOOKING_NOTICE_MINUTES: 0,
+      MAX_BOOKING_DAYS: 30,
+      MIN_CANCEL_NOTICE_MINUTES: 30,
+      DEFAULT_WORKING_HOURS: {
+        mon: { open: "09:00", close: "19:00", enabled: true },
+        tue: { open: "09:00", close: "19:00", enabled: true },
+        wed: { open: "09:00", close: "19:00", enabled: true },
+        thu: { open: "09:00", close: "19:00", enabled: true },
+        fri: { open: "09:00", close: "19:00", enabled: true },
+        sat: { open: "09:00", close: "17:00", enabled: true },
+        sun: { open: null, close: null, enabled: false },
+      },
+      DAY_KEYS: ["sun", "mon", "tue", "wed", "thu", "fri", "sat"],
+    }));
+
+    const { computeAvailableSlots: computeWithNoNotice } = await import(
+      "../slot-utils.ts"
+    );
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-01T06:04:00.000Z")); // 09:04 Istanbul
+
+    const slots = computeWithNoNotice({
+      date: MONDAY,
+      durationMin: 30,
+      workingHours: makeWorkingHours({
+        mon: { open: "09:00", close: "09:30", enabled: true },
+      }),
+      occupied: [],
+      timezone: TZ,
+    });
+
+    expect(slots).toHaveLength(1);
+    expect(
+      slots[0]?.startsAt.toLocaleTimeString("tr-TR", {
+        timeZone: TZ,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      })
+    ).toBe("09:00");
+  });
+
+  it("filters a slot that started before BOOKING_GRACE_PERIOD_MIN", async () => {
+    vi.resetModules();
+    vi.doMock("../constants.ts", () => ({
+      SLOT_GRANULARITY_MIN: 15,
+      DEFAULT_TIMEZONE: "Europe/Istanbul",
+      BOOKING_GRACE_PERIOD_MIN: 5,
+      MIN_BOOKING_NOTICE_MINUTES: 0,
+      MAX_BOOKING_DAYS: 30,
+      MIN_CANCEL_NOTICE_MINUTES: 30,
+      DEFAULT_WORKING_HOURS: {
+        mon: { open: "09:00", close: "19:00", enabled: true },
+        tue: { open: "09:00", close: "19:00", enabled: true },
+        wed: { open: "09:00", close: "19:00", enabled: true },
+        thu: { open: "09:00", close: "19:00", enabled: true },
+        fri: { open: "09:00", close: "19:00", enabled: true },
+        sat: { open: "09:00", close: "17:00", enabled: true },
+        sun: { open: null, close: null, enabled: false },
+      },
+      DAY_KEYS: ["sun", "mon", "tue", "wed", "thu", "fri", "sat"],
+    }));
+
+    const { computeAvailableSlots: computeWithNoNotice } = await import(
+      "../slot-utils.ts"
+    );
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-01T06:06:00.000Z")); // 09:06 Istanbul
+
+    const slots = computeWithNoNotice({
+      date: MONDAY,
+      durationMin: 30,
+      workingHours: makeWorkingHours({
+        mon: { open: "09:00", close: "09:30", enabled: true },
+      }),
+      occupied: [],
+      timezone: TZ,
+    });
+
+    expect(slots).toHaveLength(0);
+  });
 });
 
 // ── localTimeToUTC ────────────────────────────────────────────────────────

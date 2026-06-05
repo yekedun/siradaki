@@ -1,5 +1,6 @@
 import {
   SLOT_GRANULARITY_MIN,
+  BOOKING_GRACE_PERIOD_MIN,
   MIN_BOOKING_NOTICE_MINUTES,
   MAX_BOOKING_DAYS,
   DAY_KEYS,
@@ -37,7 +38,10 @@ export function computeAvailableSlots(params: {
 
   const slots: Slot[] = [];
   const nowMs = Date.now();
-  const minAllowedMs = nowMs + MIN_BOOKING_NOTICE_MINUTES * 60_000;
+  const minAllowedMs =
+    MIN_BOOKING_NOTICE_MINUTES > 0
+      ? nowMs + MIN_BOOKING_NOTICE_MINUTES * 60_000
+      : nowMs - BOOKING_GRACE_PERIOD_MIN * 60_000;
   const maxAllowedMs = nowMs + MAX_BOOKING_DAYS * 24 * 60 * 60 * 1000;
 
   const durationMs = durationMin * 60_000;
