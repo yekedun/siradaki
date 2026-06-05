@@ -109,7 +109,7 @@ serve(async (req) => {
       .single();
 
     if (!service) return error("Hizmet bulunamadı", 404);
-    durationMin = service.duration_min;
+    durationMin = durationFromParam ?? service.duration_min;
   }
 
   if (!durationMin) {

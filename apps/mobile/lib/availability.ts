@@ -43,7 +43,7 @@ export function findServiceIdForDuration(
   services: AvailabilityServiceOption[],
   duration: AvailabilityDuration,
 ): string | null {
-  return services.find((service) => service.dur === duration)?.id ?? null;
+  return services.find((service) => service.dur === duration)?.id ?? services[0]?.id ?? null;
 }
 
 export function getEarliestStaffOptions(

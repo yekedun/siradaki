@@ -47,10 +47,17 @@ describe('availability helpers', () => {
     ).toBe('svc-45');
   });
 
-  it('returns null when no service matches the selected duration', () => {
+  it('falls back to the first service when no duration matches', () => {
     expect(
-      findServiceIdForDuration([{ id: 'svc-30', dur: 30 }], 60),
-    ).toBeNull();
+      findServiceIdForDuration([
+        { id: 'svc-30', dur: 30 },
+        { id: 'svc-45', dur: 45 },
+      ], 60),
+    ).toBe('svc-30');
+  });
+
+  it('returns null when there are no services', () => {
+    expect(findServiceIdForDuration([], 60)).toBeNull();
   });
 
   it('returns earliest staff options sorted by time', () => {
