@@ -51,6 +51,17 @@ async function resolveWorkingHours(
 
 const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 
+const ALLOWED_DURATION_MINUTES = new Set([30, 45, 60]);
+
+function parseDurationMin(value: string | null): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || !ALLOWED_DURATION_MINUTES.has(parsed)) {
+    return NaN;
+  }
+  return parsed;
+}
+
 // ── Ana Handler ───────────────────────────────────────────────────────────────
 
 serve(async (req) => {
@@ -60,11 +71,17 @@ serve(async (req) => {
   const shopSlug     = url.searchParams.get("shop_slug") ?? url.searchParams.get("slug");
   const date         = url.searchParams.get("date");
   const serviceId    = url.searchParams.get("service_id");
+  const durationParam = url.searchParams.get("duration_min");
+  const durationFromParam = parseDurationMin(durationParam);
   // staff_id = UUID → belirli personel | "any" veya yoksa → en az 1 personel müsait slot
   const staffIdParam = url.searchParams.get("staff_id");
 
-  if (!shopSlug || !date || !serviceId) {
-    return error("shop_slug, date, service_id zorunlu");
+  if (!shopSlug || !date || (!serviceId && !durationParam)) {
+    return error("shop_slug, date ve service_id veya duration_min zorunlu");
+  }
+
+  if (Number.isNaN(durationFromParam)) {
+    return error("duration_min 30, 45 veya 60 olmali", 400);
   }
 
   const supabase = createAdminClient();
@@ -79,16 +96,25 @@ serve(async (req) => {
 
   if (!shop) return error("Dükkan bulunamadı", 404);
 
-  // Hizmeti doğrula
-  const { data: service } = await supabase
-    .from("services")
-    .select("duration_min")
-    .eq("id", serviceId)
-    .eq("shop_id", shop.id)
-    .eq("is_active", true)
-    .single();
+  let durationMin = durationFromParam;
 
-  if (!service) return error("Hizmet bulunamadı", 404);
+  if (serviceId) {
+    // Hizmeti doğrula
+    const { data: service } = await supabase
+      .from("services")
+      .select("duration_min")
+      .eq("id", serviceId)
+      .eq("shop_id", shop.id)
+      .eq("is_active", true)
+      .single();
+
+    if (!service) return error("Hizmet bulunamadı", 404);
+    durationMin = service.duration_min;
+  }
+
+  if (!durationMin) {
+    return error("Gecerli sure bulunamadi", 400);
+  }
 
   const shopWorkingHours = shop.working_hours as WorkingHours;
   const timezone         = shop.timezone;
@@ -136,7 +162,7 @@ serve(async (req) => {
 
     const slots = computeAvailableSlots({
       date: new Date(date),
-      durationMin: service.duration_min,
+      durationMin,
       workingHours,
       occupied: occupied ?? [],
       timezone,
@@ -227,7 +253,7 @@ serve(async (req) => {
 
     const slots = computeAvailableSlots({
       date: new Date(date),
-      durationMin: service.duration_min,
+      durationMin,
       workingHours: wh,
       occupied,
       timezone,
