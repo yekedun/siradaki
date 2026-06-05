@@ -2,6 +2,10 @@
 node_modules/
 .pnpm-store/
 
+# Lockfiles — monorepo uses pnpm-lock.yaml at root; per-package npm lockfiles are noise
+apps/*/package-lock.json
+packages/*/package-lock.json
+
 # Environment variables — NEVER commit
 .env
 .env.local
