@@ -120,4 +120,20 @@ describe('rejectShop', () => {
   it('yanlış key ile Yetkisiz atar', async () => {
     await expect(rejectShop('shop-1', 'wrong')).rejects.toThrow('Yetkisiz');
   });
+
+  it('zaten reddedilmiş dükkan için erken döner', async () => {
+    serviceClient.from.mockReturnValue(mockSelect({ data: { status: 'rejected' }, error: null }));
+    const result = await rejectShop('shop-1', 'secret');
+    expect(result).toEqual({ error: 'Bu dükkan zaten reddedilmiş.' });
+    expect(serviceClient.from).toHaveBeenCalledOnce();
+  });
+
+  it('bekleyen dükkanı reddeder ve shops tablosunu günceller', async () => {
+    serviceClient.from
+      .mockReturnValueOnce(mockSelect({ data: { status: 'pending' }, error: null }))
+      .mockReturnValueOnce(mockUpdate())
+      .mockReturnValueOnce(mockSelect({ data: null, error: null })); // sendOwnerPush: no owner → returns early
+    await rejectShop('shop-1', 'secret');
+    expect(serviceClient.from).toHaveBeenCalledWith('shops');
+  });
 });
