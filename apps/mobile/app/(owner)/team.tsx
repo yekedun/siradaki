@@ -21,7 +21,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -355,6 +357,7 @@ interface AddStaffSheetProps {
 function AddStaffSheet({ open, onClose, onAdd }: AddStaffSheetProps) {
   const [name,  setName]  = useState('');
   const [commInput, setCommInput] = useState('');
+  const insets = useSafeAreaInsets();
 
   function handleAdd() {
     if (name.trim().length < 2) {
@@ -377,8 +380,15 @@ function AddStaffSheet({ open, onClose, onAdd }: AddStaffSheetProps) {
       animationType="slide"
       onRequestClose={onClose}
     >
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingRoot}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <Pressable style={styles.sheetBackdrop} onPress={onClose}>
-        <Pressable style={styles.sheetContainer} onPress={() => {}}>
+        <Pressable
+          style={[styles.sheetContainer, { paddingBottom: Math.max(insets.bottom, 16) + 16 }]}
+          onPress={() => {}}
+        >
           <View style={styles.sheetHandle} />
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>Personel Ekle</Text>
@@ -427,6 +437,7 @@ function AddStaffSheet({ open, onClose, onAdd }: AddStaffSheetProps) {
           </ScrollView>
         </Pressable>
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -1026,6 +1037,9 @@ const styles = StyleSheet.create({
   },
 
   /* Sheet shared */
+  keyboardAvoidingRoot: {
+    flex: 1,
+  },
   sheetBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(11,18,32,0.38)',

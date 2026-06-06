@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Switch } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Switch } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../lib/theme';
 import { Button } from './ds/Button';
 import { supabase } from '../lib/supabase';
@@ -23,6 +24,7 @@ export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
   const [isActive, setIsActive] = useState(true);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (staff) {
@@ -54,8 +56,13 @@ export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingRoot}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-      <View style={styles.sheet}>
+      <View style={styles.sheetHost} pointerEvents="box-none">
+      <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
         <View style={styles.handle} />
         <Text style={styles.title}>Berber Düzenle</Text>
         <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
@@ -84,13 +91,17 @@ export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
           </Button>
         </View>
       </View>
+      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardAvoidingRoot: { flex: 1 },
   backdrop:    { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet:       { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff',
+  sheetHost:   { flex: 1, justifyContent: 'flex-end' },
+  sheet:       { backgroundColor: '#fff',
                   borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 32,
                   maxHeight: '80%', display: 'flex', flexDirection: 'column' },
   handle:      { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.slate[300],
