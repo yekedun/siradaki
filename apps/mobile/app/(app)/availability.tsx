@@ -4,16 +4,20 @@ import { supabase } from '../../lib/supabase';
 
 interface StaffContext {
   staffId: string | null;
+  shopId: string | null;
   shopSlug: string | null;
   staffName: string;
-  services: Array<{ id: string; dur: number }>;
+  workingHours: Record<string, unknown> | null;
+  services: Array<{ id: string; label: string; dur: number; price: string }>;
 }
 
 export default function StaffAvailabilityRoute() {
   const [context, setContext] = useState<StaffContext>({
     staffId: null,
+    shopId: null,
     shopSlug: null,
     staffName: '',
+    workingHours: null,
     services: [],
   });
   const [loading, setLoading] = useState(true);
@@ -38,7 +42,7 @@ export default function StaffAvailabilityRoute() {
         .maybeSingle();
 
       if (!staff || cancelled) {
-        setContext({ staffId: null, shopSlug: null, staffName: '', services: [] });
+        setContext({ staffId: null, shopId: null, shopSlug: null, staffName: '', workingHours: null, services: [] });
         setLoading(false);
         return;
       }
@@ -46,12 +50,12 @@ export default function StaffAvailabilityRoute() {
       const [{ data: shop }, { data: services }] = await Promise.all([
         supabase
           .from('shops')
-          .select('slug')
+          .select('id, slug, working_hours')
           .eq('id', staff.shop_id)
           .maybeSingle(),
         supabase
           .from('services')
-          .select('id, duration_min')
+          .select('id, name, duration_min, price_cents')
           .eq('shop_id', staff.shop_id)
           .eq('is_active', true),
       ]);
@@ -59,11 +63,15 @@ export default function StaffAvailabilityRoute() {
       if (!cancelled) {
         setContext({
           staffId: staff.id,
+          shopId: shop?.id ?? staff.shop_id ?? null,
           staffName: staff.name ?? '',
           shopSlug: shop?.slug ?? null,
+          workingHours: (shop?.working_hours as Record<string, unknown> | null) ?? null,
           services: (services ?? []).map((service) => ({
             id: service.id,
+            label: service.name ?? '',
             dur: service.duration_min ?? 30,
+            price: `${Math.round((service.price_cents ?? 0) / 100)}₺`,
           })),
         });
         setLoading(false);
@@ -80,10 +88,12 @@ export default function StaffAvailabilityRoute() {
   return (
     <AvailabilityScreen
       mode="staff"
+      shopId={context.shopId}
       shopSlug={context.shopSlug}
       staffId={context.staffId}
       staffList={context.staffId ? [{ id: context.staffId, name: context.staffName }] : []}
       services={context.services}
+      workingHours={context.workingHours}
       loadingContext={loading}
     />
   );

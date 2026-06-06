@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -8,15 +9,19 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Plus } from 'lucide-react-native';
+import { AddAppointmentModal, ServiceOption } from '../AddAppointmentModal';
 import { Chip, ChipRow } from '../ds/Chip';
 import { DayPicker } from '../ds/DayPicker';
 import { OverlineHeader } from '../ds/OverlineHeader';
 import {
   AVAILABILITY_DURATIONS,
   AvailabilityDuration,
-  AvailabilityServiceOption,
+  AvailabilityAppointmentInitialValues,
   AvailabilitySlot,
   StaffAvailability,
+  StaffSlotOption,
+  buildAvailabilityAppointmentInitialValues,
   findServiceIdForDuration,
   formatAvailabilityTime,
   getStaffAvailableSlotCount,
@@ -24,7 +29,12 @@ import {
   getStaffSlotOptions,
   getTotalAvailableSlotCount,
 } from '../../lib/availability';
-import { formatLocalAppointmentDate } from '../../lib/appointment-time';
+import {
+  AppointmentWorkingHours,
+  buildLocalAppointmentTimestamp,
+  formatLocalAppointmentDate,
+} from '../../lib/appointment-time';
+import { supabase } from '../../lib/supabase';
 import { colors, radius } from '../../lib/theme';
 
 const FN_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1';
@@ -45,10 +55,12 @@ interface AvailabilityResponse {
 
 interface AvailabilityScreenProps {
   mode: Mode;
+  shopId?: string | null;
   shopSlug: string | null;
   staffList: StaffOption[];
-  services?: AvailabilityServiceOption[];
+  services?: ServiceOption[];
   staffId?: string | null;
+  workingHours?: AppointmentWorkingHours | null;
   loadingContext?: boolean;
 }
 
@@ -82,10 +94,12 @@ async function fetchAvailability(params: {
 
 export function AvailabilityScreen({
   mode,
+  shopId,
   shopSlug,
   staffList,
   services = [],
   staffId,
+  workingHours,
   loadingContext = false,
 }: AvailabilityScreenProps) {
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -100,6 +114,8 @@ export function AvailabilityScreen({
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const [appointmentInitialValues, setAppointmentInitialValues] =
+    useState<AvailabilityAppointmentInitialValues | null>(null);
 
   const effectiveStaffId = mode === 'staff' ? staffId ?? null : staffFilter;
   const slotOptions = useMemo(
@@ -181,6 +197,73 @@ export function AvailabilityScreen({
 
   const isBusy = loadingContext || loading;
 
+  function handleOpenAppointment(slot: StaffSlotOption) {
+    setAppointmentInitialValues(
+      buildAvailabilityAppointmentInitialValues({
+        staffId: slot.staffId,
+        startsAt: slot.startsAt,
+      }),
+    );
+  }
+
+  async function handleSaveAppointment(data: {
+    customerName: string;
+    customerPhone: string;
+    serviceId: string;
+    staffId: string | null;
+    date: string;
+    time: string;
+    notes?: string;
+  }) {
+    if (!shopSlug) {
+      Alert.alert('Hata', 'Dükkan bilgisi yüklenmedi. Sayfayı yenileyin.');
+      return;
+    }
+    if (!data.staffId) {
+      Alert.alert('Hata', 'Berber seçimi zorunludur.');
+      return;
+    }
+
+    const { error: fnErr } = await supabase.functions.invoke('app-book-appointment', {
+      body: {
+        shop_slug: shopSlug,
+        service_id: data.serviceId,
+        staff_id: data.staffId,
+        starts_at: buildLocalAppointmentTimestamp(data.date, data.time),
+        customer_name: data.customerName,
+        customer_phone: data.customerPhone || null,
+        ...(data.notes ? { notes: data.notes } : {}),
+      },
+    });
+
+    if (fnErr) {
+      const ctx = (fnErr as any)?.context;
+      let status = ctx?.status ?? 0;
+      let ctxBody: any = ctx?.body;
+      if (ctx && typeof ctx.json === 'function') {
+        try { ctxBody = await ctx.clone().json(); }
+        catch { try { ctxBody = await ctx.clone().text(); } catch {} }
+        if (!status) status = ctx.status ?? 0;
+      }
+
+      const serverMsg = (ctxBody && typeof ctxBody === 'object' && typeof ctxBody.error === 'string')
+        ? ctxBody.error
+        : (typeof ctxBody === 'string' ? ctxBody : '');
+      const msg = status === 409
+        ? serverMsg || 'Bu saat dolu. Başka bir saat seçin.'
+        : status === 401
+          ? 'Oturum gerekli. Tekrar giriş yapın.'
+          : serverMsg || fnErr.message || 'Randevu eklenemedi.';
+
+      Alert.alert('Hata', msg);
+      if (status === 409) load(true);
+      return;
+    }
+
+    setAppointmentInitialValues(null);
+    load(true);
+  }
+
   return (
     <View style={styles.root}>
       <OverlineHeader
@@ -250,12 +333,25 @@ export function AvailabilityScreen({
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}
       >
-        <View style={styles.heroCard}>
+        <TouchableOpacity
+          activeOpacity={topSlot && !isBusy ? 0.86 : 1}
+          disabled={!topSlot || isBusy}
+          onPress={() => topSlot && handleOpenAppointment(topSlot)}
+          style={styles.heroCard}
+        >
           <Text style={styles.heroEyebrow}>Bugün · en yakın boş slot</Text>
           {isBusy ? (
             <ActivityIndicator color="#ffffff" style={styles.heroLoader} />
           ) : topSlot ? (
             <>
+              <TouchableOpacity
+                activeOpacity={0.78}
+                onPress={() => handleOpenAppointment(topSlot)}
+                hitSlop={8}
+                style={styles.heroAddButton}
+              >
+                <Plus size={22} color="#ffffff" strokeWidth={2.4} />
+              </TouchableOpacity>
               <View style={styles.heroTimeRow}>
                 <Text style={styles.heroTime}>{formatAvailabilityTime(topSlot.startsAt)}</Text>
                 <Text style={styles.heroEndTime}>{formatAvailabilityTime(topSlot.endsAt)}</Text>
@@ -271,7 +367,7 @@ export function AvailabilityScreen({
           ) : (
             <Text style={styles.heroEmpty}>Bu seçimde yakın boş saat yok.</Text>
           )}
-        </View>
+        </TouchableOpacity>
 
         {errorText && (
           <TouchableOpacity style={styles.errorBox} onPress={() => load()}>
@@ -291,7 +387,12 @@ export function AvailabilityScreen({
         ) : (
           <View style={styles.slotList}>
             {slotOptions.map((slot) => (
-              <View key={`${slot.staffId}-${slot.startsAt}`} style={styles.slotCard}>
+              <TouchableOpacity
+                key={`${slot.staffId}-${slot.startsAt}`}
+                activeOpacity={0.82}
+                onPress={() => handleOpenAppointment(slot)}
+                style={styles.slotCard}
+              >
                 <View style={styles.slotTimeBlock}>
                   <Text style={styles.slotTime}>{formatAvailabilityTime(slot.startsAt)}</Text>
                   <Text style={styles.slotEnd}>{formatAvailabilityTime(slot.endsAt)}</Text>
@@ -304,11 +405,34 @@ export function AvailabilityScreen({
                 <View style={styles.durationPill}>
                   <Text style={styles.durationPillText}>{slot.durationMin} dk</Text>
                 </View>
-              </View>
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  onPress={() => handleOpenAppointment(slot)}
+                  hitSlop={8}
+                  style={styles.slotAddButton}
+                >
+                  <Plus size={22} color={colors.ink[900]} strokeWidth={2.2} />
+                </TouchableOpacity>
+              </TouchableOpacity>
             ))}
           </View>
         )}
       </ScrollView>
+
+      <AddAppointmentModal
+        visible={!!appointmentInitialValues}
+        onClose={() => {
+          setAppointmentInitialValues(null);
+        }}
+        onSave={handleSaveAppointment}
+        services={services}
+        staffList={mode === 'staff' && staffId ? staffList.filter((staff) => staff.id === staffId) : staffList}
+        initialStaffId={appointmentInitialValues?.staffId ?? (mode === 'staff' ? staffId ?? null : null)}
+        workingHours={workingHours}
+        shopId={shopId}
+        mode="create"
+        initialValues={appointmentInitialValues}
+      />
     </View>
   );
 }
@@ -402,6 +526,20 @@ const styles = StyleSheet.create({
     padding: 18,
     backgroundColor: colors.mint[700],
     gap: 12,
+    position: 'relative',
+  },
+  heroAddButton: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   heroEyebrow: {
     fontFamily: 'Montserrat-Bold',
@@ -571,6 +709,16 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     backgroundColor: colors.brand[100],
     alignItems: 'center',
+  },
+  slotAddButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1,
+    borderColor: colors.slate[200],
+    backgroundColor: colors.slate[0],
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   durationPillText: {
     fontFamily: 'Montserrat-Bold',

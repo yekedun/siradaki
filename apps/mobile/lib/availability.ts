@@ -35,6 +35,30 @@ export interface StaffSlotOption {
   durationMin: AvailabilityDuration;
 }
 
+export interface AvailabilityAppointmentInitialValues {
+  customerName: string;
+  customerPhone: string;
+  serviceId: string | null;
+  staffId: string;
+  date: string;
+  time: string;
+  notes: string | null;
+}
+
+function formatAvailabilityDate(value: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Istanbul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(value));
+
+  const year = parts.find((part) => part.type === 'year')?.value ?? '';
+  const month = parts.find((part) => part.type === 'month')?.value ?? '';
+  const day = parts.find((part) => part.type === 'day')?.value ?? '';
+  return `${year}-${month}-${day}`;
+}
+
 export function formatAvailabilityTime(value: string): string {
   return new Intl.DateTimeFormat('tr-TR', {
     timeZone: 'Europe/Istanbul',
@@ -42,6 +66,24 @@ export function formatAvailabilityTime(value: string): string {
     minute: '2-digit',
     hour12: false,
   }).format(new Date(value));
+}
+
+export function buildAvailabilityAppointmentInitialValues({
+  staffId,
+  startsAt,
+}: {
+  staffId: string;
+  startsAt: string;
+}): AvailabilityAppointmentInitialValues {
+  return {
+    customerName: '',
+    customerPhone: '',
+    serviceId: null,
+    staffId,
+    date: formatAvailabilityDate(startsAt),
+    time: formatAvailabilityTime(startsAt),
+    notes: null,
+  };
 }
 
 export function getAvailableSlots(slots: AvailabilitySlot[]): AvailabilitySlot[] {

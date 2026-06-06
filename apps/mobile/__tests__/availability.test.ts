@@ -1,5 +1,6 @@
 import {
   AVAILABILITY_DURATIONS,
+  buildAvailabilityAppointmentInitialValues,
   formatAvailabilityTime,
   findServiceIdForDuration,
   getAvailableSlots,
@@ -160,5 +161,22 @@ describe('availability helpers', () => {
 
     expect(getStaffAvailableSlotCount(availability, 'staff-1')).toBe(1);
     expect(getTotalAvailableSlotCount(availability)).toBe(2);
+  });
+
+  it('builds appointment modal initial values from an available staff slot', () => {
+    expect(
+      buildAvailabilityAppointmentInitialValues({
+        staffId: 'staff-1',
+        startsAt: '2026-06-06T06:00:00.000Z',
+      }),
+    ).toEqual({
+      customerName: '',
+      customerPhone: '',
+      serviceId: null,
+      staffId: 'staff-1',
+      date: '2026-06-06',
+      time: '09:00',
+      notes: null,
+    });
   });
 });

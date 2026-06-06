@@ -3,14 +3,16 @@ import { AvailabilityScreen } from '../../components/availability/AvailabilitySc
 import { useShop } from '../../lib/ShopContext';
 
 export default function OwnerAvailabilityRoute() {
-  const { shopSlug, staffList, services, loading } = useShop();
+  const { shopId, shopSlug, staffList, services, workingHours, loading } = useShop();
 
   return (
     <AvailabilityScreen
       mode="owner"
+      shopId={shopId}
       shopSlug={shopSlug}
       staffList={staffList}
       services={services}
+      workingHours={workingHours}
       loadingContext={loading}
     />
   );

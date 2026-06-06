@@ -214,7 +214,9 @@ export function AddAppointmentModal({
 
     const initKey = mode === 'edit'
       ? `edit:${initialValues?.id ?? initialValues?.date ?? ''}:${initialValues?.time ?? ''}`
-      : 'create';
+      : initialValues
+        ? `create:${initialValues.staffId ?? ''}:${initialValues.date}:${initialValues.time}:${initialValues.serviceId ?? ''}`
+        : 'create';
     if (initializedKeyRef.current === initKey) return;
 
     if (mode === 'edit' && initialValues) {
@@ -225,6 +227,18 @@ export function AddAppointmentModal({
       setDayIdx(getAppointmentDayIndex(days, initialValues.date));
       setSlot(initialValues.time);
       setSelectedStaffId(initialValues.staffId ?? null);
+      initializedKeyRef.current = initKey;
+      return;
+    }
+
+    if (mode === 'create' && initialValues) {
+      setName(initialValues.customerName);
+      setPhone(initialValues.customerPhone ?? '');
+      setNotes(initialValues.notes ?? '');
+      setSvc(initialValues.serviceId ? resolveAppointmentServiceId(initialValues.serviceId, services) : null);
+      setDayIdx(getAppointmentDayIndex(days, initialValues.date));
+      setSlot(initialValues.time);
+      setSelectedStaffId(initialValues.staffId ?? initialStaffId ?? null);
       initializedKeyRef.current = initKey;
       return;
     }
@@ -241,8 +255,12 @@ export function AddAppointmentModal({
 
   useEffect(() => {
     if (!visible) return;
+    if (mode === 'create' && initialValues && initialValues.serviceId === null) {
+      setSvc((current) => (current && services.some((service) => service.id === current) ? current : null));
+      return;
+    }
     setSvc((current) => resolveAppointmentServiceId(current, services));
-  }, [visible, services]);
+  }, [visible, mode, initialValues, services]);
 
   const curSvc  = services.find(s => s.id === svc);
   const canSave = isAppointmentModalSaveEnabled({
