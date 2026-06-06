@@ -56,10 +56,13 @@ const styles = StyleSheet.create({
   /* Chip */
   chip: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 7,
+    minHeight: 34,
     borderRadius: radius.pill,
     borderWidth: 1,
     flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   chipDefault:  { borderColor: colors.slate[200], backgroundColor: colors.slate[0] },
   chipSelected: { borderColor: colors.ink[900],   backgroundColor: colors.ink[900] },
@@ -68,13 +71,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Montserrat-SemiBold',
     color: colors.ink[900],
-    lineHeight: 13,
+    lineHeight: 18,
   },
   labelSelected: { color: '#ffffff' },
 
   /* ChipRow */
   row: {
-    height: 46,
+    minHeight: 46,
     flexGrow: 0,
     flexShrink: 0,
   },
