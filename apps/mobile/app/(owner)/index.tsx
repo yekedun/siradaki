@@ -281,20 +281,19 @@ export default function OzetScreen() {
     });
 
     if (monthly && monthly.length > 0) {
-      // service_name is not in the static RPC schema but may be present at runtime
-      type RevenueRowWithExtras = (typeof monthly)[0] & { service_name?: string };
-      const rows = monthly as RevenueRowWithExtras[];
+      const rows = monthly;
 
       // En Çok Tercih Edilen hizmet
       const svcCount = new Map<string, number>();
       for (const a of rows) {
-        const name = a.service_name ?? 'Bilinmiyor';
+        const name = a.service_name?.trim();
+        if (!name) continue;
         svcCount.set(name, (svcCount.get(name) ?? 0) + 1);
       }
       let topSvc = '—'; let topSvcCnt = 0;
       svcCount.forEach((cnt, name) => { if (cnt > topSvcCnt) { topSvcCnt = cnt; topSvc = name; } });
       const topPct = rows.length > 0 ? `%${Math.round((topSvcCnt / rows.length) * 100)}` : '—';
-      setTopService({ name: topSvc, pct: topPct });
+      setTopService(topSvcCnt > 0 ? { name: topSvc, pct: topPct } : null);
 
       // En Yoğun Gün (haftanın günü)
       const TR_DAYS = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];

@@ -21,7 +21,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -55,6 +57,8 @@ interface StaffMember {
   _role?: string | null;
   _phone?: string | null;
   _is_active?: boolean;
+  _commission_type?: 'none' | 'percentage' | null;
+  _commission_rate_bps?: number | null;
 }
 
 interface StaffRow {
@@ -63,6 +67,8 @@ interface StaffRow {
   phone?: string | null;
   role: string | null;
   is_active: boolean;
+  commission_type?: 'none' | 'percentage' | null;
+  commission_rate_bps?: number | null;
 }
 
 interface CommissionRow {
@@ -355,6 +361,7 @@ interface AddStaffSheetProps {
 function AddStaffSheet({ open, onClose, onAdd }: AddStaffSheetProps) {
   const [name,  setName]  = useState('');
   const [commInput, setCommInput] = useState('');
+  const insets = useSafeAreaInsets();
 
   function handleAdd() {
     if (name.trim().length < 2) {
@@ -377,8 +384,15 @@ function AddStaffSheet({ open, onClose, onAdd }: AddStaffSheetProps) {
       animationType="slide"
       onRequestClose={onClose}
     >
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingRoot}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <Pressable style={styles.sheetBackdrop} onPress={onClose}>
-        <Pressable style={styles.sheetContainer} onPress={() => {}}>
+        <Pressable
+          style={[styles.sheetContainer, { paddingBottom: Math.max(insets.bottom, 16) + 16 }]}
+          onPress={() => {}}
+        >
           <View style={styles.sheetHandle} />
           <View style={styles.sheetHeader}>
             <Text style={styles.sheetTitle}>Personel Ekle</Text>
@@ -427,6 +441,7 @@ function AddStaffSheet({ open, onClose, onAdd }: AddStaffSheetProps) {
           </ScrollView>
         </Pressable>
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -516,10 +531,8 @@ function StaffRowItem({ member, onRowPress, onChevronPress, isLast }: StaffRowIt
     .toUpperCase();
 
   return (
-    <TouchableOpacity
-      onPress={onRowPress}
+    <View
       style={[styles.staffRow, !isLast && styles.staffRowBorder]}
-      activeOpacity={0.75}
     >
       {/* Avatar */}
       <View style={[styles.staffAvatar, member.status === 'Pasif' && styles.staffAvatarPasif]}>
@@ -539,14 +552,24 @@ function StaffRowItem({ member, onRowPress, onChevronPress, isLast }: StaffRowIt
         <Text style={styles.staffMeta}>{member.meta}</Text>
       </View>
 
-      {/* Chevron */}
-      <TouchableOpacity onPress={onChevronPress} hitSlop={10} style={styles.chevronBtn}>
-        <View style={styles.chevronWrap}>
-          <View style={styles.chevronLine1} />
-          <View style={styles.chevronLine2} />
-        </View>
-      </TouchableOpacity>
-    </TouchableOpacity>
+      {/* Action buttons */}
+      <View style={styles.actionBtns}>
+        <TouchableOpacity onPress={onRowPress} hitSlop={8} style={styles.actionBtn}>
+          <Text style={styles.actionBtnLabel}>Düzenle</Text>
+          <View style={styles.pencilWrap}>
+            <View style={styles.pencilBody} />
+            <View style={styles.pencilTip} />
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onChevronPress} hitSlop={8} style={styles.actionBtn}>
+          <Text style={styles.actionBtnLabel}>Saatler</Text>
+          <View style={styles.chevronWrap}>
+            <View style={styles.chevronLine1} />
+            <View style={styles.chevronLine2} />
+          </View>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
@@ -587,7 +610,7 @@ export default function TeamScreen() {
     const [staffResult, { data: commData, error: commErr }] = await Promise.all([
       supabase
         .from('staff')
-        .select('id, name, is_active, phone, role')
+        .select('id, name, is_active, phone, role, commission_type, commission_rate_bps')
         .eq('shop_id', shopData.id)
         .order('created_at'),
       supabase.rpc('get_staff_commission_configs', { p_shop_id: shopData.id }),
@@ -597,7 +620,7 @@ export default function TeamScreen() {
     if (isMissingColumnError(staffErr, 'staff.phone')) {
       const fallback = await supabase
         .from('staff')
-        .select('id, name, is_active, role')
+        .select('id, name, is_active, role, commission_type, commission_rate_bps')
         .eq('shop_id', shopData.id)
         .order('created_at');
       data = fallback.data as StaffRow[] | null;
@@ -620,6 +643,8 @@ export default function TeamScreen() {
         _role: s.role as string | null,
         _phone: s.phone as string | null,
         _is_active: s.is_active as boolean,
+        _commission_type: s.commission_type ?? null,
+        _commission_rate_bps: s.commission_rate_bps ?? null,
       };
     });
     const sorted = mapped.sort((a, b) => {
@@ -795,6 +820,8 @@ export default function TeamScreen() {
                     name: s.name,
                     is_active: s._is_active ?? s.status === 'Aktif',
                     role: s._role ?? undefined,
+                    commission_type: s._commission_type ?? undefined,
+                    commission_rate_bps: s._commission_rate_bps ?? undefined,
                   });
                   setEditVisible(true);
                 }}
@@ -978,8 +1005,50 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-SemiBold',
     color: colors.slate[400],
   },
-  chevronBtn: {
-    padding: 4,
+  actionBtns: {
+    flexDirection: 'row',
+    gap: 6,
+    flexShrink: 0,
+  },
+  actionBtn: {
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  actionBtnLabel: {
+    fontSize: 9,
+    fontFamily: 'Montserrat-SemiBold',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: colors.slate[400],
+  },
+  pencilWrap: {
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pencilBody: {
+    position: 'absolute',
+    width: 9,
+    height: 9,
+    borderWidth: 1.6,
+    borderColor: colors.slate[400],
+    borderRadius: 1.5,
+    transform: [{ rotate: '-45deg' }, { translateY: -1 }],
+  },
+  pencilTip: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    borderLeftWidth: 3.5,
+    borderRightWidth: 3.5,
+    borderTopWidth: 5,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: colors.slate[400],
+    transform: [{ rotate: '-45deg' }, { translateX: 5.5 }, { translateY: 5.5 }],
   },
   chevronWrap: {
     width: 16,
@@ -993,7 +1062,7 @@ const styles = StyleSheet.create({
     height: 1.6,
     backgroundColor: colors.slate[400],
     borderRadius: 1,
-    transform: [{ rotate: '-45deg' }, { translateY: -3 }],
+    transform: [{ rotate: '45deg' }, { translateY: -3 }],
   },
   chevronLine2: {
     position: 'absolute',
@@ -1001,7 +1070,7 @@ const styles = StyleSheet.create({
     height: 1.6,
     backgroundColor: colors.slate[400],
     borderRadius: 1,
-    transform: [{ rotate: '45deg' }, { translateY: 3 }],
+    transform: [{ rotate: '-45deg' }, { translateY: 3 }],
   },
 
   /* Toggle */
@@ -1026,6 +1095,9 @@ const styles = StyleSheet.create({
   },
 
   /* Sheet shared */
+  keyboardAvoidingRoot: {
+    flex: 1,
+  },
   sheetBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(11,18,32,0.38)',

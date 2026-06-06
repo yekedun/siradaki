@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Switch } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Switch } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../lib/theme';
 import { Button } from './ds/Button';
 import { supabase } from '../lib/supabase';
@@ -9,6 +10,8 @@ export interface StaffMember {
   name: string;
   is_active: boolean;
   role?: string;
+  commission_type?: 'none' | 'percentage';
+  commission_rate_bps?: number | null;
 }
 
 interface Props {
@@ -19,15 +22,23 @@ interface Props {
 }
 
 export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
-  const [name,     setName]     = useState('');
-  const [isActive, setIsActive] = useState(true);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState<string | null>(null);
+  const [name,           setName]           = useState('');
+  const [isActive,       setIsActive]       = useState(true);
+  const [commEnabled,    setCommEnabled]    = useState(false);
+  const [commRateStr,    setCommRateStr]    = useState('');
+  const [loading,        setLoading]        = useState(false);
+  const [error,          setError]          = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (staff) {
       setName(staff.name);
       setIsActive(staff.is_active);
+      const enabled = staff.commission_type === 'percentage';
+      setCommEnabled(enabled);
+      setCommRateStr(enabled && staff.commission_rate_bps != null
+        ? String(staff.commission_rate_bps / 100)
+        : '');
       setError(null);
     }
   }, [staff]);
@@ -43,6 +54,14 @@ export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
         .update({ name: name.trim(), is_active: isActive })
         .eq('id', staff.id);
       if (err) { setError(err.message); return; }
+
+      const rateBps = commEnabled ? Math.round(parseFloat(commRateStr) * 100) : null;
+      const { error: commErr } = await supabase.rpc('update_staff_commission_config', {
+        p_staff_id: staff.id,
+        p_commission_type: commEnabled ? 'percentage' : 'none',
+        p_commission_rate_bps: rateBps ?? undefined,
+      });
+      if (commErr) { setError(commErr.message); return; }
       onClose();
       onSaved();
     } finally {
@@ -54,8 +73,13 @@ export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingRoot}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
-      <View style={styles.sheet}>
+      <View style={styles.sheetHost} pointerEvents="box-none">
+      <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
         <View style={styles.handle} />
         <Text style={styles.title}>Berber Düzenle</Text>
         <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
@@ -72,9 +96,35 @@ export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
               </Text>
             </View>
             <Switch value={isActive} onValueChange={setIsActive}
-              trackColor={{ false: colors.slate[300], true: colors.brand[500] }}
+              trackColor={{ false: colors.slate[400], true: colors.brand[500] }}
+              ios_backgroundColor={colors.slate[400]}
               thumbColor="#fff" />
           </View>
+          <View style={styles.toggleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.toggleLabel}>Komisyon</Text>
+              <Text style={styles.toggleSub}>
+                {commEnabled ? 'Tamamlanan randevudan kesinti' : 'Komisyon uygulanmıyor'}
+              </Text>
+            </View>
+            <Switch value={commEnabled} onValueChange={setCommEnabled}
+              trackColor={{ false: colors.slate[400], true: colors.brand[500] }}
+              ios_backgroundColor={colors.slate[400]}
+              thumbColor="#fff" />
+          </View>
+          {commEnabled && (
+            <View style={styles.field}>
+              <Text style={styles.label}>Komisyon Oranı (%)</Text>
+              <TextInput
+                style={styles.input}
+                value={commRateStr}
+                onChangeText={setCommRateStr}
+                placeholder="ör. 20"
+                placeholderTextColor={colors.slate[400]}
+                keyboardType="decimal-pad"
+              />
+            </View>
+          )}
         </ScrollView>
         {error && <Text style={styles.error}>{error}</Text>}
         <View style={styles.actions}>
@@ -84,15 +134,19 @@ export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
           </Button>
         </View>
       </View>
+      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  keyboardAvoidingRoot: { flex: 1 },
   backdrop:    { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet:       { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff',
+  sheetHost:   { flex: 1, justifyContent: 'flex-end' },
+  sheet:       { backgroundColor: '#fff',
                   borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 32,
-                  maxHeight: '80%', display: 'flex', flexDirection: 'column' },
+                  maxHeight: '80%', minHeight: 420, flex: 1, flexDirection: 'column' },
   handle:      { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.slate[300],
                   alignSelf: 'center', marginTop: 12, marginBottom: 20 },
   title:       { fontSize: 18, fontFamily: 'Montserrat-Bold', color: colors.ink[900],
