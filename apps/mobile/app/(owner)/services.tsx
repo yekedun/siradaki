@@ -796,7 +796,7 @@ const styles = StyleSheet.create({
   /* FAB */
   fab: {
     position: 'absolute',
-    bottom: 90,
+    bottom: 18,
     right: 16,
     zIndex: 10,
   },
