@@ -23,6 +23,15 @@ export function inviteAcceptedRoute(): Href {
   return routeForRole('staff');
 }
 
-export function shouldSkipRoleRouting(segment: RootSegment): boolean {
-  return segment === '(owner)' || segment === '(app)' || segment === 'invite';
+function segmentForRole(role: UserRole): RootSegment {
+  if (role === 'owner') return '(owner)';
+  if (role === 'staff') return '(app)';
+  return '(auth)';
+}
+
+export function shouldSkipRoleRouting(segment: RootSegment, role?: UserRole): boolean {
+  if (segment === 'invite') return true;
+  if (!role) return segment === '(owner)' || segment === '(app)';
+  if (segment === '(owner)' || segment === '(app)') return segment === segmentForRole(role);
+  return false;
 }

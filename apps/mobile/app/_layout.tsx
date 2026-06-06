@@ -98,12 +98,14 @@ export default function RootLayout() {
       return;
     }
 
-    if (shouldSkipRoleRouting(firstSegment)) return;
+    if (firstSegment === 'invite') return;
     if (routedRef.current) return;
     routedRef.current = true;
 
     determineUserRole(session.user.id).then(role => {
-      router.replace(routeForRole(role));
+      if (!shouldSkipRoleRouting(firstSegment, role)) {
+        router.replace(routeForRole(role));
+      }
       if (pendingNotif.current) {
         pendingNotif.current = false;
         const target: Href = role === 'owner' ? '/(owner)/agenda' : '/(app)/';

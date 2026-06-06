@@ -33,4 +33,11 @@ describe('router guard helpers', () => {
     expect(shouldSkipRoleRouting('invite')).toBe(true);
     expect(shouldSkipRoleRouting('(auth)')).toBe(false);
   });
+
+  it('does not skip role routing when restored app group does not match the user role', () => {
+    expect(shouldSkipRoleRouting('(app)', 'owner')).toBe(false);
+    expect(shouldSkipRoleRouting('(owner)', 'staff')).toBe(false);
+    expect(shouldSkipRoleRouting('(owner)', 'owner')).toBe(true);
+    expect(shouldSkipRoleRouting('(app)', 'staff')).toBe(true);
+  });
 });
