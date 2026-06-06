@@ -4,9 +4,35 @@ apps/mobile/ios/
 apps/mobile/.expo/
 apps/mobile/build-archive/
 apps/mobile/build-archive/**
+apps/mobile/reports/
+apps/mobile/reports/**
+apps/web/
+apps/web/**
+docs/
+docs/**
+scripts/
+scripts/**
+supabase/
+supabase/**
+reports/
+reports/**
 
 # Heavy dirs excluded by EAS by default — listed here as safety net
 node_modules/
 **/node_modules/
 .pnpm-store/
 **/.turbo/
+
+# Local agent/editor state is never needed by EAS Build
+.agent/
+.ai/
+.claude/
+.continue/
+.expo/
+.git/
+.github/
+.superpowers/
+.turbo/
+.codebase-map.txt
+SAYFA-ENVANTERI.md
+SIRADAKI-SYSTEM-OVERVIEW.md

@@ -23,8 +23,10 @@ declare
   v_rebook_id uuid;
   v_conflict boolean;
   v_count int;
+  v_base_date date;
 begin
   select * into ids from scheduling_remote_smoke_ids;
+  v_base_date := (current_date + (8 - extract(isodow from current_date)::int))::date;
 
   insert into auth.users (
     id, instance_id, aud, role, email, encrypted_password,
@@ -57,7 +59,7 @@ begin
   ) on conflict (id) do nothing;
 
   insert into public.shops (
-    id, owner_user_id, owner_id, slug, display_name, name, timezone, working_hours
+    id, owner_user_id, owner_id, slug, display_name, name, timezone, working_hours, status
   ) values (
     ids.shop_id,
     ids.owner_id,
@@ -74,13 +76,15 @@ begin
       "fri": {"open": "09:00", "close": "19:00", "enabled": true},
       "sat": {"open": "09:00", "close": "17:00", "enabled": true},
       "sun": {"open": null, "close": null, "enabled": false}
-    }'::jsonb
+    }'::jsonb,
+    'active'
   )
   on conflict (id) do update set
     working_hours = excluded.working_hours,
     slug = excluded.slug,
     display_name = excluded.display_name,
-    name = excluded.name;
+    name = excluded.name,
+    status = excluded.status;
 
   insert into public.staff (id, shop_id, user_id, name, role, is_active)
   values (
@@ -128,6 +132,8 @@ begin
     break_start = excluded.break_start,
     break_end = excluded.break_end;
 
+  execute 'set local role service_role';
+
   delete from public.appointments where staff_id = ids.staff_id;
   delete from public.blocks where staff_id = ids.staff_id;
 
@@ -136,7 +142,7 @@ begin
     null,
     ids.service_id,
     ids.staff_id,
-    '2026-05-18 10:00 Europe/Istanbul',
+    (v_base_date + time '10:00') AT TIME ZONE 'Europe/Istanbul',
     'Remote Smoke Original',
     null,
     null,
@@ -154,7 +160,7 @@ begin
     v_original_id,
     ids.staff_id,
     ids.service_id,
-    '2026-05-18 10:15 Europe/Istanbul',
+    (v_base_date + time '10:15') AT TIME ZONE 'Europe/Istanbul',
     'Remote Smoke Updated',
     null,
     null
@@ -164,7 +170,7 @@ begin
     select 1
     from public.appointments
     where id = v_original_id
-      and starts_at = '2026-05-18 10:15 Europe/Istanbul'
+      and starts_at = ((v_base_date + time '10:15') AT TIME ZONE 'Europe/Istanbul')
       and customer_name = 'Remote Smoke Updated'
       and status = 'confirmed'
   ) then
@@ -176,7 +182,7 @@ begin
     null,
     ids.service_id,
     ids.staff_id,
-    '2026-05-18 11:00 Europe/Istanbul',
+    (v_base_date + time '11:00') AT TIME ZONE 'Europe/Istanbul',
     'Remote Smoke Cancelled',
     null,
     null,
@@ -193,7 +199,7 @@ begin
     null,
     ids.service_id,
     ids.staff_id,
-    '2026-05-18 11:00 Europe/Istanbul',
+    (v_base_date + time '11:00') AT TIME ZONE 'Europe/Istanbul',
     'Remote Smoke Rebooked',
     null,
     null,
@@ -213,7 +219,7 @@ begin
       null,
       ids.service_id,
       ids.staff_id,
-      '2026-05-18 10:15 Europe/Istanbul',
+      (v_base_date + time '10:15') AT TIME ZONE 'Europe/Istanbul',
       'Remote Smoke Conflict',
       null,
       null,
@@ -226,8 +232,8 @@ begin
 
   select public.schedule_has_conflict(
     ids.staff_id,
-    '2026-05-18 10:15 Europe/Istanbul',
-    '2026-05-18 10:45 Europe/Istanbul',
+    (v_base_date + time '10:15') AT TIME ZONE 'Europe/Istanbul',
+    (v_base_date + time '10:45') AT TIME ZONE 'Europe/Istanbul',
     v_original_id,
     null
   ) into v_conflict;

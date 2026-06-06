@@ -14,7 +14,7 @@ if (-not $SkipPush) {
   }
 }
 
-supabase db query --linked --file $smokeSql --output table
+supabase db query --linked --file $smokeSql
 if ($LASTEXITCODE -ne 0) {
   throw "supabase db query failed for $smokeSql"
 }
