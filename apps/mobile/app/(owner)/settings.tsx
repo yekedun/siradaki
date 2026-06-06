@@ -65,6 +65,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
+import { deleteCurrentAccount } from '../../lib/delete-account';
 import { StaffSelfEditModal } from '../../components/StaffSelfEditModal';
 import {
   shopHoursScheduleFromWorkingHours,
@@ -800,9 +801,13 @@ export default function SettingsScreen() {
           text: 'Sil',
           style: 'destructive',
           onPress: async () => {
-            const { error } = await supabase.functions.invoke('delete-account');
-            if (error) {
-              Alert.alert('Hata', 'Hesap silinemedi. Lütfen tekrar deneyin.');
+            try {
+              await deleteCurrentAccount();
+            } catch (err) {
+              Alert.alert(
+                'Hata',
+                err instanceof Error ? err.message : 'Hesap silinemedi. Lütfen tekrar deneyin.',
+              );
               return;
             }
             await supabase.auth.signOut();

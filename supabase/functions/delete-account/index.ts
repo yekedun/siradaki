@@ -11,6 +11,29 @@ interface AppointmentRow {
   starts_at: string;
 }
 
+async function clearInviteTokenReferences(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+): Promise<void> {
+  // invite_tokens.created_by/used_by may block auth user deletion on older schemas.
+  const { error: usedByErr } = await admin
+    .from("invite_tokens")
+    .update({ used_by: null })
+    .eq("used_by", userId);
+  if (usedByErr) throw new Error(`Invite token used_by cleanup failed: ${usedByErr.message}`);
+
+  const { error: createdByErr } = await admin
+    .from("invite_tokens")
+    .delete()
+    .eq("created_by", userId);
+  if (createdByErr) throw new Error(`Invite token created_by cleanup failed: ${createdByErr.message}`);
+}
+
+function fail(message: string, cause: unknown): Error {
+  const detail = cause instanceof Error ? cause.message : String(cause);
+  return new Error(`${message}: ${detail}`);
+}
+
 // Cancel a batch of future appointments and email each affected customer.
 async function cancelAndNotifyCustomers(
   admin: ReturnType<typeof createAdminClient>,
@@ -99,14 +122,17 @@ serve(async (req) => {
   if (authError || !user) return error("Unauthorized", 401);
 
   const admin = createAdminClient();
+  let currentStep = "init";
 
   try {
     // Determine role: owner or staff
-    const { data: shop } = await admin
+    currentStep = "load_shop";
+    const { data: shop, error: shopLookupErr } = await admin
       .from("shops")
       .select("id, name")
       .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
-      .single();
+      .maybeSingle();
+    if (shopLookupErr) throw fail("Shop lookup failed", shopLookupErr.message);
 
     const now = new Date().toISOString();
 
@@ -114,24 +140,49 @@ serve(async (req) => {
       // Owner: cancel future appointments across all shop staff, notify customers, then delete shop
       const shopRecord = shop as { id: string; name: string };
 
-      const { data: futureAppointments } = await admin
-        .from("appointments")
-        .select("id, staff_id, customer_user_id, customer_name, starts_at")
-        .eq("status", "confirmed")
-        .gte("starts_at", now)
-        .in(
-          "staff_id",
-          // subquery: all staff belonging to this shop
-          (await admin.from("staff").select("id").eq("shop_id", shopRecord.id))
-            .data?.map((s: { id: string }) => s.id) ?? [],
-        );
+      currentStep = "load_shop_staff";
+      const { data: staffRows, error: staffRowsErr } = await admin
+        .from("staff")
+        .select("id")
+        .eq("shop_id", shopRecord.id);
+      if (staffRowsErr) throw fail("Shop staff lookup failed", staffRowsErr.message);
 
+      const staffIds = (staffRows ?? []).map((s: { id: string }) => s.id);
+      let futureAppointments: AppointmentRow[] = [];
+      if (staffIds.length > 0) {
+        currentStep = "load_owner_future_appointments";
+        const { data, error: futureErr } = await admin
+          .from("appointments")
+          .select("id, staff_id, customer_user_id, customer_name, starts_at")
+          .eq("status", "confirmed")
+          .gte("starts_at", now)
+          .in("staff_id", staffIds);
+        if (futureErr) throw fail("Owner appointment lookup failed", futureErr.message);
+        futureAppointments = (data ?? []) as AppointmentRow[];
+      }
+
+      currentStep = "cancel_owner_future_appointments";
       await cancelAndNotifyCustomers(
         admin,
-        (futureAppointments ?? []) as AppointmentRow[],
+        futureAppointments,
         shopRecord.name,
       );
 
+      if (staffIds.length > 0) {
+        currentStep = "clear_owner_appointment_services";
+        const { error: serviceRefErr } = await admin
+          .from("appointments")
+          .update({ service_id: null })
+          .in("staff_id", staffIds)
+          .not("service_id", "is", null);
+        if (serviceRefErr) {
+          throw new Error(`Appointment service cleanup failed: ${serviceRefErr.message}`);
+        }
+      }
+
+      // Delete the shop before auth user deletion. This runs as service_role, so
+      // scheduling-write triggers allow the cascade through staff/appointments.
+      currentStep = "delete_owner_shop";
       const { error: shopErr } = await admin
         .from("shops")
         .delete()
@@ -139,31 +190,38 @@ serve(async (req) => {
       if (shopErr) throw new Error(`Shop delete failed: ${shopErr.message}`);
     } else {
       // Staff: find this user's staff record before unlinking
-      const { data: staffRecord } = await admin
+      currentStep = "load_staff_record";
+      const { data: staffRecord, error: staffRecordErr } = await admin
         .from("staff")
         .select("id, shop_id")
         .eq("user_id", user.id)
         .maybeSingle();
+      if (staffRecordErr) throw fail("Staff lookup failed", staffRecordErr.message);
 
       if (staffRecord) {
         const sr = staffRecord as { id: string; shop_id: string };
 
         // Get shop name for the email
-        const { data: staffShop } = await admin
+        currentStep = "load_staff_shop";
+        const { data: staffShop, error: staffShopErr } = await admin
           .from("shops")
           .select("name")
           .eq("id", sr.shop_id)
           .maybeSingle();
+        if (staffShopErr) throw fail("Staff shop lookup failed", staffShopErr.message);
         const shopName = (staffShop as { name: string } | null)?.name ?? "Berber";
 
         // Cancel future appointments for this staff member
-        const { data: futureAppointments } = await admin
+        currentStep = "load_staff_future_appointments";
+        const { data: futureAppointments, error: futureErr } = await admin
           .from("appointments")
           .select("id, staff_id, customer_user_id, customer_name, starts_at")
           .eq("staff_id", sr.id)
           .eq("status", "confirmed")
           .gte("starts_at", now);
+        if (futureErr) throw fail("Staff appointment lookup failed", futureErr.message);
 
+        currentStep = "cancel_staff_future_appointments";
         await cancelAndNotifyCustomers(
           admin,
           (futureAppointments ?? []) as AppointmentRow[],
@@ -172,6 +230,7 @@ serve(async (req) => {
       }
 
       // Disconnect user_id so the staff slot remains but is unlinked
+      currentStep = "unlink_staff_user";
       const { error: staffErr } = await admin
         .from("staff")
         .update({ user_id: null })
@@ -179,15 +238,20 @@ serve(async (req) => {
       if (staffErr) throw new Error(`Staff unlink failed: ${staffErr.message}`);
 
       // Customer: cancel future confirmed appointments so barbers are not left with ghost slots
-      const { data: customerAppointments } = await admin
+      currentStep = "load_customer_future_appointments";
+      const { data: customerAppointments, error: customerAppointmentsErr } = await admin
         .from("appointments")
         .select("id, staff_id")
         .eq("customer_user_id", user.id)
         .gte("starts_at", now)
         .eq("status", "confirmed");
+      if (customerAppointmentsErr) {
+        throw fail("Customer appointment lookup failed", customerAppointmentsErr.message);
+      }
 
       if (customerAppointments && customerAppointments.length > 0) {
         const ids = customerAppointments.map((a) => a.id);
+        currentStep = "cancel_customer_future_appointments";
         const { error: cancelErr } = await admin
           .from("appointments")
           .update({ status: "cancelled" })
@@ -196,11 +260,13 @@ serve(async (req) => {
 
         // Notify affected barbers via Expo push
         const staffIds = [...new Set(customerAppointments.map((a) => a.staff_id))];
-        const { data: staffRows } = await admin
+        currentStep = "load_push_tokens";
+        const { data: staffRows, error: pushTokenErr } = await admin
           .from("staff")
           .select("push_token")
           .in("id", staffIds)
           .not("push_token", "is", null);
+        if (pushTokenErr) throw fail("Push token lookup failed", pushTokenErr.message);
 
         const tokens = (staffRows ?? [])
           .map((s) => (s as { push_token: string | null }).push_token)
@@ -228,12 +294,19 @@ serve(async (req) => {
     }
 
     // Delete auth user (requires service role)
+    currentStep = "clear_invite_token_references";
+    await clearInviteTokenReferences(admin, user.id);
+
+    currentStep = "delete_auth_user";
     const { error: deleteErr } = await admin.auth.admin.deleteUser(user.id);
     if (deleteErr) throw new Error(`Auth delete failed: ${deleteErr.message}`);
 
     return json({ success: true });
   } catch (err) {
     console.error("[delete-account] account deletion failed:", err);
-    return error("Hesap silinemedi", 500);
+    return error("Hesap silinemedi", 500, {
+      step: currentStep,
+      detail: err instanceof Error ? err.message : String(err),
+    });
   }
 });
