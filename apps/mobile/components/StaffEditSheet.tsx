@@ -10,6 +10,8 @@ export interface StaffMember {
   name: string;
   is_active: boolean;
   role?: string;
+  commission_type?: 'none' | 'percentage';
+  commission_rate_bps?: number | null;
 }
 
 interface Props {
@@ -20,16 +22,23 @@ interface Props {
 }
 
 export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
-  const [name,     setName]     = useState('');
-  const [isActive, setIsActive] = useState(true);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState<string | null>(null);
+  const [name,           setName]           = useState('');
+  const [isActive,       setIsActive]       = useState(true);
+  const [commEnabled,    setCommEnabled]    = useState(false);
+  const [commRateStr,    setCommRateStr]    = useState('');
+  const [loading,        setLoading]        = useState(false);
+  const [error,          setError]          = useState<string | null>(null);
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (staff) {
       setName(staff.name);
       setIsActive(staff.is_active);
+      const enabled = staff.commission_type === 'percentage';
+      setCommEnabled(enabled);
+      setCommRateStr(enabled && staff.commission_rate_bps != null
+        ? String(staff.commission_rate_bps / 100)
+        : '');
       setError(null);
     }
   }, [staff]);
@@ -45,6 +54,14 @@ export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
         .update({ name: name.trim(), is_active: isActive })
         .eq('id', staff.id);
       if (err) { setError(err.message); return; }
+
+      const rateBps = commEnabled ? Math.round(parseFloat(commRateStr) * 100) : null;
+      const { error: commErr } = await supabase.rpc('update_staff_commission_config', {
+        p_staff_id: staff.id,
+        p_commission_type: commEnabled ? 'percentage' : 'none',
+        p_commission_rate_bps: rateBps ?? undefined,
+      });
+      if (commErr) { setError(commErr.message); return; }
       onClose();
       onSaved();
     } finally {
@@ -79,9 +96,35 @@ export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
               </Text>
             </View>
             <Switch value={isActive} onValueChange={setIsActive}
-              trackColor={{ false: colors.slate[300], true: colors.brand[500] }}
+              trackColor={{ false: colors.slate[400], true: colors.brand[500] }}
+              ios_backgroundColor={colors.slate[400]}
               thumbColor="#fff" />
           </View>
+          <View style={styles.toggleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.toggleLabel}>Komisyon</Text>
+              <Text style={styles.toggleSub}>
+                {commEnabled ? 'Tamamlanan randevudan kesinti' : 'Komisyon uygulanmıyor'}
+              </Text>
+            </View>
+            <Switch value={commEnabled} onValueChange={setCommEnabled}
+              trackColor={{ false: colors.slate[400], true: colors.brand[500] }}
+              ios_backgroundColor={colors.slate[400]}
+              thumbColor="#fff" />
+          </View>
+          {commEnabled && (
+            <View style={styles.field}>
+              <Text style={styles.label}>Komisyon Oranı (%)</Text>
+              <TextInput
+                style={styles.input}
+                value={commRateStr}
+                onChangeText={setCommRateStr}
+                placeholder="ör. 20"
+                placeholderTextColor={colors.slate[400]}
+                keyboardType="decimal-pad"
+              />
+            </View>
+          )}
         </ScrollView>
         {error && <Text style={styles.error}>{error}</Text>}
         <View style={styles.actions}>
@@ -103,7 +146,7 @@ const styles = StyleSheet.create({
   sheetHost:   { flex: 1, justifyContent: 'flex-end' },
   sheet:       { backgroundColor: '#fff',
                   borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 32,
-                  maxHeight: '80%', display: 'flex', flexDirection: 'column' },
+                  maxHeight: '80%', minHeight: 420, flex: 1, flexDirection: 'column' },
   handle:      { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.slate[300],
                   alignSelf: 'center', marginTop: 12, marginBottom: 20 },
   title:       { fontSize: 18, fontFamily: 'Montserrat-Bold', color: colors.ink[900],

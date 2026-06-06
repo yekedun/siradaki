@@ -229,7 +229,8 @@ export default function BlockScreen() {
           <Switch
             value={allDay}
             onValueChange={setAllDay}
-            trackColor={{ false: colors.slate[300], true: colors.ink[900] }}
+            trackColor={{ false: colors.slate[400], true: colors.ink[900] }}
+            ios_backgroundColor={colors.slate[400]}
             thumbColor="#fff"
           />
         </View>
