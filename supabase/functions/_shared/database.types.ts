@@ -580,6 +580,8 @@ export type Database = {
           completed_shop_share_cents: number
           ends_at: string
           id: string
+          service_id: string | null
+          service_name: string | null
           staff_id: string
           starts_at: string
           status: string
@@ -1339,4 +1341,3 @@ export const Constants = {
     },
   },
 } as const
-
