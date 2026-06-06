@@ -36,6 +36,7 @@ import { colors, radius } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { buildOwnerRoleFilter, isMissingColumnError } from '../../lib/supabase-role';
 import { StaffEditSheet, type StaffMember as EditableStaffMember } from '../../components/StaffEditSheet';
+import { OwnerSettingsAvatar } from '../../components/ds/OwnerSettingsAvatar';
 
 const FN_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1';
 import {
@@ -772,14 +773,7 @@ export default function TeamScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.pageTitle}>Ustalar</Text>
         </View>
-        <TouchableOpacity
-          onPress={() => setAddOpen(true)}
-          style={styles.headerAddBtn}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.headerAddBtnPlus}>+</Text>
-          <Text style={styles.headerAddBtnText}>Personel ekle</Text>
-        </TouchableOpacity>
+        <OwnerSettingsAvatar />
       </View>
 
       <ScrollView
@@ -824,6 +818,14 @@ export default function TeamScreen() {
           <Text style={styles.addButtonText}>
             {inviteLoading ? 'Link oluşturuluyor…' : '+ Berber Davet Et'}
           </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => setAddOpen(true)}
+          style={styles.manualAddButton}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.manualAddButtonText}>+ Personel ekle</Text>
         </TouchableOpacity>
 
       </ScrollView>
@@ -895,28 +897,6 @@ const styles = StyleSheet.create({
     color: colors.ink[900],
     marginTop: 10,
   },
-  headerAddBtn: {
-    height: 34,
-    paddingHorizontal: 12,
-    backgroundColor: colors.brand[600],
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 4,
-  },
-  headerAddBtnPlus: {
-    fontSize: 14,
-    fontFamily: 'Montserrat-Bold',
-    color: '#ffffff',
-    lineHeight: 16,
-  },
-  headerAddBtnText: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-SemiBold',
-    color: '#ffffff',
-  },
-
   /* List */
   list: { flex: 1 },
   listContent: {
@@ -1294,6 +1274,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Montserrat-SemiBold',
     color: '#ffffff',
+  },
+  manualAddButton: {
+    marginTop: 10,
+    height: 52,
+    backgroundColor: colors.slate[0],
+    borderWidth: 1,
+    borderColor: colors.slate[200],
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manualAddButtonText: {
+    fontSize: 15,
+    fontFamily: 'Montserrat-SemiBold',
+    color: colors.ink[900],
   },
 
   /* Invite link box */

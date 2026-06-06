@@ -9,6 +9,10 @@ jest.mock('../supabase', () => ({
   },
 }));
 jest.mock('expo-device', () => ({ isDevice: true }));
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: { appOwnership: 'standalone' },
+}));
 jest.mock('expo-notifications', () => ({
   setNotificationHandler: jest.fn(),
   getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
@@ -18,7 +22,7 @@ jest.mock('expo-notifications', () => ({
   AndroidImportance: { MAX: 5 },
 }));
 
-import { buildExpoPushToken, registerForPushNotifications } from '../notifications';
+import { buildExpoPushToken, canUseExpoPushNotifications, registerForPushNotifications } from '../notifications';
 
 test('buildExpoPushToken geçerli token formatını tanır', () => {
   expect(buildExpoPushToken('ExponentPushToken[abc123]')).toBe('ExponentPushToken[abc123]');
@@ -44,4 +48,16 @@ test('registerForPushNotifications skips on non-device', async () => {
   supabase.from.mockClear();
   await reg();
   expect(supabase.from).not.toHaveBeenCalled();
+});
+
+test('canUseExpoPushNotifications skips Android Expo Go', () => {
+  jest.resetModules();
+  jest.doMock('expo-constants', () => ({
+    __esModule: true,
+    default: { appOwnership: 'expo' },
+  }));
+  jest.doMock('react-native', () => ({ Platform: { OS: 'android' } }));
+
+  const { canUseExpoPushNotifications: canUse } = require('../notifications');
+  expect(canUse()).toBe(false);
 });

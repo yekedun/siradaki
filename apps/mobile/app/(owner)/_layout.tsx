@@ -10,7 +10,7 @@
  *   { key:'ayarlar', icon:'settings',      label:'Ayarlar' }
  */
 import { Tabs } from 'expo-router';
-import { BarChart3, CalendarDays, CalendarCheck2, Wallet, Users, Settings } from 'lucide-react-native';
+import { BarChart3, CalendarDays, CalendarCheck2, Wallet, Users } from 'lucide-react-native';
 import { colors } from '../../lib/theme';
 import { ShopProvider } from '../../lib/ShopContext';
 
@@ -77,7 +77,7 @@ export default function OwnerLayout() {
         name="settings"
         options={{
           title: 'Ayarlar',
-          tabBarIcon: ({ color }) => <Settings size={ICON_SIZE} color={color} />,
+          href: null,
         }}
       />
       {/* Non-tab screens — hidden from tab bar */}

@@ -1,17 +1,32 @@
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+type ExpoNotifications = typeof import('expo-notifications');
+
+let notificationsModule: Promise<ExpoNotifications> | null = null;
+
+export function canUseExpoPushNotifications(): boolean {
+  return !(Platform.OS === 'android' && Constants.appOwnership === 'expo');
+}
+
+async function loadNotifications(): Promise<ExpoNotifications | null> {
+  if (!canUseExpoPushNotifications()) return null;
+  notificationsModule ??= Promise.resolve(require('expo-notifications') as ExpoNotifications).then((Notifications) => {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+    return Notifications;
+  });
+  return notificationsModule;
+}
 
 export function buildExpoPushToken(token: string): string | null {
   if (!token || !token.startsWith('ExponentPushToken[')) return null;
@@ -20,6 +35,8 @@ export function buildExpoPushToken(token: string): string | null {
 
 export async function registerForPushNotifications(): Promise<void> {
   if (!Device.isDevice) return;
+  const Notifications = await loadNotifications();
+  if (!Notifications) return;
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;

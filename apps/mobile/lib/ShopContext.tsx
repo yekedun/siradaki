@@ -15,6 +15,7 @@ export interface StaffOption {
 
 interface ShopState {
   shopId: string | null;
+  shopName: string | null;
   shopSlug: string | null;
   workingHours: Record<string, unknown> | null;
   services: ServiceOption[];
@@ -25,6 +26,7 @@ interface ShopState {
 
 const ShopContext = createContext<ShopState>({
   shopId: null,
+  shopName: null,
   shopSlug: null,
   workingHours: null,
   services: [],
@@ -35,6 +37,7 @@ const ShopContext = createContext<ShopState>({
 
 export function ShopProvider({ children }: { children: ReactNode }) {
   const [shopId, setShopId] = useState<string | null>(null);
+  const [shopName, setShopName] = useState<string | null>(null);
   const [shopSlug, setShopSlug] = useState<string | null>(null);
   const [workingHours, setWorkingHours] = useState<Record<string, unknown> | null>(null);
   const [services, setServices] = useState<ServiceOption[]>([]);
@@ -51,12 +54,13 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
       const { data: shop } = await supabase
         .from('shops')
-        .select('id, slug, working_hours')
+        .select('id, name, slug, working_hours')
         .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
         .maybeSingle();
       if (!shop || cancelled) { setLoading(false); return; }
 
       setShopId(shop.id);
+      setShopName(shop.name ?? null);
       setShopSlug(shop.slug ?? null);
       setWorkingHours((shop.working_hours as Record<string, unknown> | null) ?? null);
 
@@ -86,7 +90,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
   return (
     <ShopContext.Provider
-      value={{ shopId, shopSlug, workingHours, services, staffList, loading, reload: () => setTick(t => t + 1) }}
+      value={{ shopId, shopName, shopSlug, workingHours, services, staffList, loading, reload: () => setTick(t => t + 1) }}
     >
       {children}
     </ShopContext.Provider>

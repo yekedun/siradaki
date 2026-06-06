@@ -1,6 +1,5 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useFonts } from 'expo-font';
-import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppState } from 'react-native';
 import { useEffect, useRef, useState } from 'react';
@@ -10,6 +9,7 @@ import { supabase, determineUserRole } from '../lib/supabase';
 import { isPublicAuthRoute, routeForRole, shouldSkipRoleRouting } from '../lib/router-guard';
 import { initSentry, SentryErrorBoundary, setSentryUserFromSession } from '../lib/sentry';
 import { initAnalytics, trackEvent, identifyUser, resetAnalytics } from '../lib/analytics';
+import { canUseExpoPushNotifications } from '../lib/notifications';
 
 SplashScreen.preventAutoHideAsync();
 initSentry();
@@ -34,12 +34,19 @@ export default function RootLayout() {
 
   // Notification tap → navigate appropriately
   useEffect(() => {
-    Notifications.getLastNotificationResponseAsync().then(res => {
-      if (res) pendingNotif.current = true;
-    });
+    if (!canUseExpoPushNotifications()) return;
+    let sub: { remove: () => void } | null = null;
+    let cancelled = false;
 
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const notifType = response.notification.request.content.data?.type as string | undefined;
+    Promise.resolve(require('expo-notifications') as typeof import('expo-notifications')).then((Notifications) => {
+      if (cancelled) return;
+
+      Notifications.getLastNotificationResponseAsync().then(res => {
+        if (res) pendingNotif.current = true;
+      });
+
+      sub = Notifications.addNotificationResponseReceivedListener((response) => {
+        const notifType = response.notification.request.content.data?.type as string | undefined;
 
       // shop_approved / shop_rejected: rol yeniden sorgula, pending kullanıcıları doğru yönlendir.
       if (notifType === 'shop_approved' || notifType === 'shop_rejected') {
@@ -54,9 +61,13 @@ export default function RootLayout() {
       const seg = segmentRef.current;
       if (seg === '(owner)') router.push('/(owner)/agenda' as Href);
       else router.push('/(app)/' as Href);
+      });
     });
 
-    return () => sub.remove();
+    return () => {
+      cancelled = true;
+      sub?.remove();
+    };
   }, []);
 
   // Track app lifecycle: cold launch + foreground/background transitions
