@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { colors } from '../../lib/theme';
 import { Button } from '../../components/ds/Button';
 import { supabase } from '../../lib/supabase';
-import { configureGoogleSignIn, signInWithGoogle } from '../../lib/google-auth';
 import { inviteAcceptedRoute } from '../../lib/router-guard';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const FN_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1';
 
@@ -13,10 +16,6 @@ export default function InviteScreen() {
   const { token } = useLocalSearchParams<{ token: string }>();
   const [state, setState] = useState<'checking' | 'ready' | 'signing' | 'error'>('checking');
   const [message, setMessage] = useState('');
-
-  useEffect(() => {
-    configureGoogleSignIn();
-  }, []);
 
   useEffect(() => {
     validateToken();
@@ -28,21 +27,18 @@ export default function InviteScreen() {
       setMessage('Davet linki geçersiz.');
       return;
     }
-
     try {
       const res = await fetch(`${FN_BASE}/open-invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
-
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setState('error');
         setMessage(data.error ?? 'Davet linki geçersiz.');
         return;
       }
-
       setState('ready');
     } catch {
       setState('error');
@@ -52,10 +48,42 @@ export default function InviteScreen() {
 
   async function handleGoogleSignIn() {
     setState('signing');
-    const result = await signInWithGoogle();
-    if (result.error) {
+
+    // Web-based OAuth — bypasses iOS Keychain caching that causes nonce mismatches
+    // with the native @react-native-google-signin flow.
+    const redirectTo = Linking.createURL('/');
+
+    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+        skipBrowserRedirect: true,
+      },
+    });
+
+    if (oauthError || !data.url) {
       setState('error');
-      setMessage(result.error);
+      setMessage(oauthError?.message ?? 'Google oturumu başlatılamadı.');
+      return;
+    }
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+
+    if (result.type === 'cancel') {
+      setState('ready');
+      return;
+    }
+
+    if (result.type !== 'success') {
+      setState('error');
+      setMessage('Google girişi tamamlanamadı.');
+      return;
+    }
+
+    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(result.url);
+    if (exchangeError) {
+      setState('error');
+      setMessage(exchangeError.message);
       return;
     }
 
@@ -75,11 +103,10 @@ export default function InviteScreen() {
         },
         body: JSON.stringify({ token }),
       });
-
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
+        const d = await res.json().catch(() => ({}));
         setState('error');
-        setMessage(data.error ?? 'Davet kabul edilemedi');
+        setMessage(d.error ?? 'Davet kabul edilemedi');
         return;
       }
     } catch {
@@ -156,9 +183,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Bold',
     color: '#fff',
   },
-  icon: {
-    fontSize: 48,
-  },
+  icon: { fontSize: 48 },
   title: {
     fontSize: 24,
     fontFamily: 'Montserrat-Bold',
