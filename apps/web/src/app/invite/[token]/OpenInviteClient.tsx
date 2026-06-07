@@ -51,9 +51,12 @@ export default function OpenInviteClient({ token }: Props) {
         <h1 className="mb-4 text-3xl font-bold tracking-tight">
           Berber Olarak Katıl
         </h1>
-        <p className="mb-8 text-base leading-7 text-slate-600">
+        <p className="mb-4 text-base leading-7 text-slate-600">
           Sıradaki uygulaması telefonunda kuruluysa otomatik açılır. Açılmazsa
           aşağıdaki butona dokun.
+        </p>
+        <p className="mb-8 text-xs text-slate-400">
+          Bu davet linki 48 saat geçerlidir.
         </p>
         <button
           type="button"

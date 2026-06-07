@@ -1,6 +1,5 @@
 import { NativeModules } from 'react-native';
 import { supabase } from './supabase';
-import { sha256hex } from './sha256';
 
 function getGoogleSignin() {
   if (!NativeModules.RNGoogleSignin) return null;
@@ -23,16 +22,6 @@ export function configureGoogleSignIn() {
   });
 }
 
-function generateNonce(length = 32): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
-
-
 export async function signInWithGoogle(): Promise<{ error?: string }> {
   const GoogleSignin = getGoogleSignin();
   if (!GoogleSignin) {
@@ -49,17 +38,13 @@ export async function signInWithGoogle(): Promise<{ error?: string }> {
     try { await GoogleSignin.revokeAccess(); } catch { /* ignore */ }
     try { await GoogleSignin.signOut(); } catch { /* ignore */ }
 
-    const rawNonce = generateNonce();
-    const hashedNonce = sha256hex(rawNonce);
-
-    const userInfo = await GoogleSignin.signIn({ nonce: hashedNonce });
+    const userInfo = await GoogleSignin.signIn({});
     const idToken = userInfo.data?.idToken ?? (userInfo as any).idToken;
     if (!idToken) return { error: 'Google token alınamadı' };
 
     const { error } = await supabase.auth.signInWithIdToken({
       provider: 'google',
       token: idToken,
-      nonce: rawNonce,
     });
     if (error) return { error: error.message };
     return {};
