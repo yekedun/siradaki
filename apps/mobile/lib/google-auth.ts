@@ -1,5 +1,6 @@
 import { NativeModules } from 'react-native';
 import { supabase } from './supabase';
+import { sha256hex } from './sha256';
 
 function getGoogleSignin() {
   if (!NativeModules.RNGoogleSignin) return null;
@@ -22,6 +23,29 @@ export function configureGoogleSignIn() {
   });
 }
 
+function generateNonce(length = 32): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+// Decode the JWT payload and return the nonce claim, or null if absent.
+function getJwtNonce(token: string): string | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) base64 += '=';
+    const payload = JSON.parse(atob(base64));
+    return typeof payload.nonce === 'string' ? payload.nonce : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function signInWithGoogle(): Promise<{ error?: string }> {
   const GoogleSignin = getGoogleSignin();
   if (!GoogleSignin) {
@@ -33,17 +57,51 @@ export async function signInWithGoogle(): Promise<{ error?: string }> {
   try {
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-    // Clear cached Google session so iOS issues a fresh token without a nonce claim.
-    try { await GoogleSignin.revokeAccess(); } catch { /* ignore */ }
-    try { await GoogleSignin.signOut(); } catch { /* ignore */ }
+    let idToken: string | null = null;
+    let rawNonceForSupabase: string | undefined;
 
-    const userInfo = await GoogleSignin.signIn({});
-    const idToken = userInfo.data?.idToken ?? (userInfo as any).idToken;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) {
+        // First attempt returned a stale cached token — force a fresh OAuth flow.
+        try { await GoogleSignin.revokeAccess(); } catch { /* ignore */ }
+        try { await GoogleSignin.signOut(); } catch { /* ignore */ }
+      }
+
+      const rawNonce = generateNonce();
+      const hashedNonce = sha256hex(rawNonce);
+
+      const userInfo = await GoogleSignin.signIn({ nonce: hashedNonce });
+      idToken = userInfo.data?.idToken ?? (userInfo as any).idToken;
+      if (!idToken) return { error: 'Google token alınamadı' };
+
+      const jwtNonce = getJwtNonce(idToken);
+
+      if (jwtNonce === null) {
+        // JWT has no nonce — don't pass nonce to Supabase either.
+        rawNonceForSupabase = undefined;
+        break;
+      }
+
+      if (jwtNonce === hashedNonce) {
+        // Fresh token: JWT nonce matches what we sent.
+        rawNonceForSupabase = rawNonce;
+        break;
+      }
+
+      // JWT carries a stale nonce from a previous cached session.
+      // On attempt 0 we loop and retry after clearing the cache.
+      // On attempt 1 (after retry) we give up.
+      if (attempt === 1) {
+        return { error: 'Google kimlik doğrulama başarısız. Lütfen tekrar deneyin.' };
+      }
+    }
+
     if (!idToken) return { error: 'Google token alınamadı' };
 
     const { error } = await supabase.auth.signInWithIdToken({
       provider: 'google',
       token: idToken,
+      nonce: rawNonceForSupabase,
     });
     if (error) return { error: error.message };
     return {};
