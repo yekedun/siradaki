@@ -1,6 +1,6 @@
 import { NativeModules } from 'react-native';
-import * as Crypto from 'expo-crypto';
 import { supabase } from './supabase';
+import { sha256hex } from './sha256';
 
 function getGoogleSignin() {
   if (!NativeModules.RNGoogleSignin) return null;
@@ -50,10 +50,7 @@ export async function signInWithGoogle(): Promise<{ error?: string }> {
     try { await GoogleSignin.signOut(); } catch { /* ignore */ }
 
     const rawNonce = generateNonce();
-    const hashedNonce = await Crypto.digestStringAsync(
-      Crypto.CryptoDigestAlgorithm.SHA256,
-      rawNonce,
-    );
+    const hashedNonce = sha256hex(rawNonce);
 
     const userInfo = await GoogleSignin.signIn({ nonce: hashedNonce });
     const idToken = userInfo.data?.idToken ?? (userInfo as any).idToken;
