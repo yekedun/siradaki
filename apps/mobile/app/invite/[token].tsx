@@ -69,7 +69,7 @@ export default function InviteScreen() {
 
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
-    if (result.type === 'cancel') {
+    if (result.type === 'cancel' || result.type === 'dismiss') {
       setState('ready');
       return;
     }
@@ -80,7 +80,18 @@ export default function InviteScreen() {
       return;
     }
 
-    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(result.url);
+    // exchangeCodeForSession passes its argument directly as `auth_code` — it does
+    // NOT parse a URL. We must extract the `code` query param ourselves.
+    const parsed = Linking.parse(result.url);
+    const code = parsed.queryParams?.code;
+    if (typeof code !== 'string' || !code) {
+      const errParam = parsed.queryParams?.error_description ?? parsed.queryParams?.error;
+      setState('error');
+      setMessage(typeof errParam === 'string' ? errParam : 'Google yetkilendirme kodu alınamadı.');
+      return;
+    }
+
+    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
     if (exchangeError) {
       setState('error');
       setMessage(exchangeError.message);
