@@ -178,7 +178,7 @@ serve(async (req) => {
   for (const appt of appointments) {
     const sid = appt.staff_id as string;
     const staffMember = staffById.get(sid);
-    if (!staffMember) continue;
+    if (!staffMember || !staffMember.push_token) continue;
     const existing = byStaff.get(sid);
     if (existing) {
       existing.count++;

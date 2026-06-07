@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createAdminClient } from "../_shared/supabase-admin.ts";
 import { corsOptions, error, json, bodyGuard } from "../_shared/cors.ts";
+import { sendBookingNotifications } from "../_shared/booking-notifications.ts";
 import { isValidPhone } from "@berber/shared/phone-utils";
 
 const RATE_LIMIT_MAX = 5;
@@ -181,6 +182,16 @@ serve(async (req) => {
       should_refetch_availability: status === 409,
       ...(status === 429 ? { retry_after: 600 } : {}),
     });
+  }
+
+  // Fire-and-forget: atanan personel + sahibe yeni randevu push'u gonder.
+  const apptId = (data as any)?.appointment_id;
+  if (apptId) {
+    const svcUrl = Deno.env.get("SUPABASE_URL")!;
+    const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    sendBookingNotifications(apptId, svcUrl, svcKey).catch(
+      (e) => console.error("[widget-book] Notification dispatch error:", e),
+    );
   }
 
   return json(data);

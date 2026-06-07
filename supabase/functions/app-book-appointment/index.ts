@@ -2,87 +2,8 @@ import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createAdminClient } from "../_shared/supabase-admin.ts";
 import { corsOptions, error, json, bodyGuard } from "../_shared/cors.ts";
+import { sendBookingNotifications } from "../_shared/booking-notifications.ts";
 import { isValidPhone } from "@berber/shared/phone-utils";
-
-async function sendBookingNotifications(
-  appointmentId: string,
-  serviceUrl: string,
-  serviceKey: string,
-): Promise<void> {
-  const supabase = createAdminClient();
-
-  // Step 1: Fetch appointment + assigned staff (flat, no nested joins)
-  const { data: appt } = await supabase
-    .from("appointments")
-    .select("customer_name, starts_at, staff_id, services(name), staff:staff_id(push_token, shop_id)")
-    .eq("id", appointmentId)
-    .maybeSingle();
-
-  if (!appt) return;
-
-  const staffMember = appt.staff as any;
-  const service = appt.services as any;
-  const shopId: string | null = staffMember?.shop_id ?? null;
-
-  const timeStr = new Date(appt.starts_at).toLocaleTimeString("tr-TR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Europe/Istanbul",
-  });
-
-  const title = "Yeni Randevu";
-  const body = `${appt.customer_name} — ${service?.name ?? "Randevu"}, ${timeStr}`;
-
-  const tokens = new Set<string>();
-  if (staffMember?.push_token) tokens.add(staffMember.push_token);
-
-  // Step 2: If shop exists, fetch owner's push_token (separate query, no ambiguous nesting)
-  if (shopId) {
-    const { data: shop } = await supabase
-      .from("shops")
-      .select("owner_user_id")
-      .eq("id", shopId)
-      .maybeSingle();
-
-    if (shop?.owner_user_id) {
-      const { data: ownerStaff } = await supabase
-        .from("staff")
-        .select("push_token, notification_prefs")
-        .eq("shop_id", shopId)
-        .eq("user_id", shop.owner_user_id)
-        .maybeSingle();
-
-      // Owner: yeni randevu tercihi false ise gonderme (default true).
-      const ownerPrefs = (ownerStaff as any)?.notification_prefs ?? {};
-      const ownerWantsNew = ownerPrefs.new_appointment !== false;
-      if (
-        ownerStaff?.push_token &&
-        ownerStaff.push_token !== staffMember?.push_token &&
-        ownerWantsNew
-      ) {
-        tokens.add(ownerStaff.push_token);
-      }
-    }
-  }
-
-  if (tokens.size === 0) return;
-
-  const messages = Array.from(tokens).map((to) => ({
-    to,
-    title,
-    body,
-    data: { appointmentId },
-  }));
-
-  await fetch(`${serviceUrl}/functions/v1/send-push`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${serviceKey}`,
-    },
-    body: JSON.stringify({ messages }),
-  }).catch((e) => console.error("[book] Push notification failed:", e));
-}
 
 interface BookRequest {
   shop_slug: string;

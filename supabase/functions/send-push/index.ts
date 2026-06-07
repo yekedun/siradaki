@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { json, error, corsOptions } from "../_shared/cors.ts";
+import { createAdminClient } from "../_shared/supabase-admin.ts";
 
 interface PushMessage {
   to: string | string[];
@@ -59,6 +60,14 @@ serve(async (req) => {
 
   let totalSent = 0;
   const errors: string[] = [];
+  // Expo "DeviceNotRegistered" donen token'lar artik gecersiz — staff tablosundan temizle.
+  const invalidTokens = new Set<string>();
+
+  interface ExpoTicket {
+    status: string;
+    message?: string;
+    details?: { error?: string };
+  }
 
   for (const chunk of chunks) {
     const res = await fetch("https://exp.host/--/api/v2/push/send", {
@@ -72,9 +81,35 @@ serve(async (req) => {
       continue;
     }
 
-    const result = await res.json() as { data: Array<{ status: string }> };
-    const sent = result.data?.filter(d => d.status === "ok").length ?? 0;
-    totalSent += sent;
+    const result = await res.json() as { data?: ExpoTicket[] };
+    const tickets = result.data ?? [];
+    tickets.forEach((ticket, i) => {
+      if (ticket.status === "ok") {
+        totalSent++;
+        return;
+      }
+      // Hatali ticket — ilgili mesajin "to" token'i ile eslestir.
+      const target = chunk[i]?.to;
+      const detail = ticket.details?.error ?? ticket.message ?? "unknown";
+      errors.push(`ticket error: ${detail}`);
+      if (ticket.details?.error === "DeviceNotRegistered" && target) {
+        const targets = Array.isArray(target) ? target : [target];
+        for (const t of targets) invalidTokens.add(t);
+      }
+    });
+  }
+
+  // Gecersiz token'lari temizle (best-effort, gonderim sonucunu etkilemez).
+  if (invalidTokens.size > 0) {
+    try {
+      const admin = createAdminClient();
+      await admin
+        .from("staff")
+        .update({ push_token: null })
+        .in("push_token", Array.from(invalidTokens));
+    } catch (e) {
+      console.error("[send-push] Failed to clear invalid tokens:", e);
+    }
   }
 
   if (errors.length > 0) {

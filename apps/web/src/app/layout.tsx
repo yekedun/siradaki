@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { Bebas_Neue, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
-import { ServiceWorkerRegistrar } from '../components/ServiceWorkerRegistrar';
 
 const bebasNeue = Bebas_Neue({
   weight: '400',
@@ -26,7 +25,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="tr" className={`${bebasNeue.variable} ${plusJakarta.variable}`}>
       <body className="bg-slate-50 font-sans text-ink-900 antialiased">
-        <ServiceWorkerRegistrar />
         {children}
       </body>
     </html>
