@@ -29,6 +29,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -108,10 +109,12 @@ export default function LoginScreen() {
       >
         {/* Top area — marginTop:60 */}
         <View style={styles.topArea}>
-          {/* Brand mark — 48×48 marginBottom:28 (ink-900 circle with "S") */}
-          <View style={styles.mark}>
-            <Text style={styles.markLetter}>S</Text>
-          </View>
+          {/* Brand mark — 48×48 marginBottom:28 */}
+          <Image
+            source={require('../../assets/icon.png')}
+            style={styles.mark}
+            resizeMode="contain"
+          />
 
           {/* Overline — 11px semiBold 0.16em uppercase slate-500 */}
           <Text style={styles.overline}>Berber · Dükkan Paneli</Text>
@@ -219,20 +222,11 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
 
-  /* Brand mark — 48×48 borderRadius:999 ink-900 bg, "S" letter, marginBottom:28 */
+  /* Brand mark — 48×48, marginBottom:28 */
   mark: {
     width: 48,
     height: 48,
-    borderRadius: 999,
-    backgroundColor: colors.ink[900],
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: 28,
-  },
-  markLetter: {
-    fontSize: 22,
-    fontFamily: 'Montserrat-Bold',
-    color: '#ffffff',
   },
 
   /* Overline — 11px semiBold letterSpacing:0.16em uppercase slate-500 lineHeight:1 */
