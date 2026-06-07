@@ -33,8 +33,7 @@ export async function signInWithGoogle(): Promise<{ error?: string }> {
   try {
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-    // Fully reset Google Sign-In state so iOS returns a fresh token with the new nonce.
-    // signOut() alone may not clear the cached token; revokeAccess() forces a fresh OAuth flow.
+    // Clear cached Google session so iOS issues a fresh token without a nonce claim.
     try { await GoogleSignin.revokeAccess(); } catch { /* ignore */ }
     try { await GoogleSignin.signOut(); } catch { /* ignore */ }
 
