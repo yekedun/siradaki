@@ -44,6 +44,10 @@ export async function signInWithGoogle(): Promise<{ error?: string }> {
   try {
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
+    // Clear any cached Google session so a fresh token with the new nonce is issued.
+    // Without this, iOS can return a cached token signed with a different nonce.
+    try { await GoogleSignin.signOut(); } catch { /* ignore if not signed in */ }
+
     const rawNonce = generateNonce();
     const hashedNonce = sha256hex(rawNonce);
 
