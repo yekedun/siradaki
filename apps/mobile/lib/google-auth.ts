@@ -1,6 +1,6 @@
 import { NativeModules } from 'react-native';
+import * as Crypto from 'expo-crypto';
 import { supabase } from './supabase';
-import { sha256hex } from './sha256';
 
 function getGoogleSignin() {
   if (!NativeModules.RNGoogleSignin) return null;
@@ -44,12 +44,16 @@ export async function signInWithGoogle(): Promise<{ error?: string }> {
   try {
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-    // Clear any cached Google session so a fresh token with the new nonce is issued.
-    // Without this, iOS can return a cached token signed with a different nonce.
-    try { await GoogleSignin.signOut(); } catch { /* ignore if not signed in */ }
+    // Fully reset Google Sign-In state so iOS returns a fresh token with the new nonce.
+    // signOut() alone may not clear the cached token; revokeAccess() forces a fresh OAuth flow.
+    try { await GoogleSignin.revokeAccess(); } catch { /* ignore */ }
+    try { await GoogleSignin.signOut(); } catch { /* ignore */ }
 
     const rawNonce = generateNonce();
-    const hashedNonce = sha256hex(rawNonce);
+    const hashedNonce = await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      rawNonce,
+    );
 
     const userInfo = await GoogleSignin.signIn({ nonce: hashedNonce });
     const idToken = userInfo.data?.idToken ?? (userInfo as any).idToken;
