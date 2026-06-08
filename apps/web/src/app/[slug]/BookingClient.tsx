@@ -214,12 +214,18 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
         </Section>
 
         {/* Footer — iptal linki */}
-        <div className="pt-4 pb-2 border-t border-[#D6DBE5]/50 text-center">
+        <div className="pt-5 pb-3 border-t border-[#D6DBE5]/50">
           <Link
             href={`/iptal?dukkan=${shop.slug}`}
-            className="text-xs text-[#0B1220]/35 hover:text-[#0B1220]/60 transition-colors duration-150"
+            className="flex items-center justify-between w-full py-3.5 px-4 bg-white border border-[#D6DBE5] hover:border-[#0B1220] transition-colors duration-150 group"
           >
-            Daha önce randevu aldınız mı? Randevuyu iptal et →
+            <span className="text-sm text-[#0B1220]/55 group-hover:text-[#0B1220]/75 transition-colors">
+              Daha önce randevu aldınız mı?
+            </span>
+            <span className="text-sm font-bold text-[#0B1220] flex items-center gap-1">
+              İptal et
+              <span className="text-[#FF4D1C]">→</span>
+            </span>
           </Link>
         </div>
       </div>
