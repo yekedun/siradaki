@@ -120,22 +120,22 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans">
+    <div className="min-h-screen bg-[#F9F9F6] font-sans text-[#0B1220]">
 
       {/* Header */}
-      <header className="bg-slate-0 shadow-xs border-b border-slate-100">
-        <div className="max-w-[480px] mx-auto px-5 py-7">
-          <div className="text-2xs font-semibold tracking-widest text-slate-400 uppercase">
+      <header className="bg-[#0B1220] text-[#F9F9F6] border-b border-[#0B1220]">
+        <div className="max-w-[520px] mx-auto px-5 pt-7 pb-8">
+          <div className="text-[11px] font-bold tracking-[0.22em] text-[#FF4D1C] uppercase">
             Online Randevu · Sıradaki
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-ink-900 mt-2">
+          <h1 className="font-display text-[56px] leading-[0.9] tracking-normal uppercase mt-3">
             {shop.name}
           </h1>
           {shop.address && (
-            <div className="text-sm text-slate-500 mt-1.5">{shop.address}</div>
+            <div className="text-sm font-medium text-[#F9F9F6]/55 mt-3 leading-relaxed">{shop.address}</div>
           )}
           {showBarberBadge && (
-            <div className="inline-flex items-center gap-1.5 mt-3 bg-brand-100 border border-[#A5B4FC] text-brand-700 text-xs font-semibold rounded-pill px-3 py-1">
+            <div className="inline-flex items-center gap-1.5 mt-4 bg-[#FF4D1C] border border-[#FF4D1C] text-white text-xs font-bold rounded-none px-3 py-1.5">
               ✂ {preselectedName}&apos;in linkindesin
             </div>
           )}
@@ -143,7 +143,7 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
       </header>
 
       {/* Body */}
-      <div className="max-w-[480px] mx-auto px-5 pt-6 pb-28">
+      <div className="max-w-[520px] mx-auto px-5 pt-7 pb-28">
 
         {/* 1 — Service */}
         <Section label="Hizmet Seç">
@@ -177,19 +177,19 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
                   key={str}
                   onClick={() => { setSelDate(d); setSelSlot(null); }}
                   style={{
-                    flexShrink: 0, width: 58, padding: '10px 0', borderRadius: 12,
+                    flexShrink: 0, width: 62, padding: '11px 0', borderRadius: 0,
                     cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
-                    border: `1.5px solid ${isSel ? 'var(--ink-900)' : 'var(--border)'}`,
-                    background: isSel ? 'var(--ink-900)' : 'var(--bg-elevated)',
-                    color: isSel ? '#fff' : 'var(--fg-2)',
+                    border: `1.5px solid ${isSel ? '#0B1220' : '#D6DBE5'}`,
+                    background: isSel ? '#0B1220' : '#FFFFFF',
+                    color: isSel ? '#F9F9F6' : '#0B1220',
                     transition: 'background 140ms, border-color 140ms',
                   }}
                 >
-                  <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.06em', opacity: 0.65 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', opacity: 0.65 }}>
                     {TR_DAYS[d.getDay()]}
                   </div>
-                  <div style={{ fontSize: 20, fontWeight: 700, marginTop: 2 }}>{d.getDate()}</div>
-                  <div style={{ fontSize: 10, fontWeight: 600, opacity: 0.55, marginTop: 1 }}>
+                  <div style={{ fontFamily: 'var(--font-bebas-neue)', fontSize: 28, lineHeight: 0.95, marginTop: 5 }}>{d.getDate()}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.55, marginTop: 3 }}>
                     {TR_MON[d.getMonth()]}
                   </div>
                 </button>
@@ -220,10 +220,10 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
           className="fixed bottom-0 left-0 right-0 px-5 py-3 pb-5 backdrop-blur-md bg-white/80 border-t border-slate-200/60"
           style={{ animation: 'slideUp 180ms ease' }}
         >
-          <div className="max-w-[480px] mx-auto">
+          <div className="max-w-[520px] mx-auto">
             <button
               onClick={handleBookingStart}
-              className="w-full h-14 rounded-md bg-brand-600 text-white font-bold text-[15px] tracking-tight cursor-pointer border-0 font-sans hover:bg-brand-700 transition-colors duration-150"
+              className="w-full h-14 rounded-none bg-[#FF4D1C] text-white font-bold text-[15px] tracking-[0.04em] uppercase cursor-pointer border-0 font-sans hover:bg-[#D83E14] transition-colors duration-150"
             >
               Randevu Al — {selSlot}
             </button>
@@ -257,8 +257,8 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <section className="mb-8">
-      <div className="text-2xs font-semibold tracking-widest text-slate-400 uppercase mb-2.5">
+    <section className="mb-9">
+      <div className="text-[11px] font-bold tracking-[0.22em] text-[#FF4D1C] uppercase mb-3">
         {label}
       </div>
       {children}
@@ -271,11 +271,11 @@ function StaffChip({ label, selected, onClick }: { label: string; selected: bool
     <button
       onClick={onClick}
       className={[
-        'px-4 py-3 rounded-pill text-sm font-semibold cursor-pointer font-sans border',
+        'px-4 py-3 rounded-none text-sm font-bold cursor-pointer font-sans border',
         'transition-all duration-150 motion-safe:active:scale-[0.97]',
         selected
-          ? 'bg-ink-900 border-ink-900 text-white'
-          : 'bg-slate-0 border-slate-200 text-slate-700 shadow-xs hover:border-slate-300',
+          ? 'bg-[#0B1220] border-[#0B1220] text-[#F9F9F6]'
+          : 'bg-white border-[#D6DBE5] text-[#0B1220]/70 hover:border-[#0B1220]',
       ].join(' ')}
     >
       {label}

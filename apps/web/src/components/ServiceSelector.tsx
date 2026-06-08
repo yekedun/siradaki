@@ -29,34 +29,34 @@ export function ServiceSelector({ services, selected, onSelect }: ServiceSelecto
             key={s.id}
             onClick={() => onSelect(s.id)}
             className={[
-              'px-4 py-4 rounded-md cursor-pointer',
+              'px-4 py-4 rounded-none cursor-pointer',
               'transition-all duration-200 motion-safe:active:scale-[0.99]',
               isSel
-                ? 'border-2 border-brand-600 bg-brand-100'
-                : 'border border-slate-200 bg-slate-0 shadow-xs hover:border-slate-300 hover:shadow-sm',
+                ? 'border-2 border-[#0B1220] bg-white'
+                : 'border border-[#D6DBE5] bg-white hover:border-[#0B1220]',
             ].join(' ')}
           >
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className={`text-base font-semibold ${isSel ? 'text-brand-700' : 'text-ink-900'}`}>
+                <div className={`text-[15px] font-bold ${isSel ? 'text-[#0B1220]' : 'text-[#0B1220]'}`}>
                   {s.name}
                 </div>
                 <div className={[
-                  'inline-flex items-center mt-1.5 rounded-pill px-2 py-0.5 border',
-                  'text-xs font-semibold',
+                  'inline-flex items-center mt-2 rounded-none px-2 py-0.5 border',
+                  'text-[11px] font-bold tracking-[0.08em] uppercase',
                   isSel
-                    ? 'text-brand-700 bg-brand-600/10 border-brand-100'
-                    : 'text-slate-400 bg-slate-100 border-slate-200',
+                    ? 'text-[#FF4D1C] bg-[#FF4D1C]/10 border-[#FF4D1C]/20'
+                    : 'text-[#0B1220]/45 bg-[#F7F8FA] border-[#D6DBE5]',
                 ].join(' ')}>
                   {s.duration_min} dk
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <span className={`text-[22px] font-bold tabular-nums ${isSel ? 'text-brand-700' : 'text-ink-900'}`}>
+                <span className={`text-[22px] font-bold tabular-nums ${isSel ? 'text-[#FF4D1C]' : 'text-[#0B1220]'}`}>
                   {s.price}₺
                 </span>
                 {isSel && (
-                  <div className="w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center flex-shrink-0">
+                  <div className="w-5 h-5 rounded-none bg-[#0B1220] flex items-center justify-center flex-shrink-0">
                     <svg width="11" height="8" viewBox="0 0 11 8" fill="none">
                       <path d="M1 4L4 7L10 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>

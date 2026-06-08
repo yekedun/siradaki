@@ -26,7 +26,7 @@ const FN_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/functions/v1';
 
 function Overline({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`text-2xs font-semibold tracking-widest uppercase leading-none ${className ?? 'text-slate-400'}`}>
+    <div className={`text-[11px] font-bold tracking-[0.22em] uppercase leading-none ${className ?? 'text-[#FF4D1C]'}`}>
       {children}
     </div>
   );
@@ -45,16 +45,16 @@ function ModalForm({
   const [phoneTouched, setPhoneTouched] = useState(false);
   const ok = name.trim().length >= 2 && isValidPhone(phone);
 
-  const inputCls = 'bg-slate-50 border border-slate-200 rounded-md px-3.5 py-3 text-[15px] text-ink-900 font-sans w-full outline-none transition-[border-color,box-shadow] duration-[140ms] focus:border-brand-600 focus:ring-2 focus:ring-brand-100';
-  const labelCls = 'text-2xs font-semibold tracking-widest text-slate-400 uppercase mb-1.5';
+  const inputCls = 'bg-white border border-[#D6DBE5] rounded-none px-3.5 py-3 text-[15px] text-[#0B1220] font-sans w-full outline-none transition-[border-color,box-shadow] duration-[140ms] focus:border-[#0B1220] focus:ring-2 focus:ring-[#FF4D1C]/15';
+  const labelCls = 'text-[11px] font-bold tracking-[0.16em] text-[#0B1220]/45 uppercase mb-1.5';
 
   return (
     <div className="p-7 pb-6">
       <Overline>Onaylama</Overline>
-      <h2 className="text-2xl font-bold tracking-tight text-ink-900 mt-2.5">
+      <h2 className="font-display text-[42px] leading-[0.95] tracking-normal uppercase text-[#0B1220] mt-3">
         Randevuyu Onayla
       </h2>
-      <div className="text-sm text-slate-500 mt-1.5 leading-relaxed">
+      <div className="text-sm font-medium text-[#0B1220]/55 mt-2 leading-relaxed">
         {summary}
       </div>
 
@@ -105,7 +105,7 @@ function ModalForm({
       <div className="flex gap-2.5 mt-5">
         <button
           onClick={onClose}
-          className="flex-1 h-12 rounded-md border border-slate-200 bg-transparent text-slate-600 font-sans font-semibold text-sm cursor-pointer hover:border-slate-300 transition-colors duration-150"
+          className="flex-1 h-12 rounded-none border border-[#D6DBE5] bg-transparent text-[#0B1220]/70 font-sans font-bold text-sm cursor-pointer hover:border-[#0B1220] transition-colors duration-150"
         >
           Vazgeç
         </button>
@@ -113,10 +113,10 @@ function ModalForm({
           onClick={() => ok && onConfirm(name, phone, note)}
           aria-disabled={!ok}
           className={[
-            'flex-[1.5] h-12 rounded-md border-0 font-sans font-semibold text-sm transition-colors duration-[140ms]',
+            'flex-[1.5] h-12 rounded-none border-0 font-sans font-bold text-sm transition-colors duration-[140ms]',
             ok
-              ? 'bg-brand-600 text-white cursor-pointer hover:bg-brand-700'
-              : 'bg-slate-200 text-slate-400 cursor-not-allowed',
+              ? 'bg-[#FF4D1C] text-white cursor-pointer hover:bg-[#D83E14]'
+              : 'bg-[#EEF1F5] text-[#8590A4] cursor-not-allowed',
           ].join(' ')}
         >
           Onayla
@@ -129,7 +129,7 @@ function ModalForm({
 function ModalLoading() {
   return (
     <div className="px-7 py-16 text-center">
-      <div className="w-9 h-9 mx-auto border-[3px] border-slate-200 border-t-brand-600 rounded-full animate-spin" />
+      <div className="w-9 h-9 mx-auto border-[3px] border-[#D6DBE5] border-t-[#FF4D1C] rounded-full animate-spin" />
       <div className="mt-4 text-sm text-slate-500">Randevu oluşturuluyor…</div>
     </div>
   );
@@ -158,23 +158,23 @@ function ModalSuccess({
         </div>
         <Overline className="text-mint-700">Onaylandı</Overline>
       </div>
-      <h2 className="text-2xl font-bold tracking-tight text-ink-900 mt-3.5">
+      <h2 className="font-display text-[42px] leading-[0.95] tracking-normal uppercase text-[#0B1220] mt-3.5">
         Randevunuz alındı
       </h2>
-      <div className="text-sm text-slate-500 mt-2 leading-relaxed">
+      <div className="text-sm font-medium text-[#0B1220]/55 mt-2 leading-relaxed">
         {displaySummary}
       </div>
 
       <div className="flex gap-2.5 mt-4">
         <button
           onClick={onClose}
-          className="flex-1 h-12 rounded-md border border-slate-200 bg-transparent text-slate-600 font-sans font-semibold text-sm cursor-pointer hover:border-slate-300 transition-colors duration-150"
+          className="flex-1 h-12 rounded-none border border-[#D6DBE5] bg-transparent text-[#0B1220]/70 font-sans font-bold text-sm cursor-pointer hover:border-[#0B1220] transition-colors duration-150"
         >
           Yeni Randevu
         </button>
         <button
           onClick={onClose}
-          className="flex-[1.5] h-12 rounded-md border-0 bg-brand-600 text-white font-sans font-semibold text-sm cursor-pointer hover:bg-brand-700 transition-colors duration-150 flex items-center justify-center"
+          className="flex-[1.5] h-12 rounded-none border-0 bg-[#FF4D1C] text-white font-sans font-bold text-sm cursor-pointer hover:bg-[#D83E14] transition-colors duration-150 flex items-center justify-center"
         >
           Tamam
         </button>
@@ -187,7 +187,7 @@ function ModalSuccess({
             const msg = encodeURIComponent(`Merhaba, ${displaySummary} randevusu aldım. Bilginize :)`);
             window.open(`https://wa.me/90${phone}?text=${msg}`, '_blank');
           }}
-          className="w-full px-5 py-3 mt-2 bg-[#25D366] text-white border-none rounded-md text-sm font-semibold cursor-pointer font-sans"
+          className="w-full px-5 py-3 mt-2 bg-[#25D366] text-white border-none rounded-none text-sm font-bold cursor-pointer font-sans"
         >
           💬 Berberi WhatsApp ile Bilgilendir
         </button>
@@ -206,17 +206,17 @@ function ModalError({ errorType, onClose }: { errorType: ErrorType; onClose: () 
         </div>
         <Overline className="text-coral-700">Çakışma</Overline>
       </div>
-      <h2 className="text-2xl font-bold tracking-tight text-ink-900 mt-3.5">
+      <h2 className="font-display text-[42px] leading-[0.95] tracking-normal uppercase text-[#0B1220] mt-3.5">
         {isConflict ? 'Bu saat az önce doldu' : 'Randevu oluşturulamadı'}
       </h2>
-      <div className="text-sm text-slate-600 mt-2 leading-relaxed">
+      <div className="text-sm font-medium text-[#0B1220]/60 mt-2 leading-relaxed">
         {isConflict
           ? 'Başka bir saat seçin ve tekrar deneyin.'
           : 'Bir hata oluştu. Lütfen tekrar deneyin.'}
       </div>
       <button
         onClick={onClose}
-        className="mt-5 w-full h-12 rounded-md border-0 bg-ink-900 text-white font-sans font-semibold text-sm cursor-pointer hover:bg-ink-800 transition-colors duration-150"
+        className="mt-5 w-full h-12 rounded-none border-0 bg-[#0B1220] text-white font-sans font-bold text-sm cursor-pointer hover:bg-[#15192A] transition-colors duration-150"
       >
         {isConflict ? 'Saat Seç' : 'Kapat'}
       </button>
@@ -282,7 +282,7 @@ export function BookingModal({
     >
       <div
         onClick={e => e.stopPropagation()}
-        className="bg-white rounded-xl w-full max-w-[456px] shadow-lg border border-slate-200 overflow-hidden"
+        className="bg-[#F9F9F6] rounded-none w-full max-w-[456px] shadow-lg border border-[#0B1220] overflow-hidden font-sans"
         style={{ animation: 'slideUp 280ms cubic-bezier(.32,.72,.0,1)' }}
       >
         {state === 'form'    && <ModalForm    summary={summary} onClose={handleClose} onConfirm={handleConfirm} />}

@@ -47,7 +47,7 @@ export function SlotGrid({
     return (
       <div style={gridStyle}>
         {Array.from({ length: 10 }).map((_, i) => (
-          <div key={i} className="h-[50px] rounded-md bg-slate-100 animate-pulse" />
+          <div key={i} className="h-[50px] rounded-none bg-[#EEF1F5] animate-pulse" />
         ))}
       </div>
     );
@@ -88,15 +88,15 @@ export function SlotGrid({
             disabled={!s.available}
             onClick={() => onSelect(s.time)}
             className={[
-              'h-[50px] rounded-md flex flex-col items-center justify-center gap-0.5',
+              'h-[50px] rounded-none flex flex-col items-center justify-center gap-0.5',
               'font-sans text-sm tabular-nums transition-all duration-150',
               isSel
-                ? 'bg-brand-600 border border-brand-600 text-white font-semibold shadow-sm motion-safe:scale-[1.02]'
+                ? 'bg-[#FF4D1C] border border-[#FF4D1C] text-white font-bold motion-safe:scale-[1.02]'
                 : s.available
                   ? s.hot
-                    ? 'bg-umber-100 border border-umber-600 text-umber-700 font-semibold hover:shadow-sm cursor-pointer motion-safe:active:scale-[0.97]'
-                    : 'bg-slate-0 border border-slate-200 text-ink-900 font-semibold shadow-xs hover:border-slate-300 hover:shadow-sm cursor-pointer motion-safe:active:scale-[0.97]'
-                  : 'bg-slate-100 border border-transparent text-slate-400 cursor-not-allowed',
+                    ? 'bg-[#ECE6DC] border border-[#6F4A14] text-[#503410] font-bold cursor-pointer motion-safe:active:scale-[0.97]'
+                    : 'bg-white border border-[#D6DBE5] text-[#0B1220] font-bold hover:border-[#0B1220] cursor-pointer motion-safe:active:scale-[0.97]'
+                  : 'bg-[#EEF1F5] border border-transparent text-[#8590A4] cursor-not-allowed',
             ].join(' ')}
           >
             <span>{s.time}</span>

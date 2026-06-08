@@ -76,7 +76,7 @@
   --coral-600: #A0303F;
 
   /* font */
-  --font-sans: 'MontserratLocal', 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: var(--font-plus-jakarta), 'MontserratLocal', 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
 
   /* shadows */

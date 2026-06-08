@@ -17,7 +17,8 @@ const config: Config = {
         coral: { 700: '#7A1F2E', 600: '#A0303F', 100: '#EFD3D8' },
       },
       fontFamily: {
-        sans: ['var(--font-montserrat)', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        sans: ['var(--font-plus-jakarta)', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        display: ['var(--font-bebas-neue)', 'Impact', 'Arial Narrow', 'sans-serif'],
         mono: ['ui-monospace', 'Cascadia Code', 'Source Code Pro', 'Menlo', 'Consolas', 'monospace'],
       },
       borderRadius: {

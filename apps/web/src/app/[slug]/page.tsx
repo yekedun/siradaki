@@ -9,13 +9,13 @@ import BookingClient from './BookingClient';
 
 function ShopPendingPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center px-6">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-6">
       <div className="text-center max-w-sm">
-        <div className="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center mx-auto mb-4">
+        <div className="w-16 h-16 rounded-full bg-umber-100 flex items-center justify-center mx-auto mb-4">
           <span className="text-2xl">⏳</span>
         </div>
-        <h1 className="text-xl font-bold text-gray-900 mb-2">Onay Bekleniyor</h1>
-        <p className="text-sm text-gray-500">Bu dükkan henüz onay bekliyor. Onaylandıktan sonra rezervasyon alabilirsiniz.</p>
+        <h1 className="text-xl font-bold text-ink-900 mb-2">Onay Bekleniyor</h1>
+        <p className="text-sm text-slate-500">Bu dükkan henüz onay bekliyor. Onaylandıktan sonra rezervasyon alabilirsiniz.</p>
       </div>
     </div>
   );
@@ -23,13 +23,13 @@ function ShopPendingPage() {
 
 function ShopRejectedPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center px-6">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-6">
       <div className="text-center max-w-sm">
-        <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+        <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
           <span className="text-2xl">🚫</span>
         </div>
-        <h1 className="text-xl font-bold text-gray-900 mb-2">Dükkan Aktif Değil</h1>
-        <p className="text-sm text-gray-500">Bu dükkan artık aktif değil.</p>
+        <h1 className="text-xl font-bold text-ink-900 mb-2">Dükkan Aktif Değil</h1>
+        <p className="text-sm text-slate-500">Bu dükkan artık aktif değil.</p>
       </div>
     </div>
   );
