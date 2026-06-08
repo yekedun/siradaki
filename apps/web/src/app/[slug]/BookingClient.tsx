@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { ServiceSelector, type Service } from '../../components/ServiceSelector';
 import { SlotGrid } from '../../components/SlotGrid';
 import { BookingModal } from '../../components/BookingModal';
@@ -212,6 +213,15 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
           />
         </Section>
 
+        {/* Footer — iptal linki */}
+        <div className="pt-4 pb-2 border-t border-[#D6DBE5]/50 text-center">
+          <Link
+            href={`/iptal?dukkan=${shop.slug}`}
+            className="text-xs text-[#0B1220]/35 hover:text-[#0B1220]/60 transition-colors duration-150"
+          >
+            Daha önce randevu aldınız mı? Randevuyu iptal et →
+          </Link>
+        </div>
       </div>
 
       {/* Sticky CTA */}
