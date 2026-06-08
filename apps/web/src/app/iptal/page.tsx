@@ -6,13 +6,12 @@ import { isValidPhone } from '@/lib/validation';
 
 const FN_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/functions/v1';
 
-const TR_DAYS = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
-const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
-
 function formatDate(iso: string) {
-  const d = new Date(new Date(iso).toLocaleString('en-US', { timeZone: 'Europe/Istanbul' }));
+  const d = new Date(iso);
+  const day  = d.toLocaleDateString('tr-TR', { weekday: 'long', timeZone: 'Europe/Istanbul' });
+  const date = d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', timeZone: 'Europe/Istanbul' });
   const time = d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' });
-  return `${TR_DAYS[d.getDay()]}, ${d.getDate()} ${TR_MONTHS[d.getMonth()]} · ${time}`;
+  return `${day}, ${date} · ${time}`;
 }
 
 type Appointment = {
@@ -24,11 +23,23 @@ type Appointment = {
 
 type CancelState = 'idle' | 'cancelling' | 'cancelled' | 'error' | 'too_late';
 
-function IptalPageInner() {
-  const params = useSearchParams();
-  const shopSlug = params.get('dukkan') ?? '';
+function InvalidLink() {
+  return (
+    <div className="min-h-screen bg-[#F7F8FA] font-sans text-[#0B1220] flex items-center justify-center p-6">
+      <div className="max-w-[400px] text-center">
+        <div className="text-[11px] font-bold tracking-[0.22em] text-[#A0303F] uppercase mb-3">Geçersiz Bağlantı</div>
+        <h1 className="font-display text-[36px] leading-[0.95] uppercase mb-3">Bu link hatalı</h1>
+        <p className="text-sm text-[#0B1220]/55 leading-relaxed mb-6">
+          İptal bağlantısı geçersiz görünüyor. Randevu onay sayfasındaki bağlantıyı kullanın.
+        </p>
+        <a href="/" className="text-sm font-bold text-[#FF4D1C] hover:underline">Ana sayfaya dön</a>
+      </div>
+    </div>
+  );
+}
 
-  const [phone, setPhone]             = useState('');
+function IptalForm({ shopSlug }: { shopSlug: string }) {
+  const [phone, setPhone]               = useState('');
   const [phoneTouched, setPhoneTouched] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[] | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
@@ -98,8 +109,8 @@ function IptalPageInner() {
   const labelCls = 'text-[11px] font-bold tracking-[0.16em] text-[#0B1220]/45 uppercase mb-1.5 block';
 
   return (
-    <div className="min-h-screen bg-[#F9F9F6] font-sans text-[#0B1220]">
-      <header className="bg-[#0B1220] text-[#F9F9F6]">
+    <div className="min-h-screen bg-[#F7F8FA] font-sans text-[#0B1220]">
+      <header className="bg-[#0B1220] text-[#F7F8FA]">
         <div className="max-w-[520px] mx-auto px-5 pt-7 pb-8">
           <div className="text-[11px] font-bold tracking-[0.22em] text-[#FF4D1C] uppercase">
             Randevu İptali · Sıradaki
@@ -112,7 +123,6 @@ function IptalPageInner() {
 
       <div className="max-w-[520px] mx-auto px-5 pt-8 pb-16">
 
-        {/* Telefon girişi */}
         <div className="mb-8">
           <div className="text-[11px] font-bold tracking-[0.22em] text-[#FF4D1C] uppercase mb-3">
             Telefon Numarası
@@ -134,7 +144,7 @@ function IptalPageInner() {
                 className={inputCls}
               />
               {phoneTouched && phone.length > 0 && !phoneOk && (
-                <div className="text-xs text-[#A0303F] mt-1">Geçerli bir telefon numarası gir (10-11 rakam)</div>
+                <div className="text-xs text-[#A0303F] mt-1">Geçerli bir mobil telefon numarası gir</div>
               )}
             </div>
             <button
@@ -143,7 +153,7 @@ function IptalPageInner() {
               className={[
                 'h-12 rounded-none border-0 font-sans font-bold text-sm transition-colors duration-[140ms]',
                 phoneOk && !lookupLoading
-                  ? 'bg-[#0B1220] text-[#F9F9F6] cursor-pointer hover:bg-[#15192A]'
+                  ? 'bg-[#0B1220] text-[#F7F8FA] cursor-pointer hover:bg-[#15192A]'
                   : 'bg-[#EEF1F5] text-[#8590A4] cursor-not-allowed',
               ].join(' ')}
             >
@@ -155,7 +165,6 @@ function IptalPageInner() {
           )}
         </div>
 
-        {/* Randevu listesi */}
         {appointments !== null && (
           <div>
             <div className="text-[11px] font-bold tracking-[0.22em] text-[#FF4D1C] uppercase mb-3">
@@ -231,6 +240,14 @@ function IptalPageInner() {
       </div>
     </div>
   );
+}
+
+function IptalPageInner() {
+  const params = useSearchParams();
+  const shopSlug = params.get('dukkan') ?? '';
+
+  if (!shopSlug) return <InvalidLink />;
+  return <IptalForm shopSlug={shopSlug} />;
 }
 
 export default function IptalPage() {

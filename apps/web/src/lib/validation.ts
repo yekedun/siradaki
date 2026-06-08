@@ -7,6 +7,8 @@ export function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+// Shared ile aynı kural: Türk mobil numaraları (5xx ile başlayan), +90/0/90 prefix opsiyonel
 export function isValidPhone(phone: string): boolean {
-  return /^[0-9]{10,11}$/.test(phone.replace(/[\s-]/g, ''));
+  const digits = phone.replace(/[\s\-\(\)]/g, '');
+  return /^(\+90|0)?[5][0-9]{9}$/.test(digits);
 }
