@@ -136,9 +136,9 @@ function ModalLoading() {
 }
 
 function ModalSuccess({
-  summary, startsAt, onClose, staffPhone,
+  summary, startsAt, onClose, staffPhone, shopSlug,
 }: {
-  summary: string; startsAt: string; onClose: () => void; staffPhone?: string | null;
+  summary: string; startsAt: string; onClose: () => void; staffPhone?: string | null; shopSlug?: string;
 }) {
   // Build display text from startsAt directly — independent of parent state timing
   const displaySummary = (() => {
@@ -191,6 +191,15 @@ function ModalSuccess({
         >
           💬 Berberi WhatsApp ile Bilgilendir
         </button>
+      )}
+
+      {shopSlug && (
+        <a
+          href={`/iptal?dukkan=${shopSlug}`}
+          className="block text-center text-xs text-[#0B1220]/35 hover:text-[#A0303F] transition-colors duration-150 mt-3"
+        >
+          Randevuyu iptal etmek istiyorum
+        </a>
       )}
     </div>
   );
@@ -287,7 +296,7 @@ export function BookingModal({
       >
         {state === 'form'    && <ModalForm    summary={summary} onClose={handleClose} onConfirm={handleConfirm} />}
         {state === 'loading' && <ModalLoading />}
-        {state === 'success' && <ModalSuccess summary={confirmedSummary.current} startsAt={startsAt} onClose={handleClose} staffPhone={staffPhone} />}
+        {state === 'success' && <ModalSuccess summary={confirmedSummary.current} startsAt={startsAt} onClose={handleClose} staffPhone={staffPhone} shopSlug={shopSlug} />}
         {state === 'error'   && <ModalError   errorType={errorType} onClose={handleClose} />}
       </div>
     </div>
