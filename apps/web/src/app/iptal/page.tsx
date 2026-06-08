@@ -25,7 +25,7 @@ type CancelState = 'idle' | 'cancelling' | 'cancelled' | 'error' | 'too_late';
 
 function InvalidLink() {
   return (
-    <div className="min-h-screen bg-[#F7F8FA] font-sans text-[#0B1220] flex items-center justify-center p-6">
+    <div className="min-h-screen bg-[#F9F9F6] font-sans text-[#0B1220] flex items-center justify-center p-6">
       <div className="max-w-[400px] text-center">
         <div className="text-[11px] font-bold tracking-[0.22em] text-[#A0303F] uppercase mb-3">Geçersiz Bağlantı</div>
         <h1 className="font-display text-[36px] leading-[0.95] uppercase mb-3">Bu link hatalı</h1>
@@ -109,8 +109,8 @@ function IptalForm({ shopSlug }: { shopSlug: string }) {
   const labelCls = 'text-[11px] font-bold tracking-[0.16em] text-[#0B1220]/45 uppercase mb-1.5 block';
 
   return (
-    <div className="min-h-screen bg-[#F7F8FA] font-sans text-[#0B1220]">
-      <header className="bg-[#0B1220] text-[#F7F8FA]">
+    <div className="min-h-screen bg-[#F9F9F6] font-sans text-[#0B1220]">
+      <header className="bg-[#0B1220] text-[#F9F9F6]">
         <div className="max-w-[520px] mx-auto px-5 pt-7 pb-8">
           <div className="text-[11px] font-bold tracking-[0.22em] text-[#FF4D1C] uppercase">
             Randevu İptali · Sıradaki
@@ -153,7 +153,7 @@ function IptalForm({ shopSlug }: { shopSlug: string }) {
               className={[
                 'h-12 rounded-none border-0 font-sans font-bold text-sm transition-colors duration-[140ms]',
                 phoneOk && !lookupLoading
-                  ? 'bg-[#0B1220] text-[#F7F8FA] cursor-pointer hover:bg-[#15192A]'
+                  ? 'bg-[#0B1220] text-[#F9F9F6] cursor-pointer hover:bg-[#15192A]'
                   : 'bg-[#EEF1F5] text-[#8590A4] cursor-not-allowed',
               ].join(' ')}
             >
