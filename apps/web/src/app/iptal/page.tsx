@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { isValidPhone } from '@/lib/validation';
 
 const FN_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/functions/v1';
@@ -32,7 +33,7 @@ function InvalidLink() {
         <p className="text-sm text-[#0B1220]/55 leading-relaxed mb-6">
           İptal bağlantısı geçersiz görünüyor. Randevu onay sayfasındaki bağlantıyı kullanın.
         </p>
-        <a href="/" className="text-sm font-bold text-[#FF4D1C] hover:underline">Ana sayfaya dön</a>
+        <Link href="/" className="text-sm font-bold text-[#FF4D1C] hover:underline">Ana sayfaya dön</Link>
       </div>
     </div>
   );
