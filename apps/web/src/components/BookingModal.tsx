@@ -7,7 +7,7 @@ import { useState, useRef } from 'react';
 import { isValidPhone } from '@/lib/validation';
 
 type ModalState = 'form' | 'loading' | 'success' | 'error';
-type ErrorType  = 'conflict' | 'generic';
+type ErrorType  = 'conflict' | 'rate_limit' | 'generic';
 
 interface BookingModalProps {
   open: boolean;
@@ -205,23 +205,31 @@ function ModalSuccess({
   );
 }
 
-function ModalError({ errorType, onClose }: { errorType: ErrorType; onClose: () => void }) {
-  const isConflict = errorType === 'conflict';
+function ModalError({ errorType, errorMessage, onClose }: { errorType: ErrorType; errorMessage?: string | null; onClose: () => void }) {
+  const isConflict  = errorType === 'conflict';
+  const isRateLimit = errorType === 'rate_limit';
+
+  const title    = isConflict  ? 'Bu saat az önce doldu'
+                 : isRateLimit ? 'Çok fazla deneme'
+                 :               'Randevu oluşturulamadı';
+
+  const subtitle = isConflict  ? 'Başka bir saat seçin ve tekrar deneyin.'
+                 : isRateLimit ? 'Çok fazla istek gönderildi. 10 dakika sonra tekrar deneyin.'
+                 :               (errorMessage ?? 'Bir hata oluştu. Lütfen tekrar deneyin.');
+
   return (
     <div className="p-7 pb-6">
       <div className="flex items-center gap-2.5">
         <div className="w-7 h-7 rounded-full bg-coral-600 text-white flex items-center justify-center font-bold text-[15px] flex-shrink-0">
           !
         </div>
-        <Overline className="text-coral-700">Çakışma</Overline>
+        <Overline className="text-coral-700">{isConflict ? 'Çakışma' : isRateLimit ? 'Limit' : 'Hata'}</Overline>
       </div>
       <h2 className="font-display text-[42px] leading-[0.95] tracking-normal uppercase text-[#0B1220] mt-3.5">
-        {isConflict ? 'Bu saat az önce doldu' : 'Randevu oluşturulamadı'}
+        {title}
       </h2>
       <div className="text-sm font-medium text-[#0B1220]/60 mt-2 leading-relaxed">
-        {isConflict
-          ? 'Başka bir saat seçin ve tekrar deneyin.'
-          : 'Bir hata oluştu. Lütfen tekrar deneyin.'}
+        {subtitle}
       </div>
       <button
         onClick={onClose}
@@ -239,6 +247,7 @@ export function BookingModal({
 }: BookingModalProps) {
   const [state,          setState]         = useState<ModalState>('form');
   const [errorType,      setErrorType]     = useState<ErrorType>('conflict');
+  const [errorMessage,   setErrorMessage]  = useState<string | null>(null);
   const submittingRef    = useRef(false);
   const confirmedSummary = useRef(summary);
 
@@ -265,8 +274,14 @@ export function BookingModal({
         }),
       });
       if (res.status === 409) { setErrorType('conflict'); setState('error'); return; }
-      if (res.status === 429) { setErrorType('generic');  setState('error'); return; }
-      if (!res.ok)            { setErrorType('generic');  setState('error'); return; }
+      if (res.status === 429) { setErrorType('rate_limit'); setState('error'); return; }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+        setErrorMessage(typeof body?.error === 'string' ? body.error : null);
+        setErrorType('generic');
+        setState('error');
+        return;
+      }
       setState('success');
       onSuccess();
     } catch {
@@ -280,6 +295,7 @@ export function BookingModal({
   function handleClose() {
     setState('form');
     setErrorType('conflict');
+    setErrorMessage(null);
     onClose();
   }
 
@@ -297,7 +313,7 @@ export function BookingModal({
         {state === 'form'    && <ModalForm    summary={summary} onClose={handleClose} onConfirm={handleConfirm} />}
         {state === 'loading' && <ModalLoading />}
         {state === 'success' && <ModalSuccess summary={confirmedSummary.current} startsAt={startsAt} onClose={handleClose} staffPhone={staffPhone} shopSlug={shopSlug} />}
-        {state === 'error'   && <ModalError   errorType={errorType} onClose={handleClose} />}
+        {state === 'error'   && <ModalError   errorType={errorType} errorMessage={errorMessage} onClose={handleClose} />}
       </div>
     </div>
   );
