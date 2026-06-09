@@ -40,7 +40,7 @@ import { buildOwnerRoleFilter, isMissingColumnError } from '../../lib/supabase-r
 import { StaffEditSheet, type StaffMember as EditableStaffMember } from '../../components/StaffEditSheet';
 import { OwnerSettingsAvatar } from '../../components/ds/OwnerSettingsAvatar';
 
-const FN_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1';
+const FN_BASE = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1`;
 import {
   rowsToStaffSchedule,
   staffScheduleToRows,

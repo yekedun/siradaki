@@ -11,7 +11,7 @@ import { supabase } from '../../lib/supabase';
 import { mapRegistrationError } from '../../lib/error-messages';
 import { isValidPhone } from '../../lib/validation';
 
-const FN_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1';
+const FN_BASE = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1`;
 
 export default function GoogleOnboardingScreen() {
   const [shopName, setShopName] = useState('');

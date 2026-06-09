@@ -52,7 +52,9 @@ export default function RootLayout() {
       if (notifType === 'shop_approved' || notifType === 'shop_rejected') {
         supabase.auth.getUser().then(({ data: { user } }) => {
           if (!user) { router.replace('/(auth)/login' as Href); return; }
-          determineUserRole(user.id).then(role => router.replace(routeForRole(role)));
+          determineUserRole(user.id)
+            .then(role => router.replace(routeForRole(role)))
+            .catch(() => router.replace('/(auth)/login' as Href));
         });
         return;
       }
@@ -92,7 +94,9 @@ export default function RootLayout() {
   }, [session]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => setSession(session))
+      .catch(() => setSession(null));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, newSession) => {
       routedRef.current = false;
       setSession(newSession);
@@ -113,16 +117,18 @@ export default function RootLayout() {
     if (routedRef.current) return;
     routedRef.current = true;
 
-    determineUserRole(session.user.id).then(role => {
-      if (!shouldSkipRoleRouting(firstSegment, role)) {
-        router.replace(routeForRole(role));
-      }
-      if (pendingNotif.current) {
-        pendingNotif.current = false;
-        const target: Href = role === 'owner' ? '/(owner)/agenda' : '/(app)/';
-        setTimeout(() => router.push(target), 250);
-      }
-    });
+    determineUserRole(session.user.id)
+      .then(role => {
+        if (!shouldSkipRoleRouting(firstSegment, role)) {
+          router.replace(routeForRole(role));
+        }
+        if (pendingNotif.current) {
+          pendingNotif.current = false;
+          const target: Href = role === 'owner' ? '/(owner)/agenda' : '/(app)/';
+          setTimeout(() => router.push(target), 250);
+        }
+      })
+      .catch(() => router.replace('/(auth)/login' as Href));
   }, [loaded, session, firstSegment]);
 
   if (!loaded || session === undefined) return null;

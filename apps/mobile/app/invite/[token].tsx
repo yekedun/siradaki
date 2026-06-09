@@ -5,12 +5,12 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { colors } from '../../lib/theme';
 import { Button } from '../../components/ds/Button';
-import { supabase } from '../../lib/supabase';
-import { inviteAcceptedRoute } from '../../lib/router-guard';
+import { supabase, determineUserRole } from '../../lib/supabase';
+import { routeForRole } from '../../lib/router-guard';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const FN_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1';
+const FN_BASE = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1`;
 
 export default function InviteScreen() {
   const { token } = useLocalSearchParams<{ token: string }>();
@@ -48,6 +48,9 @@ export default function InviteScreen() {
 
   async function handleGoogleSignIn() {
     setState('signing');
+
+    // Sign out any existing session so the invite account doesn't overwrite it silently.
+    await supabase.auth.signOut();
 
     // Web-based OAuth — bypasses iOS Keychain caching that causes nonce mismatches
     // with the native @react-native-google-signin flow.
@@ -126,7 +129,8 @@ export default function InviteScreen() {
       return;
     }
 
-    router.replace(inviteAcceptedRoute());
+    const role = await determineUserRole(session.user.id).catch(() => 'staff' as const);
+    router.replace(routeForRole(role));
   }
 
   if (state === 'checking') {

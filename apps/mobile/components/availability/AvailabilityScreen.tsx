@@ -38,7 +38,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { colors, radius } from '../../lib/theme';
 
-const FN_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1';
+const FN_BASE = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1`;
 
 type Mode = 'owner' | 'staff';
 type StaffFilter = 'any' | string;

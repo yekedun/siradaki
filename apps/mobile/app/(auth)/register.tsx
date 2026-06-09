@@ -55,7 +55,7 @@ import { supabase } from '../../lib/supabase';
 import { trackEvent } from '../../lib/analytics';
 import { isValidEmail } from '../../lib/validation';
 
-const FN_BASE = process.env.EXPO_PUBLIC_SUPABASE_URL + '/functions/v1';
+const FN_BASE = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1`;
 
 /* ── PasswordStrength ─────────────────────────────────────────── */
 function PasswordStrength({ value }: { value: string }) {
