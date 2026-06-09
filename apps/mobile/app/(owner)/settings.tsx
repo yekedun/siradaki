@@ -49,7 +49,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -278,6 +280,10 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
     >
       <Pressable style={styles.sheetBackdrop} onPress={handleClose}>
         <Pressable style={styles.sheetContainer} onPress={() => {}}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+          >
           {/* Drag handle */}
           <View style={styles.sheetHandle} />
 
@@ -425,6 +431,7 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
               </TouchableOpacity>
             </ScrollView>
           )}
+          </KeyboardAvoidingView>
         </Pressable>
       </Pressable>
     </Modal>
