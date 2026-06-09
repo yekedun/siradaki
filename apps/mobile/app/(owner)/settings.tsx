@@ -124,13 +124,13 @@ function Toggle({ on, onChange }: ToggleProps) {
   );
 }
 
-/* ─── ShareLinkBox ──────────────────────────────────────────── */
+/* ─── BookingLinkCard ───────────────────────────────────────── */
 
-interface ShareLinkBoxProps {
+interface BookingLinkCardProps {
   slug: string;
 }
 
-function ShareLinkBox({ slug }: ShareLinkBoxProps) {
+function BookingLinkCard({ slug }: BookingLinkCardProps) {
   const [copied, setCopied] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const url = slug ? `https://siradaki.app/${slug}` : '';
@@ -164,31 +164,34 @@ function ShareLinkBox({ slug }: ShareLinkBoxProps) {
   }
 
   return (
-    <View style={styles.slugBox}>
-      <Text style={styles.slugLabel}>Rezervasyon Linki</Text>
-      <Text style={styles.slugValue} numberOfLines={1} ellipsizeMode="middle">
-        {disabled ? 'siradaki.app/—' : `siradaki.app/${slug}`}
-      </Text>
-      <View style={styles.slugBtnRow}>
+    <View style={styles.bookingSection}>
+      <Text style={styles.bookingSectionLabel}>Rezervasyon Linki</Text>
+      <View style={[styles.bookingCard, disabled && styles.bookingCardDisabled]}>
+        <Text style={[styles.bookingUrl, disabled && styles.bookingUrlDisabled]} numberOfLines={1} ellipsizeMode="tail">
+          {disabled ? 'siradaki.app/—' : `siradaki.app/${slug}`}
+        </Text>
         <TouchableOpacity
           onPress={handleCopy}
           disabled={disabled}
-          style={[styles.slugSecondaryBtn, disabled && styles.slugBtnDisabled]}
+          style={styles.bookingCopyBtn}
           activeOpacity={0.75}
         >
-          <Text style={[styles.slugSecondaryBtnText, copied && styles.slugBtnTextActive]}>
+          <Text style={[styles.bookingCopyBtnText, copied && styles.bookingCopyBtnTextDone]}>
             {copied ? 'Kopyalandı!' : 'Kopyala'}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={handleShare}
           disabled={disabled}
-          style={[styles.slugPrimaryBtn, disabled && styles.slugBtnDisabled]}
+          style={styles.bookingShareBtn}
           activeOpacity={0.8}
         >
-          <Text style={styles.slugPrimaryBtnText}>Paylaş</Text>
+          <Text style={styles.bookingShareBtnText}>Paylaş</Text>
         </TouchableOpacity>
       </View>
+      <Text style={styles.bookingHint}>
+        Müşterilerine bu linki paylaş — doğrudan sana randevu alabilirler.
+      </Text>
     </View>
   );
 }
@@ -398,9 +401,6 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
                 </View>
                 <Toggle on={visible} onChange={setVisible} />
               </View>
-
-              {/* Rezervasyon linki — paylaş/kopyala */}
-              <ShareLinkBox slug={slug} />
 
               {/* Kaydet */}
               <TouchableOpacity
@@ -862,7 +862,7 @@ export default function SettingsScreen() {
         <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
           <Text style={styles.pageTitle}>Ayarlar</Text>
           <Text style={styles.headerMeta}>
-            Widget bağlantılarını yönet ve hesabından çıkış yap.
+            Dükkan bilgilerini, saatleri ve tercihlerini yönet.
           </Text>
         </View>
 
@@ -902,6 +902,9 @@ export default function SettingsScreen() {
             </View>
           </View>
         </TouchableOpacity>
+
+        {/* Rezervasyon Linki — prominent card */}
+        <BookingLinkCard slug={shop?.slug ?? ''} />
 
         {/* Section: Operasyon */}
         <Text style={styles.sectionLabel}>Operasyon</Text>
@@ -1573,64 +1576,76 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  /* Slug box */
-  slugBox: {
-    backgroundColor: colors.slate[100],
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  slugLabel: {
-    fontSize: 10,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
-    color: colors.slate[400],
+  /* Booking link card */
+  bookingSection: {
+    marginHorizontal: 20,
+    marginTop: 10,
     marginBottom: 4,
   },
-  slugValue: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.brand[600],
+  bookingSectionLabel: {
+    fontSize: 11,
+    fontFamily: 'Montserrat-Bold',
+    letterSpacing: 2.5,
+    textTransform: 'uppercase',
+    color: colors.slate[500],
+    marginBottom: 8,
   },
-  slugBtnRow: {
+  bookingCard: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
-  },
-  slugSecondaryBtn: {
-    flex: 1,
-    height: 38,
-    borderRadius: 9,
+    alignItems: 'center',
+    backgroundColor: colors.brand[100],
     borderWidth: 1,
     borderColor: colors.brand[600],
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 10,
   },
-  slugSecondaryBtnText: {
+  bookingCardDisabled: {
+    opacity: 0.5,
+  },
+  bookingUrl: {
+    flex: 1,
     fontSize: 13,
     fontFamily: 'Montserrat-SemiBold',
     color: colors.brand[600],
   },
-  slugPrimaryBtn: {
-    flex: 1,
-    height: 38,
-    borderRadius: 9,
-    backgroundColor: colors.brand[600],
-    alignItems: 'center',
-    justifyContent: 'center',
+  bookingUrlDisabled: {
+    color: colors.slate[400],
   },
-  slugPrimaryBtnText: {
-    fontSize: 13,
+  bookingCopyBtn: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: colors.brand[600],
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  bookingCopyBtnText: {
+    fontSize: 12,
+    fontFamily: 'Montserrat-SemiBold',
+    color: colors.brand[600],
+  },
+  bookingCopyBtnTextDone: {
+    color: colors.mint[600],
+  },
+  bookingShareBtn: {
+    backgroundColor: colors.brand[600],
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  bookingShareBtnText: {
+    fontSize: 12,
     fontFamily: 'Montserrat-SemiBold',
     color: '#ffffff',
   },
-  slugBtnDisabled: {
-    opacity: 0.4,
-  },
-  slugBtnTextActive: {
-    color: colors.mint[600],
+  bookingHint: {
+    marginTop: 7,
+    fontSize: 11,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.slate[400],
+    lineHeight: 16,
   },
 
   /* Form fields */
