@@ -9,7 +9,8 @@ const RATE_LIMIT_MAX = 5;
 
 interface BookAppointmentRequest {
   shop_slug: string;
-  service_id: string;
+  service_id?: string;           // legacy single-service (still accepted)
+  service_ids?: string[];        // multi-service
   staff_id: string | null;
   starts_at: string;
   customer_name: string;
@@ -65,6 +66,7 @@ serve(async (req) => {
   const {
     shop_slug,
     service_id,
+    service_ids,
     staff_id,
     starts_at,
     customer_name,
@@ -72,8 +74,13 @@ serve(async (req) => {
     customer_notes,
   } = body;
 
-  if (!shop_slug || !service_id || !starts_at || !customer_name || !customer_phone) {
-    return error("shop_slug, service_id, starts_at, customer_name, customer_phone zorunlu");
+  // Normalize to a de-duplicated id list (array form wins; else single fallback).
+  const serviceIdList: string[] = Array.isArray(service_ids) && service_ids.length > 0
+    ? Array.from(new Set(service_ids.map((s) => String(s).trim()).filter(Boolean)))
+    : (service_id ? [String(service_id).trim()] : []);
+
+  if (!shop_slug || serviceIdList.length === 0 || !starts_at || !customer_name || !customer_phone) {
+    return error("shop_slug, service_ids, starts_at, customer_name, customer_phone zorunlu");
   }
 
   if (customer_name.trim().length < 2) {
@@ -97,15 +104,16 @@ serve(async (req) => {
 
   if (!shopCheck || shopCheck.status !== "active") return error("Dukkan bulunamadi", 404);
 
-  const { data: serviceCheck } = await supabase
+  const { data: serviceRows } = await supabase
     .from("services")
     .select("id")
-    .eq("id", service_id)
+    .in("id", serviceIdList)
     .eq("shop_id", shopCheck.id)
-    .eq("is_active", true)
-    .maybeSingle();
+    .eq("is_active", true);
 
-  if (!serviceCheck) return error("Hizmet bulunamadi", 404);
+  if (!serviceRows || serviceRows.length !== serviceIdList.length) {
+    return error("Hizmet bulunamadi", 404);
+  }
 
   // Validate staff_id belongs to this shop (defense against cross-shop booking).
   // The any-staff path is bound to shopCheck.id below via p_shop_id.
@@ -123,7 +131,8 @@ serve(async (req) => {
   const { data, error: rpcError } = await supabase.rpc("create_appointment_atomic" as never, {
     p_shop_slug: null,
     p_shop_id: shopCheck.id,
-    p_service_id: service_id,
+    p_service_id: serviceIdList[0],
+    p_service_ids: serviceIdList,
     p_staff_id: staff_id ?? null,
     p_starts_at: starts_at,
     p_customer_name: customer_name,
