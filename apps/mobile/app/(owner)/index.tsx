@@ -397,12 +397,12 @@ export default function OzetScreen() {
         {staffStats.length === 0 ? (
           <View style={[styles.insightsCard, { marginHorizontal: 0, paddingVertical: 16, alignItems: 'center' }]}>
             <Text style={{ fontSize: 13, fontFamily: 'Montserrat-Regular', color: colors.slate[400] }}>
-              Henüz veri yok
+              Bugün randevu yok.
             </Text>
           </View>
         ) : (() => {
           const maxCount = Math.max(...staffStats.map(s => s.count), 1);
-          const avatarColors = [colors.brand[600], '#8B4513', colors.mint[700] ?? '#14B8A6'];
+          const avatarColors = [colors.brand[600], colors.coral[600], colors.mint[600]];
           return staffStats.map((s, i) => (
             <View key={s.id} style={styles.staffCard}>
               <View style={[styles.avatar, { backgroundColor: avatarColors[i % avatarColors.length] }]}>

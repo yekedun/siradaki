@@ -986,12 +986,15 @@ export default function SettingsScreen() {
 
         {/* Section: Widget Bağlantıları */}
         <Text style={styles.sectionLabel}>Widget Bağlantıları</Text>
+        <Text style={styles.widgetHint}>
+          Telefon veya tabletin ana ekranındaki randevu widget'ı bu bağlantıyla dükkanınıza bağlanır.
+        </Text>
         <View style={styles.widgetSection}>
           {widgetLinks.map((l) => (
             <View key={l.id} style={styles.widgetLinkCard}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.widgetLinkId}>{l.shortId}</Text>
-                <Text style={styles.widgetLinkMeta}>Son {l.lastUsed}</Text>
+                <Text style={styles.widgetLinkMeta}>{l.lastUsed === 'Yeni' ? 'Yeni eklendi' : `Son kullanım: ${l.lastUsed}`}</Text>
               </View>
               <TouchableOpacity
                 onPress={() => handleDeleteLink(l.id)}
@@ -1264,6 +1267,15 @@ const styles = StyleSheet.create({
   },
 
   /* Widget section */
+  widgetHint: {
+    fontFamily: 'Montserrat-Regular',
+    fontSize: 12,
+    color: colors.slate[400],
+    marginHorizontal: 20,
+    marginTop: 4,
+    marginBottom: 8,
+    lineHeight: 18,
+  },
   widgetSection: {
     marginHorizontal: 20,
     gap: 8,

@@ -268,7 +268,7 @@ export function AvailabilityScreen({
   return (
     <View style={styles.root}>
       <OverlineHeader
-        eyebrow="Berber · Dükkan Paneli"
+        eyebrow={mode === 'owner' ? 'Dükkan Sahibi' : 'Berber'}
         title="Müsaitlik"
         meta={`${duration} dk için`}
         trailing={mode === 'owner' ? <OwnerSettingsAvatar /> : null}
@@ -341,7 +341,14 @@ export function AvailabilityScreen({
           onPress={() => topSlot && handleOpenAppointment(topSlot)}
           style={styles.heroCard}
         >
-          <Text style={styles.heroEyebrow}>Bugün · en yakın boş slot</Text>
+          <Text style={styles.heroEyebrow}>
+            {(() => {
+              const today = new Date(); today.setHours(0,0,0,0);
+              const diff = Math.round((selectedDate.getTime() - today.getTime()) / 86400000);
+              const label = diff === 0 ? 'Bugün' : diff === 1 ? 'Yarın' : selectedDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+              return `${label} · en yakın boş slot`;
+            })()}
+          </Text>
           {isBusy ? (
             <ActivityIndicator color="#ffffff" style={styles.heroLoader} />
           ) : topSlot ? (
