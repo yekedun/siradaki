@@ -881,13 +881,6 @@ export default function SettingsScreen() {
           </Text>
         </View>
 
-        {/* Account info card */}
-        <View style={styles.accountCard}>
-          <Text style={styles.accountOverline}>Dükkan Sahibi</Text>
-          <Text style={styles.accountName}>{shop?.name ?? '—'}</Text>
-          <Text style={styles.accountEmail}>{shop?.email ?? '—'}</Text>
-        </View>
-
         {/* Profile clickable card */}
         <TouchableOpacity
           onPress={() => {
@@ -908,6 +901,7 @@ export default function SettingsScreen() {
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={styles.profileCardName}>{shop?.name ?? '—'}</Text>
             <Text style={styles.profileCardMeta}>{shop?.address?.split(',')[0] ?? '—'} · {shop?.slug ?? ''}</Text>
+            <Text style={styles.profileCardEmail}>{shop?.email ?? '—'}</Text>
           </View>
           <View style={styles.profileEditBadge}>
             <Text style={styles.profileEditText}>Düzenle</Text>
@@ -929,6 +923,7 @@ export default function SettingsScreen() {
           >
             <View style={{ flex: 1 }}>
               <Text style={styles.opRowTitle}>Dükkan Saatleri</Text>
+              <Text style={styles.opRowMeta}>{hoursSubtitle}</Text>
             </View>
             <View style={styles.chevronWrap}>
               <View style={styles.chevronLine1} />
@@ -1021,7 +1016,8 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Profil düzenle */}
+        {/* Hesap */}
+        <Text style={styles.sectionLabel}>Hesap</Text>
         <TouchableOpacity
           onPress={() => setSelfEditOpen(true)}
           style={styles.selfEditBtn}
@@ -1038,13 +1034,14 @@ export default function SettingsScreen() {
         >
           <Text style={styles.signOutBtnText}>Çıkış yap</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handleDeleteAccount}
-          style={[styles.signOutBtn, { marginTop: 12 }]}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.signOutBtnText}>Hesabımı Sil</Text>
-        </TouchableOpacity>
+        <View style={styles.deleteAccountWrap}>
+          <TouchableOpacity
+            onPress={handleDeleteAccount}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.deleteAccountLink}>Hesabımı Sil</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Yasal */}
         <View style={styles.legalSection}>
@@ -1122,13 +1119,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 16,
   },
-  eyebrow: {
-    fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    letterSpacing: 2.5,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-  },
   pageTitle: {
     fontSize: 32,
     fontFamily: 'Montserrat-Bold',
@@ -1142,37 +1132,6 @@ const styles = StyleSheet.create({
     color: colors.slate[500],
     marginTop: 4,
     lineHeight: 19.5,
-  },
-
-  /* Account card */
-  accountCard: {
-    marginHorizontal: 20,
-    backgroundColor: colors.slate[0],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    marginBottom: 8,
-  },
-  accountOverline: {
-    fontSize: 10,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: 1.96,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-  },
-  accountName: {
-    fontSize: 17,
-    fontFamily: 'Montserrat-Bold',
-    color: colors.ink[900],
-    marginTop: 6,
-  },
-  accountEmail: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
-    marginTop: 2,
   },
 
   /* Profile card */
@@ -1214,6 +1173,12 @@ const styles = StyleSheet.create({
     color: colors.slate[500],
     marginTop: 3,
   },
+  profileCardEmail: {
+    fontSize: 11,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.slate[400],
+    marginTop: 2,
+  },
   profileEditBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1253,10 +1218,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: colors.slate[100],
-  },
-  opRowBorderTop: {
-    borderTopWidth: 1,
-    borderTopColor: colors.slate[100],
   },
   opRowLast: {
     borderBottomWidth: 0,
@@ -1344,7 +1305,7 @@ const styles = StyleSheet.create({
   /* Sign out */
   selfEditBtn: {
     marginHorizontal: 20,
-    marginTop: 28,
+    marginTop: 0,
     height: 52,
     borderRadius: 12,
     borderWidth: 1,
@@ -1373,6 +1334,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Montserrat-SemiBold',
     color: colors.coral[600],
+  },
+  deleteAccountWrap: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  deleteAccountLink: {
+    fontSize: 12,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.slate[400],
+    textDecorationLine: 'underline',
   },
 
   /* Footer */
@@ -1550,19 +1522,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'Montserrat-SemiBold',
     color: colors.brand[600],
-  },
-
-  /* Toggle row (main screen) */
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.slate[100],
-  },
-  toggleRowLast: {
-    borderBottomWidth: 0,
   },
 
   /* Toggle row (in sheet) */
