@@ -1,5 +1,3 @@
-const RATE_LIMIT_WINDOW_SEC = 600;
-
 export function getClientIp(req: Request): string {
   return (
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -8,7 +6,11 @@ export function getClientIp(req: Request): string {
   );
 }
 
-export async function isRateLimited(key: string, maxRequests: number): Promise<boolean> {
+export async function isRateLimited(
+  key: string,
+  maxRequests: number,
+  windowSec = 600,
+): Promise<boolean> {
   const url = Deno.env.get("UPSTASH_REDIS_REST_URL");
   const token = Deno.env.get("UPSTASH_REDIS_REST_TOKEN");
   if (!url || !token) {
@@ -28,7 +30,7 @@ export async function isRateLimited(key: string, maxRequests: number): Promise<b
       },
       body: JSON.stringify([
         ["INCR", key],
-        ["EXPIRE", key, String(RATE_LIMIT_WINDOW_SEC), "NX"],
+        ["EXPIRE", key, String(windowSec), "NX"],
       ]),
     });
     if (!res.ok) return false;

@@ -2,52 +2,10 @@ import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createAdminClient } from "../_shared/supabase-admin.ts";
 import { corsOptions, error, json, bodyGuard } from "../_shared/cors.ts";
 import { sendBookingNotifications } from "../_shared/booking-notifications.ts";
+import { isRateLimited, getClientIp } from "../_shared/rate-limit.ts";
 import { isValidPhone } from "@berber/shared/phone-utils";
 
 const RATE_LIMIT_MAX = 5;
-const RATE_LIMIT_WINDOW_SEC = 600;
-
-async function isRateLimited(ip: string): Promise<boolean> {
-  const url = Deno.env.get("UPSTASH_REDIS_REST_URL");
-  const token = Deno.env.get("UPSTASH_REDIS_REST_TOKEN");
-  if (!url || !token) {
-    if (Deno.env.get("ENVIRONMENT") !== "development") {
-      throw new Error("UPSTASH_REDIS_REST_URL / TOKEN not set in production");
-    }
-    console.warn("[widget-book] Upstash not configured — IP rate limiting is disabled (dev only)");
-    return false;
-  }
-
-  const key = `rl:book:${ip}`;
-  try {
-    const res = await fetch(`${url}/pipeline`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify([
-        ["INCR", key],
-        ["EXPIRE", key, String(RATE_LIMIT_WINDOW_SEC), "NX"],
-      ]),
-    });
-    if (!res.ok) return false;
-    const data = await res.json();
-    const count: unknown = data?.[0]?.result;
-    return typeof count === "number" && count > RATE_LIMIT_MAX;
-  } catch (err) {
-    console.error("Upstash rate limit check failed:", err);
-    return false;
-  }
-}
-
-function getClientIp(req: Request): string {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    req.headers.get("x-real-ip") ??
-    "unknown"
-  );
-}
 
 interface BookAppointmentRequest {
   shop_slug: string;
@@ -85,7 +43,7 @@ serve(async (req) => {
   const ip = getClientIp(req);
   let rateLimited: boolean;
   try {
-    rateLimited = await isRateLimited(ip);
+    rateLimited = await isRateLimited(`rl:book:${ip}`, RATE_LIMIT_MAX);
   } catch (e) {
     console.error("[widget-book] Rate limit misconfigured:", e);
     return error("Servis geçici olarak kullanılamıyor.", 503);

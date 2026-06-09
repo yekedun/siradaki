@@ -1,5 +1,15 @@
 import { createAdminClient } from "./supabase-admin.ts";
 
+type StaffJoin = {
+  push_token: string | null;
+  shop_id: string | null;
+  user_id: string | null;
+  notification_prefs: Record<string, boolean> | null;
+};
+type ServiceJoin = { name: string | null };
+type ShopRow = { owner_user_id: string | null };
+type OwnerStaffRow = { push_token: string | null; notification_prefs: Record<string, boolean> | null };
+
 /**
  * Yeni randevu olusunca atanan personel + dukkan sahibine Expo push gonderir.
  * Hem app-book-appointment (mobil musteri) hem widget-book-appointment (web widget)
@@ -25,8 +35,8 @@ export async function sendBookingNotifications(
 
   if (!appt) return;
 
-  const staffMember = appt.staff as any;
-  const service = appt.services as any;
+  const staffMember = appt.staff as StaffJoin | null;
+  const service = appt.services as ServiceJoin | null;
   const shopId: string | null = staffMember?.shop_id ?? null;
 
   const timeStr = new Date(appt.starts_at).toLocaleTimeString("tr-TR", {
@@ -46,7 +56,7 @@ export async function sendBookingNotifications(
       .select("owner_user_id")
       .eq("id", shopId)
       .maybeSingle();
-    ownerUserId = (shop as any)?.owner_user_id ?? null;
+    ownerUserId = (shop as ShopRow | null)?.owner_user_id ?? null;
   }
 
   const staffIsOwner = ownerUserId !== null && staffMember?.user_id === ownerUserId;
@@ -70,7 +80,7 @@ export async function sendBookingNotifications(
       .eq("user_id", ownerUserId)
       .maybeSingle();
 
-    const ownerPrefs = (ownerStaff as any)?.notification_prefs ?? {};
+    const ownerPrefs = (ownerStaff as OwnerStaffRow | null)?.notification_prefs ?? {};
     if (
       ownerStaff?.push_token &&
       ownerStaff.push_token !== staffMember?.push_token &&
@@ -120,7 +130,7 @@ export async function sendCancellationNotifications(
     .maybeSingle();
 
   if (!appt) return;
-  const staffMember = appt.staff as any;
+  const staffMember = appt.staff as StaffJoin | null;
   const shopId: string | null = staffMember?.shop_id ?? null;
 
   const timeStr = new Date(appt.starts_at).toLocaleTimeString("tr-TR", {
@@ -136,7 +146,7 @@ export async function sendCancellationNotifications(
       .select("owner_user_id")
       .eq("id", shopId)
       .maybeSingle();
-    ownerUserId = (shop as any)?.owner_user_id ?? null;
+    ownerUserId = (shop as ShopRow | null)?.owner_user_id ?? null;
   }
 
   const staffIsOwner = ownerUserId !== null && staffMember?.user_id === ownerUserId;
@@ -158,7 +168,7 @@ export async function sendCancellationNotifications(
       .eq("shop_id", shopId)
       .eq("user_id", ownerUserId)
       .maybeSingle();
-    const ownerPrefs = (ownerStaff as any)?.notification_prefs ?? {};
+    const ownerPrefs = (ownerStaff as OwnerStaffRow | null)?.notification_prefs ?? {};
     if (
       ownerStaff?.push_token &&
       ownerStaff.push_token !== staffMember?.push_token &&

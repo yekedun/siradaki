@@ -101,7 +101,8 @@ serve(async (req) => {
   // 1) Bugun acilis - 15dk slot'u currentSlotMin'e esit olan shop'lari sec.
   const { data: shops, error: shopsErr } = await supabase
     .from("shops")
-    .select("id, working_hours");
+    .select("id, working_hours")
+    .eq("status", "active");
   if (shopsErr) {
     console.error("[daily-summary] shops query failed:", shopsErr);
     return error("Sorgu hatasi", 500);

@@ -3,7 +3,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createAdminClient } from "../_shared/supabase-admin.ts";
 import { corsOptions, error, json, bodyGuard } from "../_shared/cors.ts";
 import { sendBookingNotifications } from "../_shared/booking-notifications.ts";
+import { isRateLimited } from "../_shared/rate-limit.ts";
 import { isValidPhone } from "@berber/shared/phone-utils";
+
+const RATE_LIMIT_MAX = 10;
 
 interface BookRequest {
   shop_slug: string;
@@ -53,6 +56,20 @@ serve(async (req) => {
     error: authErr,
   } = await userClient.auth.getUser();
   if (authErr || !user) return error("Geçersiz oturum", 401);
+
+  let rateLimited: boolean;
+  try {
+    rateLimited = await isRateLimited(`rl:app-book:${user.id}`, RATE_LIMIT_MAX);
+  } catch (e) {
+    console.error("[app-book] Rate limit misconfigured:", e);
+    return error("Servis geçici olarak kullanılamıyor.", 503);
+  }
+  if (rateLimited) {
+    return error("Çok fazla istek. 10 dakika sonra tekrar deneyin.", 429, {
+      code: "RATE_LIMITED",
+      retry_after: 600,
+    });
+  }
 
   let body: BookRequest;
   try {

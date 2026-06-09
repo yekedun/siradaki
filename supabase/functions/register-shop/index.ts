@@ -2,7 +2,10 @@ import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { createAdminClient } from "../_shared/supabase-admin.ts";
 import { corsOptions, error, json, bodyGuard } from "../_shared/cors.ts";
+import { isRateLimited, getClientIp } from "../_shared/rate-limit.ts";
 import { isValidPhone } from "@berber/shared/phone-utils";
+
+const REGISTER_RATE_LIMIT_MAX = 3;
 
 const MAX_SHOP_NAME_LENGTH = 120;
 
@@ -29,6 +32,21 @@ serve(async (req) => {
 
   const guard = bodyGuard(req);
   if (guard) return guard;
+
+  const ip = getClientIp(req);
+  let rateLimited: boolean;
+  try {
+    rateLimited = await isRateLimited(`rl:register-shop:${ip}`, REGISTER_RATE_LIMIT_MAX);
+  } catch (e) {
+    console.error("[register-shop] Rate limit misconfigured:", e);
+    return error("Servis geçici olarak kullanılamıyor.", 503);
+  }
+  if (rateLimited) {
+    return error("Çok fazla istek. 10 dakika sonra tekrar deneyin.", 429, {
+      code: "RATE_LIMITED",
+      retry_after: 600,
+    });
+  }
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) return error("Authorization header eksik", 401);

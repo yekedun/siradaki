@@ -1,51 +1,10 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import { createAdminClient } from "../_shared/supabase-admin.ts";
 import { corsOptions, error, json, bodyGuard } from "../_shared/cors.ts";
+import { isRateLimited, getClientIp } from "../_shared/rate-limit.ts";
 
 const RL_MAX = 10;
 const RL_WINDOW_SEC = 60;
-
-async function isRateLimited(ip: string): Promise<boolean> {
-  const url = Deno.env.get("UPSTASH_REDIS_REST_URL");
-  const token = Deno.env.get("UPSTASH_REDIS_REST_TOKEN");
-  if (!url || !token) {
-    if (Deno.env.get("ENVIRONMENT") !== "development") {
-      throw new Error("UPSTASH_REDIS_REST_URL / TOKEN not set in production");
-    }
-    console.warn("[open-invite] Upstash not configured — IP rate limiting is disabled (dev only)");
-    return false;
-  }
-
-  const key = `rl:invite:${ip}`;
-  try {
-    const res = await fetch(`${url}/pipeline`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify([
-        ["INCR", key],
-        ["EXPIRE", key, String(RL_WINDOW_SEC), "NX"],
-      ]),
-    });
-    if (!res.ok) return false;
-    const data = await res.json();
-    const count: unknown = data?.[0]?.result;
-    return typeof count === "number" && count > RL_MAX;
-  } catch (err) {
-    console.error("[open-invite] Upstash rate limit check failed:", err);
-    return false;
-  }
-}
-
-function getClientIp(req: Request): string {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    req.headers.get("x-real-ip") ??
-    "unknown"
-  );
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return corsOptions(req);
@@ -57,7 +16,7 @@ serve(async (req) => {
   const ip = getClientIp(req);
   let rateLimited: boolean;
   try {
-    rateLimited = await isRateLimited(ip);
+    rateLimited = await isRateLimited(`rl:invite:${ip}`, RL_MAX, RL_WINDOW_SEC);
   } catch (e) {
     console.error("[open-invite] Rate limit misconfigured:", e);
     return error("Servis geçici olarak kullanılamıyor.", 503, {}, req);

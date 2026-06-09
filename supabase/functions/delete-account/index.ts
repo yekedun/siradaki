@@ -303,10 +303,7 @@ serve(async (req) => {
 
     return json({ success: true });
   } catch (err) {
-    console.error("[delete-account] account deletion failed:", err);
-    return error("Hesap silinemedi", 500, {
-      step: currentStep,
-      detail: err instanceof Error ? err.message : String(err),
-    });
+    console.error(`[delete-account] account deletion failed at step=${currentStep}:`, err);
+    return error("Hesap silinemedi", 500);
   }
 });
