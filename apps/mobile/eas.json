@@ -24,7 +24,6 @@
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxrb3ZlaHR1amFyZndjdnRhaG9xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MjI1MzgsImV4cCI6MjA5NTI5ODUzOH0.1JnG8b3_1J82ze95TRNqlKxrrI11FlOCqlzy7_DjAOo",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "434882013340-mo12af45h1nebfuppafpndorblv93pge.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "434882013340-odqk93o87gvag3j4u2ldbk5br0m34q0k.apps.googleusercontent.com",
-        "EXPO_PUBLIC_POSTHOG_API_KEY": "",
         "EXPO_PUBLIC_POSTHOG_HOST": "https://eu.posthog.com"
       }
     },
@@ -43,7 +42,6 @@
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxrb3ZlaHR1amFyZndjdnRhaG9xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MjI1MzgsImV4cCI6MjA5NTI5ODUzOH0.1JnG8b3_1J82ze95TRNqlKxrrI11FlOCqlzy7_DjAOo",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "434882013340-mo12af45h1nebfuppafpndorblv93pge.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "434882013340-odqk93o87gvag3j4u2ldbk5br0m34q0k.apps.googleusercontent.com",
-        "EXPO_PUBLIC_POSTHOG_API_KEY": "",
         "EXPO_PUBLIC_POSTHOG_HOST": "https://eu.posthog.com"
       }
     }
