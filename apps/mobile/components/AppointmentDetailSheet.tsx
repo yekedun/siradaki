@@ -54,6 +54,7 @@ interface AppointmentDetailSheetProps {
   onEdit: (id: string) => void;
   onCancel: (id: string) => void;
   onComplete: (id: string) => void;
+  showEdit?: boolean;
 }
 
 export function AppointmentDetailSheet({
@@ -63,6 +64,7 @@ export function AppointmentDetailSheet({
   onEdit,
   onCancel,
   onComplete,
+  showEdit = true,
 }: AppointmentDetailSheetProps) {
   const [busy, setBusy] = useState(false);
   if (!appointment) return null;
@@ -184,24 +186,22 @@ export function AppointmentDetailSheet({
           size md: height 44 */}
       <View style={styles.actionsRow}>
         {[
-          { label: 'Ara',     onPress: handleCall,  disabled: !hasPhone },
-          { label: 'Mesaj',   onPress: handleSMS,   disabled: !hasPhone },
-          {
+          ...(hasPhone ? [
+            { label: 'Ara',   onPress: handleCall },
+            { label: 'Mesaj', onPress: handleSMS  },
+          ] : []),
+          ...(showEdit ? [{
             label: 'Düzenle',
             onPress: () => { onClose(); onEdit(appointment.id); },
-            disabled: false,
-          },
+          }] : []),
         ].map(a => (
           <TouchableOpacity
             key={a.label}
             onPress={a.onPress}
-            disabled={a.disabled}
             activeOpacity={0.8}
-            style={[styles.actionBtn, a.disabled && styles.actionDisabled]}
+            style={styles.actionBtn}
           >
-            <Text style={[styles.actionLabel, a.disabled && styles.actionLabelDisabled]}>
-              {a.label}
-            </Text>
+            <Text style={styles.actionLabel}>{a.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -263,17 +263,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionDisabled: {
-    opacity: 0.4,
-  },
   actionLabel: {
     fontFamily: 'Montserrat-SemiBold',
     fontSize: 14,
     color: colors.ink[900],
     letterSpacing: 14 * -0.005,
-  },
-  actionLabelDisabled: {
-    color: colors.slate[400],
   },
 
   /* Footer button row: flex row, gap 10
