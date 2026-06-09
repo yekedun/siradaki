@@ -452,6 +452,19 @@ interface HoursEditorSheetProps {
   initialSchedule?: ScheduleDay[];
 }
 
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const BREAK_RE = /^([01]\d|2[0-3]):[0-5]\d–([01]\d|2[0-3]):[0-5]\d$/;
+
+function validateSchedule(schedule: ScheduleDay[]): string | null {
+  for (const d of schedule) {
+    if (!d.open) continue;
+    if (!TIME_RE.test(d.start)) return `${d.label}: Açılış saati geçersiz — HH:MM formatında gir`;
+    if (!TIME_RE.test(d.end))   return `${d.label}: Kapanış saati geçersiz — HH:MM formatında gir`;
+    if (d.brk && !BREAK_RE.test(d.brk)) return `${d.label}: Mola formatı geçersiz — HH:MM–HH:MM formatında gir`;
+  }
+  return null;
+}
+
 function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSaved, initialSchedule }: HoursEditorSheetProps) {
   const [schedule, setSchedule] = useState<ScheduleDay[]>(initialSchedule ?? INIT_SCHEDULE);
   const [sel, setSel] = useState(0);
@@ -611,6 +624,11 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
             {/* Save */}
             <TouchableOpacity
               onPress={async () => {
+                const validationError = validateSchedule(schedule);
+                if (validationError) {
+                  Alert.alert('Geçersiz Saat', validationError);
+                  return;
+                }
                 if (shopId) {
                   const wh = shopHoursScheduleToWorkingHours(schedule);
                   // WorkingHours is JSON-compatible; cast required because the type lacks an index signature
@@ -631,6 +649,7 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
                 }
                 onSaved?.(schedule);
                 onClose();
+                Alert.alert('Kaydedildi', 'Çalışma saatleri güncellendi.');
               }}
               style={styles.primaryBtn}
               activeOpacity={0.8}
@@ -1719,9 +1738,9 @@ const styles = StyleSheet.create({
     borderColor: colors.slate[200],
   },
   dayTabText: {
-    fontSize: 9,
+    fontSize: 11,
     fontFamily: 'Montserrat-Bold',
-    letterSpacing: 1.0,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   dayTabTextSel: {
