@@ -22,6 +22,7 @@ export default function InviteScreen() {
   }, [token]);
 
   async function validateToken() {
+    setState('checking');
     if (!token) {
       setState('error');
       setMessage('Davet linki geçersiz.');
@@ -97,7 +98,7 @@ export default function InviteScreen() {
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
     if (exchangeError) {
       setState('error');
-      setMessage(exchangeError.message);
+      setMessage('Google girişi tamamlanamadı. Tekrar deneyin.');
       return;
     }
 
@@ -145,9 +146,14 @@ export default function InviteScreen() {
   if (state === 'error') {
     return (
       <View style={styles.center}>
-        <Text style={styles.icon}>❌</Text>
-        <Text style={styles.title}>Geçersiz Davet</Text>
+        <View style={[styles.mark, { backgroundColor: colors.coral[600] }]}>
+          <Text style={styles.markLetter}>!</Text>
+        </View>
+        <Text style={styles.title}>Davet Başarısız</Text>
         <Text style={styles.sub}>{message}</Text>
+        <Button variant="secondary" size="md" full onPress={validateToken}>
+          Tekrar Dene
+        </Button>
       </View>
     );
   }
@@ -198,7 +204,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Bold',
     color: '#fff',
   },
-  icon: { fontSize: 48 },
   title: {
     fontSize: 24,
     fontFamily: 'Montserrat-Bold',

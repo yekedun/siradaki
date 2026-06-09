@@ -20,7 +20,7 @@ interface BlokCardProps {
  * Callers who need the stripe can swap `backgroundColor` via the `style` prop
  * with a gradient library (e.g. expo-linear-gradient with repeating tiles).
  */
-export function BlokCard({ time, endTime, duration, label = 'BLOKE', style }: BlokCardProps) {
+export function BlokCard({ time, endTime, duration, label = 'BLOK', style }: BlokCardProps) {
   return (
     <View style={[styles.base, style]}>
       {/* Left: time + duration */}

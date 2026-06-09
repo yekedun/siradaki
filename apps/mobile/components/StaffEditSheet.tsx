@@ -53,7 +53,7 @@ export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
         .from('staff')
         .update({ name: name.trim(), is_active: isActive })
         .eq('id', staff.id);
-      if (err) { setError(err.message); return; }
+      if (err) { setError('Personel bilgileri kaydedilemedi. Tekrar dene.'); return; }
 
       const rateBps = commEnabled ? Math.round(parseFloat(commRateStr) * 100) : null;
       const { error: commErr } = await supabase.rpc('update_staff_commission_config', {
@@ -61,7 +61,7 @@ export function StaffEditSheet({ staff, visible, onClose, onSaved }: Props) {
         p_commission_type: commEnabled ? 'percentage' : 'none',
         p_commission_rate_bps: rateBps ?? undefined,
       });
-      if (commErr) { setError(commErr.message); return; }
+      if (commErr) { setError('Komisyon kaydedilemedi. Tekrar dene.'); return; }
       onClose();
       onSaved();
     } finally {

@@ -16,7 +16,7 @@ type Reason = 'break' | 'personal' | 'walkin';
 const REASON_LABELS: Record<Reason, string> = {
   break:    'Mola',
   personal: 'Kişisel',
-  walkin:   'Walk-in',
+  walkin:   'Anlık Müşteri',
 };
 
 const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120];
