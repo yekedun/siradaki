@@ -518,12 +518,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     opacity: 0.85,
   },
-  reasonIconDot: {
-    fontFamily: 'Montserrat-Bold',
-    fontSize: 18,
-    color: colors.ink[900],
-  },
-  reasonIconDotActive: { color: '#ffffff' },
   reasonRight: { flex: 1 },
   /* Title: 15px SemiBold */
   reasonTitle: {
