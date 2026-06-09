@@ -551,6 +551,7 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
                         onChangeText={(v) => update('start', v)}
                         placeholder="09:00"
                         placeholderTextColor={colors.slate[300]}
+                        keyboardType="numbers-and-punctuation"
                         style={styles.timeInput}
                       />
                     </View>
@@ -561,6 +562,7 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
                         onChangeText={(v) => update('end', v)}
                         placeholder="19:00"
                         placeholderTextColor={colors.slate[300]}
+                        keyboardType="numbers-and-punctuation"
                         style={styles.timeInput}
                       />
                     </View>
@@ -573,8 +575,9 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
                   <TextInput
                     value={day.brk}
                     onChangeText={(v) => update('brk', v)}
-                    placeholder="örn. 13:00–14:00"
+                    placeholder="13:00–14:00"
                     placeholderTextColor={colors.slate[300]}
+                    keyboardType="numbers-and-punctuation"
                     style={styles.timeInputFull}
                   />
                   <Text style={styles.molaHint}>
@@ -622,7 +625,7 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
               style={styles.primaryBtn}
               activeOpacity={0.8}
             >
-              <Text style={styles.primaryBtnText}>Tüm Günleri Kaydet</Text>
+              <Text style={styles.primaryBtnText}>Kaydet</Text>
             </TouchableOpacity>
           </ScrollView>
         </Pressable>

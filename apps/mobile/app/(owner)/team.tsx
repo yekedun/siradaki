@@ -285,6 +285,7 @@ function StaffScheduleModal({ open, onClose, staffId, staffName, onSaved }: Staf
                         onChangeText={(v) => updateDay('start', v)}
                         placeholder="09:00"
                         placeholderTextColor={colors.slate[300]}
+                        keyboardType="numbers-and-punctuation"
                         style={styles.timeInput}
                       />
                     </View>
@@ -295,6 +296,7 @@ function StaffScheduleModal({ open, onClose, staffId, staffName, onSaved }: Staf
                         onChangeText={(v) => updateDay('end', v)}
                         placeholder="19:00"
                         placeholderTextColor={colors.slate[300]}
+                        keyboardType="numbers-and-punctuation"
                         style={styles.timeInput}
                       />
                     </View>
@@ -310,8 +312,9 @@ function StaffScheduleModal({ open, onClose, staffId, staffName, onSaved }: Staf
                       <TextInput
                         value={day.breakStart}
                         onChangeText={(v) => updateDay('breakStart', v)}
-                        placeholder="--:--"
+                        placeholder="13:00"
                         placeholderTextColor={colors.slate[300]}
+                        keyboardType="numbers-and-punctuation"
                         style={styles.timeInput}
                       />
                     </View>
@@ -320,8 +323,9 @@ function StaffScheduleModal({ open, onClose, staffId, staffName, onSaved }: Staf
                       <TextInput
                         value={day.breakEnd}
                         onChangeText={(v) => updateDay('breakEnd', v)}
-                        placeholder="--:--"
+                        placeholder="14:00"
                         placeholderTextColor={colors.slate[300]}
+                        keyboardType="numbers-and-punctuation"
                         style={styles.timeInput}
                       />
                     </View>
@@ -341,7 +345,7 @@ function StaffScheduleModal({ open, onClose, staffId, staffName, onSaved }: Staf
               style={styles.primaryBtn}
               activeOpacity={0.8}
             >
-              <Text style={styles.primaryBtnText}>Tüm Günleri Kaydet</Text>
+              <Text style={styles.primaryBtnText}>Kaydet</Text>
             </TouchableOpacity>
           </ScrollView>
         </Pressable>
@@ -438,6 +442,10 @@ function AddStaffSheet({ open, onClose, onAdd }: AddStaffSheetProps) {
             >
               <Text style={styles.primaryBtnText}>Ekle</Text>
             </TouchableOpacity>
+
+            <Text style={styles.addStaffHint}>
+              Personel eklendikten sonra sayfanın altındaki "Berber Davet Et" butonu ile giriş bağlantısı gönder.
+            </Text>
           </ScrollView>
         </Pressable>
       </Pressable>
@@ -656,14 +664,17 @@ export default function TeamScreen() {
   }
 
   function handleToggleStatus(s: StaffMember) {
-    const verb = s.status === 'Aktif' ? 'pasif yap' : 'aktif yap';
+    const goingPassive = s.status === 'Aktif';
+    const message = goingPassive
+      ? `${s.name} pasif yapılırsa yeni randevu alamaz ve ajandada görünmez.`
+      : `${s.name} aktif yapılırsa randevu almaya başlar.`;
     Alert.alert(
-      'Durumu Değiştir',
-      `${s.name} personelini ${verb}?`,
+      goingPassive ? 'Pasife Al' : 'Aktife Al',
+      message,
       [
         { text: 'Vazgeç', style: 'cancel' },
         {
-          text: s.status === 'Aktif' ? 'Pasif yap' : 'Aktif yap',
+          text: goingPassive ? 'Pasife Al' : 'Aktife Al',
           onPress: async () => {
             const newIsActive = s.status === 'Aktif' ? false : true;
             await supabase.from('staff').update({ is_active: newIsActive }).eq('id', s.id);
@@ -1324,6 +1335,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Montserrat-SemiBold',
     color: '#ffffff',
+  },
+
+  addStaffHint: {
+    fontSize: 12,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.slate[400],
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 18,
+    paddingHorizontal: 8,
   },
 
   /* Commission sheet */

@@ -282,7 +282,7 @@ export default function HesabimScreen() {
               <Text style={styles.notifTitle}>Günlük Özet</Text>
               <Text style={styles.notifMeta}>
                 {dailySummary.enabled
-                  ? 'Açılıştan 15 dakika önce günün özeti.'
+                  ? 'Her sabah ilk randevunuzdan 15 dk önce günün listesi.'
                   : 'Günlük özet bildirimi kapalı.'}
               </Text>
             </View>

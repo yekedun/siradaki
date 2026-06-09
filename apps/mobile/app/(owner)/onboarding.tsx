@@ -290,7 +290,6 @@ function DurPicker3({ value, onChange }: DurPicker3Props) {
 
 interface Step2Props {
   onNext: () => void;
-  onSkip: () => void;
   svcName: string;
   setSvcName: (v: string) => void;
   svcDur: number;
@@ -300,7 +299,7 @@ interface Step2Props {
 }
 
 function Step2({
-  onNext, onSkip,
+  onNext,
   svcName, setSvcName,
   svcDur, setSvcDur,
   svcPrice, setSvcPrice,
@@ -312,12 +311,11 @@ function Step2({
       step={1}
       onNext={onNext}
       nextDisabled={!canNext}
-      onSkip={onSkip}
     >
       <Text style={styles.stepEyebrow}>Adım 2 / 3</Text>
       <Text style={styles.stepH2}>{'İlk hizmetini\nekle'}</Text>
       <Text style={styles.stepSubtitle}>
-        Daha fazlasını sonra ekleyebilirsin.
+        Randevu alabilmek için en az bir hizmet gerekli. Daha fazlasını sonra ekleyebilirsin.
       </Text>
 
       <View style={styles.fieldsCol}>
@@ -639,7 +637,6 @@ export default function OnboardingScreen() {
     return (
       <Step2
         onNext={handleNext2}
-        onSkip={() => setStep(3)}
         svcName={svcName}
         setSvcName={setSvcName}
         svcDur={svcDur}

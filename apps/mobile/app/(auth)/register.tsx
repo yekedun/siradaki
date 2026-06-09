@@ -91,6 +91,7 @@ interface FieldProps {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  onBlur?: () => void;
   placeholder: string;
   secureTextEntry?: boolean;
   keyboardType?: 'default' | 'email-address';
@@ -102,6 +103,7 @@ function Field({
   label,
   value,
   onChange,
+  onBlur,
   placeholder,
   secureTextEntry = false,
   keyboardType = 'default',
@@ -131,7 +133,7 @@ function Field({
         autoCapitalize={keyboardType === 'email-address' ? 'none' : 'words'}
         autoCorrect={false}
         onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onBlur={() => { setFocused(false); onBlur?.(); }}
         style={[f.input, { borderColor }]}
       />
 
@@ -189,18 +191,20 @@ export default function RegisterScreen() {
   const [email,    setEmail]    = useState('');
   const [pass,     setPass]     = useState('');
   const [passConf, setPassConf] = useState('');
-  const [touched,  setTouched]  = useState(false);
+  const [touchedEmail,    setTouchedEmail]    = useState(false);
+  const [touchedPass,     setTouchedPass]     = useState(false);
+  const [touchedPassConf, setTouchedPassConf] = useState(false);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
 
-  /* Validation — shown once user attempts submit */
-  const passError  = touched && pass.length > 0 && pass.length < 8
+  /* Validation — shown per-field on blur, or all on submit */
+  const passError  = touchedPass && pass.length > 0 && pass.length < 8
     ? 'En az 8 karakter gerekli'
     : null;
-  const confError  = touched && passConf.length > 0 && pass !== passConf
+  const confError  = touchedPassConf && passConf.length > 0 && pass !== passConf
     ? 'Şifreler eşleşmiyor'
     : null;
-  const emailError = touched && email.length > 0 && !isValidEmail(email)
+  const emailError = touchedEmail && email.length > 0 && !isValidEmail(email)
     ? 'Geçerli bir e-posta gir'
     : null;
 
@@ -211,7 +215,9 @@ export default function RegisterScreen() {
     pass === passConf;
 
   async function handleSubmit() {
-    setTouched(true);
+    setTouchedEmail(true);
+    setTouchedPass(true);
+    setTouchedPassConf(true);
     if (!canRegister || loading) return;
     setLoading(true);
     setError(null);
@@ -291,6 +297,7 @@ export default function RegisterScreen() {
             label="E-posta"
             value={email}
             onChange={setEmail}
+            onBlur={() => setTouchedEmail(true)}
             placeholder="berber@dukkan.com"
             keyboardType="email-address"
             error={emailError}
@@ -302,6 +309,7 @@ export default function RegisterScreen() {
               label="Şifre"
               value={pass}
               onChange={setPass}
+              onBlur={() => setTouchedPass(true)}
               placeholder="En az 8 karakter"
               secureTextEntry
               error={passError}
@@ -317,6 +325,7 @@ export default function RegisterScreen() {
             label="Şifre Tekrar"
             value={passConf}
             onChange={setPassConf}
+            onBlur={() => setTouchedPassConf(true)}
             placeholder="Şifreni tekrar gir"
             secureTextEntry
             error={confError}

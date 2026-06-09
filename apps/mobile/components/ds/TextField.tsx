@@ -13,6 +13,7 @@ interface TextFieldProps {
   label: string;
   value: string;
   onChangeText?: (text: string) => void;
+  onBlur?: () => void;
   placeholder?: string;
   secureTextEntry?: boolean;
   keyboardType?: KeyboardTypeOptions;
@@ -25,6 +26,7 @@ export function TextField({
   label,
   value,
   onChangeText,
+  onBlur,
   placeholder,
   secureTextEntry,
   keyboardType,
@@ -46,7 +48,7 @@ export function TextField({
         keyboardType={keyboardType}
         editable={editable}
         onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onBlur={() => { setFocused(false); onBlur?.(); }}
         style={[
           styles.input,
           focused && styles.inputFocused,

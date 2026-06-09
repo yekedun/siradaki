@@ -77,9 +77,12 @@ export function AppointmentDetailSheet({
     Linking.openURL(`tel:${appt.customerPhone}`);
   }
 
-  function handleSMS() {
+  function handleWhatsApp() {
     if (!hasPhone) return;
-    Linking.openURL(`sms:${appt.customerPhone}`);
+    const wa = toWAPhone(appt.customerPhone!);
+    Linking.openURL(`https://wa.me/${wa}`).catch(() => {
+      Linking.openURL(`sms:${appt.customerPhone}`);
+    });
   }
 
   async function doCancel(withWhatsApp: boolean) {
@@ -124,18 +127,30 @@ export function AppointmentDetailSheet({
     );
   }
 
-  async function handleComplete() {
-    setBusy(true);
-    const { error } = await supabase.rpc('complete_appointment_with_revenue', {
-      p_appointment_id: appt.id,
-    });
-    setBusy(false);
-    if (error) {
-      Alert.alert('Hata', error.message);
-      return;
-    }
-    onComplete(appt.id);
-    onClose();
+  function handleComplete() {
+    Alert.alert(
+      'Randevuyu Tamamla',
+      `${appt.customerName} için randevuyu tamamlandı olarak işaretlemek istiyor musunuz?`,
+      [
+        { text: 'Vazgeç', style: 'cancel' },
+        {
+          text: 'Tamamlandı',
+          onPress: async () => {
+            setBusy(true);
+            const { error } = await supabase.rpc('complete_appointment_with_revenue', {
+              p_appointment_id: appt.id,
+            });
+            setBusy(false);
+            if (error) {
+              Alert.alert('Hata', 'Randevu tamamlanamadı. Lütfen tekrar deneyin.');
+              return;
+            }
+            onComplete(appt.id);
+            onClose();
+          },
+        },
+      ],
+    );
   }
 
   return (
@@ -187,8 +202,8 @@ export function AppointmentDetailSheet({
       <View style={styles.actionsRow}>
         {[
           ...(hasPhone ? [
-            { label: 'Ara',   onPress: handleCall },
-            { label: 'Mesaj', onPress: handleSMS  },
+            { label: 'Ara',       onPress: handleCall      },
+            { label: 'WhatsApp',  onPress: handleWhatsApp  },
           ] : []),
           ...(showEdit ? [{
             label: 'Düzenle',

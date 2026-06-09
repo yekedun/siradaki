@@ -71,6 +71,7 @@ import { AddAppointmentModal } from '../../components/AddAppointmentModal';
 import { AppointmentDetailSheet, AppointmentDetail } from '../../components/AppointmentDetailSheet';
 import { AddBlockModal } from '../../components/AddBlockModal';
 import { useShop } from '../../lib/ShopContext';
+import { useRouter } from 'expo-router';
 
 
 interface AppItem {
@@ -132,6 +133,7 @@ function getToday(): Date {
 }
 
 export default function AgendaScreen() {
+  const router = useRouter();
   const { shopId, shopSlug, workingHours, services, staffList: barberList, reload } = useShop();
   const shopWorkingHours = workingHours as AppointmentWorkingHours | null;
 
@@ -316,7 +318,7 @@ export default function AgendaScreen() {
   return (
     <View style={styles.screen}>
       {/* Header */}
-      <OverlineHeader title="Ajanda" trailing={<OwnerSettingsAvatar />} />
+      <OverlineHeader eyebrow="Dükkan Sahibi" title="Ajanda" trailing={<OwnerSettingsAvatar />} />
 
       {/* DayPicker — gap:6, padding:'0 16px' */}
       <DayPicker
@@ -334,7 +336,15 @@ export default function AgendaScreen() {
         </View>
       ) : cols.length === 0 ? (
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>Henüz personel veya randevu yok</Text>
+          <Text style={styles.emptyText}>Henüz personel eklenmedi</Text>
+          <Text style={styles.emptySubText}>Randevu alabilmek için önce ekibini tanıt.</Text>
+          <TouchableOpacity
+            style={styles.emptyCtaBtn}
+            onPress={() => router.push('/(owner)/team' as any)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.emptyCtaText}>Ekip Ekle →</Text>
+          </TouchableOpacity>
         </View>
       ) : null}
       <ScrollView
@@ -589,12 +599,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 28,
+    gap: 8,
   },
   emptyText: {
+    fontSize: 15,
+    fontFamily: 'Montserrat-Bold',
+    color: colors.ink[900],
+    textAlign: 'center',
+  },
+  emptySubText: {
     fontSize: 13,
     fontFamily: 'Montserrat-Regular',
-    color: colors.slate[400],
+    color: colors.slate[500],
     textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptyCtaBtn: {
+    height: 44,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: colors.brand[600],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyCtaText: {
+    fontSize: 14,
+    fontFamily: 'Montserrat-SemiBold',
+    color: '#ffffff',
   },
 
   dropZone: {

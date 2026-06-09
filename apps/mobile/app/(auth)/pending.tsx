@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Alert, View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, View, Text, StyleSheet, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { colors } from '../../lib/theme';
@@ -13,6 +13,33 @@ export default function PendingScreen() {
   const { status } = useLocalSearchParams<{ status?: string }>();
   const rejected = status === 'rejected';
   const unknown = status === 'unknown';
+  const [secondsLeft, setSecondsLeft] = useState(POLL_INTERVAL_MS / 1000);
+
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (rejected || unknown) return;
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.08, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1,    duration: 900, useNativeDriver: true }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [rejected, unknown, pulseAnim]);
+
+  useEffect(() => {
+    if (rejected || unknown) return;
+    setSecondsLeft(POLL_INTERVAL_MS / 1000);
+    const tick = setInterval(() => {
+      setSecondsLeft(s => {
+        if (s <= 1) return POLL_INTERVAL_MS / 1000;
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [rejected, unknown]);
 
   // Sadece onay bekleyen durumda otomatik polling
   useEffect(() => {
@@ -53,21 +80,42 @@ export default function PendingScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.slate[0] }}>
       <View style={styles.screen}>
-        <View style={styles.iconWrap}>
-          <Text style={styles.icon}>{rejected ? '!' : '?'}</Text>
-        </View>
+        <Animated.View
+          style={[
+            styles.iconWrap,
+            rejected
+              ? styles.iconWrapDanger
+              : unknown
+              ? styles.iconWrapWarning
+              : styles.iconWrapPending,
+            !rejected && !unknown && { transform: [{ scale: pulseAnim }] },
+          ]}
+        >
+          <Text style={styles.icon}>
+            {rejected ? '✕' : unknown ? '?' : '⏳'}
+          </Text>
+        </Animated.View>
+
         <Text style={styles.title}>
           {rejected ? 'Başvuru Reddedildi' : unknown ? 'Durum Kontrol Edilemedi' : 'Başvurun Alındı'}
         </Text>
+
         <Text style={styles.body}>
           {rejected
             ? 'Dükkan başvurun onaylanmadı. Detay için destek ekibiyle iletişime geçebilirsin.'
             : unknown
               ? 'Hesap durumun şu anda okunamadı. Bağlantını kontrol edip tekrar giriş yap.'
-              : 'Dükkanın inceleme sürecinde. Onaylandıktan sonra bildirim alacaksın. Genellikle 24 saat içinde yanıt verilir.'}
+              : 'Dükkanın inceleme sürecinde. Onaylandıktan sonra bildirim alacaksın. 24 saat içinde yanıt verilir.'}
         </Text>
+
+        {!rejected && !unknown && (
+          <Text style={styles.pollHint}>
+            {secondsLeft} saniye içinde otomatik kontrol ediliyor…
+          </Text>
+        )}
+
         <Button variant="primary" size="md" onPress={handleRefresh}>
-          Durumu Yenile
+          Şimdi Kontrol Et
         </Button>
         <Button variant="secondary" size="md" onPress={handleLogout}>
           Çıkış Yap
@@ -86,15 +134,36 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   iconWrap: {
-    width: 72,
-    height: 72,
+    width: 80,
+    height: 80,
     borderRadius: 999,
-    backgroundColor: colors.slate[100],
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
   },
+  iconWrapPending: {
+    backgroundColor: colors.brand[100],
+    borderWidth: 2,
+    borderColor: colors.brand[100],
+  },
+  iconWrapDanger: {
+    backgroundColor: colors.coral[100],
+    borderWidth: 2,
+    borderColor: colors.coral[100],
+  },
+  iconWrapWarning: {
+    backgroundColor: colors.slate[100],
+    borderWidth: 2,
+    borderColor: colors.slate[200],
+  },
   icon: { fontSize: 32 },
+  pollHint: {
+    fontSize: 12,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.slate[400],
+    textAlign: 'center',
+    marginTop: -4,
+  },
   title: {
     fontSize: 24,
     fontFamily: 'Montserrat-Bold',

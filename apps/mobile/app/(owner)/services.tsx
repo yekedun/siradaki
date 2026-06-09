@@ -439,7 +439,7 @@ export default function ServicesScreen() {
     setAdding(false);
   }
 
-  async function toggleActive(id: string) {
+  async function doToggleActive(id: string) {
     const sv = services.find(s => s.id === id);
     if (!sv) return;
     const { error } = await supabase.from('services').update({ is_active: !sv.active }).eq('id', id);
@@ -448,6 +448,23 @@ export default function ServicesScreen() {
       return;
     }
     setServices((s) => s.map((sv) => sv.id === id ? { ...sv, active: !sv.active } : sv));
+  }
+
+  function toggleActive(id: string) {
+    const sv = services.find(s => s.id === id);
+    if (!sv) return;
+    if (sv.active) {
+      Alert.alert(
+        'Hizmeti Pasife Al',
+        `"${sv.name}" rezervasyona kapatılacak. Müşteriler bu hizmeti göremez.`,
+        [
+          { text: 'Vazgeç', style: 'cancel' },
+          { text: 'Pasife Al', style: 'destructive', onPress: () => doToggleActive(id) },
+        ],
+      );
+    } else {
+      doToggleActive(id);
+    }
   }
 
   return (

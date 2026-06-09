@@ -43,6 +43,7 @@ import { configureGoogleSignIn, signInWithGoogle } from '../../lib/google-auth';
 import { signInWithApple } from '../../lib/apple-auth';
 import { routeForRole } from '../../lib/router-guard';
 import { trackEvent } from '../../lib/analytics';
+import { mapAuthError } from '../../lib/error-messages';
 
 export default function LoginScreen() {
   const [email,    setEmail]    = useState('');
@@ -67,7 +68,7 @@ export default function LoginScreen() {
       });
       if (authError) {
         trackEvent('login_fail', { method: 'email', code: authError.status ?? 'unknown' });
-        setError(authError.message);
+        setError(mapAuthError(authError.message));
         return;
       }
       if (!data.user) return;

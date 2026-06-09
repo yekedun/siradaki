@@ -52,6 +52,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { useRouter } from 'expo-router';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { OverlineHeader } from '../../components/ds/OverlineHeader';
@@ -110,6 +111,7 @@ function Card({ children, padding = 16 }: { children: React.ReactNode; padding?:
 
 /* ── SCREEN ──────────────────────────────────────────────────────── */
 export default function BlockScreen() {
+  const router = useRouter();
   const [dur, setDur] = useState<number | 'custom'>(30);
   const [allDay, setAllDay] = useState(false);
   const [customInput, setCustomInput] = useState('');
@@ -182,6 +184,15 @@ export default function BlockScreen() {
               Müşteri randevu ekranında {startTime}–{endTime} arası kapalı görünecek.
             </Text>
           </View>
+
+          {/* Ajandaya Dön */}
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => router.replace('/(app)/' as any)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.primaryBtnText}>Ajandaya Dön</Text>
+          </TouchableOpacity>
 
           {/* Button variant="secondary" size="lg" full "Yeni Blok Ekle" */}
           <TouchableOpacity

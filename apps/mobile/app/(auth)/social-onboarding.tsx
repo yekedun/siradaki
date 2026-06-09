@@ -14,10 +14,15 @@ import { isValidPhone } from '../../lib/validation';
 const FN_BASE = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1`;
 
 export default function SocialOnboardingScreen() {
-  const [shopName, setShopName] = useState('');
-  const [phone,    setPhone]    = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState<string | null>(null);
+  const [shopName,      setShopName]      = useState('');
+  const [phone,         setPhone]         = useState('');
+  const [phoneTouched,  setPhoneTouched]  = useState(false);
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState<string | null>(null);
+
+  const phoneError = phoneTouched && phone.length > 0 && !isValidPhone(phone)
+    ? 'Geçerli bir telefon numarası gir (05XX XXX XX XX)'
+    : null;
 
   const canSubmit = shopName.trim().length >= 2 && isValidPhone(phone);
 
@@ -64,7 +69,9 @@ export default function SocialOnboardingScreen() {
           <TextField label="Dükkan Adı" value={shopName} onChangeText={setShopName}
             placeholder="örn. Neco Kuaför" />
           <TextField label="Telefon Numarası" value={phone} onChangeText={setPhone}
-            placeholder="05XX XXX XX XX" keyboardType="phone-pad" />
+            placeholder="05XX XXX XX XX" keyboardType="phone-pad"
+            onBlur={() => setPhoneTouched(true)}
+            error={phoneError} />
         </View>
         <View style={{ flex: 1, minHeight: 24 }} />
         <View style={styles.cta}>

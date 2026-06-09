@@ -102,7 +102,7 @@ function InlineDayPicker({
   onSelect: (idx: number) => void;
 }) {
   const today = new Date();
-  const days = Array.from({ length: 7 }, (_, i) => {
+  const days = Array.from({ length: 14 }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
     return d;
@@ -199,7 +199,7 @@ export function AddAppointmentModal({
   /* Build date label for ÖZET card */
   const days = useMemo(() => {
     const today = new Date();
-    return Array.from({ length: 7 }, (_, i) => {
+    return Array.from({ length: 14 }, (_, i) => {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       return d;
@@ -470,6 +470,11 @@ export function AddAppointmentModal({
           {/* Time slot grid: 4 cols, gap 6
               Each: height 38, borderRadius 8, sel=ink-900 bg, unsel=slate-0
               13px SemiBold tabular-nums */}
+          {visibleTimeSlots.length === 0 && (
+            <Text style={styles.emptyHint}>
+              Bu tarih için uygun saat bulunamadı. Çalışma saatleri ayarlanmamış olabilir — Ayarlar → Dükkan Saatleri bölümünü kontrol et.
+            </Text>
+          )}
           <View style={styles.timeGrid}>
             {visibleTimeSlots.map(t => {
               const sel = slot === t;

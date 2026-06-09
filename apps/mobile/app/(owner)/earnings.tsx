@@ -195,7 +195,10 @@ export default function EarningsScreen() {
       <View style={styles.staffSection}>
         {staffDist.length === 0 && (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>Henüz veri yok</Text>
+            <Text style={styles.emptyText}>Bu dönem için tamamlanan randevu yok</Text>
+            <Text style={styles.emptyHint}>
+              Kazanç raporu yalnızca "Tamamlandı" işaretlenen randevuları sayar.
+            </Text>
           </View>
         )}
         {staffDist.map((p, i) => {
@@ -391,8 +394,16 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 13,
+    fontFamily: 'Montserrat-SemiBold',
+    color: colors.slate[500],
+  },
+  emptyHint: {
+    fontSize: 12,
     fontFamily: 'Montserrat-Regular',
     color: colors.slate[400],
+    textAlign: 'center',
+    marginTop: 4,
+    paddingHorizontal: 16,
   },
   staffCard: {
     backgroundColor: colors.slate[0],

@@ -434,6 +434,7 @@ export default function RandevularScreen() {
     <SafeAreaView style={styles.safe}>
       {/* OverlineHeader */}
       <View style={styles.header}>
+        <Text style={styles.eyebrow}>Berber</Text>
         <Text style={styles.title}>Randevular</Text>
         <Text style={styles.meta}>{formatMetaDate(selectedDate)}</Text>
       </View>
