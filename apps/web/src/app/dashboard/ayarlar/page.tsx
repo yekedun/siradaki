@@ -68,7 +68,7 @@ export default function AyarlarPage() {
         name,
         display_name: name,
         address,
-        working_hours: wh as unknown as import('@berber/db').Json,
+        working_hours: wh ?? undefined,
       });
       if (error) {
         setError(shopSaveErrorMessage(error.message));

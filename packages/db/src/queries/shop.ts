@@ -3,6 +3,10 @@ import type { Database, Json } from '../database.types';
 
 type Client = SupabaseClient<Database>;
 
+// WorkingHours shape — mirrors @berber/shared to avoid cross-package dep in @berber/db
+type WorkingDayHours = { open: string | null; close: string | null; enabled: boolean };
+type WorkingHours = Record<'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat', WorkingDayHours>;
+
 export async function getShopByOwner(client: Client, userId: string) {
   return client
     .from('shops')
@@ -18,13 +22,18 @@ export async function updateShop(
     name?: string;
     display_name?: string;
     address?: string;
-    working_hours?: Json;
+    working_hours?: WorkingHours;
     timezone?: string;
   },
 ) {
+  const { working_hours, ...rest } = patch;
   return client
     .from('shops')
-    .update({ ...patch, updated_at: new Date().toISOString() })
+    .update({
+      ...rest,
+      ...(working_hours !== undefined ? { working_hours: working_hours as unknown as Json } : {}),
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', shopId)
     .select('id, slug, name, display_name, address, working_hours, status')
     .single();

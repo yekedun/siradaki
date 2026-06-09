@@ -7,5 +7,5 @@ export const DEFAULT_WORKING_HOURS: WorkingHours = {
   thu: { open: '09:00', close: '19:00', enabled: true },
   fri: { open: '09:00', close: '19:00', enabled: true },
   sat: { open: '10:00', close: '17:00', enabled: true },
-  sun: { open: '09:00', close: '19:00', enabled: false },
+  sun: { open: null, close: null, enabled: false },
 };
