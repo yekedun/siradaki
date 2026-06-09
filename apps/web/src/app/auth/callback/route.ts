@@ -3,8 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
-  const code     = searchParams.get('code');
-  const redirect = searchParams.get('redirect') ?? '/dashboard';
+  const code         = searchParams.get('code');
+  const rawRedirect  = searchParams.get('redirect') ?? '/dashboard';
+  // Guard against open-redirect: must be a relative path, no protocol-relative (//) or credential (@)
+  const redirect = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') && !rawRedirect.includes('@')
+    ? rawRedirect
+    : '/dashboard';
 
   if (code) {
     const supabase = await createClient();
