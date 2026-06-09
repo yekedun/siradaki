@@ -34,14 +34,16 @@ export function StaffSelfEditModal({ visible, onClose, onSaved }: StaffSelfEditM
   const [name,    setName]    = useState('');
   const [phone,   setPhone]   = useState('');
   const [bio,     setBio]     = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState<string | null>(null);
+  const [success,   setSuccess]   = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!visible) return;
     setSuccess(false);
     setError(null);
+    setLoadError(null);
 
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -51,12 +53,14 @@ export function StaffSelfEditModal({ visible, onClose, onSaved }: StaffSelfEditM
         .select('id, name, phone, bio')
         .eq('user_id', user.id)
         .maybeSingle();
-      if (data) {
-        setStaffId(data.id);
-        setName(data.name ?? '');
-        setPhone(data.phone ?? '');
-        setBio(data.bio ?? '');
+      if (!data) {
+        setLoadError('Personel profili bulunamadı. Destek ekibiyle iletişime geçin.');
+        return;
       }
+      setStaffId(data.id);
+      setName(data.name ?? '');
+      setPhone(data.phone ?? '');
+      setBio(data.bio ?? '');
     }
 
     load();
@@ -106,6 +110,11 @@ export function StaffSelfEditModal({ visible, onClose, onSaved }: StaffSelfEditM
             <Text style={styles.successTitle}>Kaydedildi</Text>
             <Text style={styles.successSub}>Profil bilgilerin güncellendi.</Text>
             <Button variant="primary" size="md" full onPress={onClose}>Tamam</Button>
+          </View>
+        ) : loadError ? (
+          <View style={styles.loadErrorWrap}>
+            <Text style={styles.errorText}>{loadError}</Text>
+            <Button variant="secondary" size="md" onPress={onClose}>Kapat</Button>
           </View>
         ) : (
           <ScrollView style={{ flex: 1 }} keyboardShouldPersistTaps="handled">
@@ -226,14 +235,21 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingHorizontal: 20,
   },
+  loadErrorWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+    paddingHorizontal: 20,
+  },
   successIcon: {
     width: 56, height: 56, borderRadius: 999,
-    backgroundColor: colors.brand[100],
+    backgroundColor: colors.mint[100],
     alignItems: 'center', justifyContent: 'center',
   },
   successCheck: {
     fontSize: 24,
-    color: colors.brand[700],
+    color: colors.mint[600],
     fontFamily: 'Montserrat-Bold',
   },
   successTitle: {
