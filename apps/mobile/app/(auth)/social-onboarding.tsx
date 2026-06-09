@@ -13,7 +13,7 @@ import { isValidPhone } from '../../lib/validation';
 
 const FN_BASE = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1`;
 
-export default function GoogleOnboardingScreen() {
+export default function SocialOnboardingScreen() {
   const [shopName, setShopName] = useState('');
   const [phone,    setPhone]    = useState('');
   const [loading,  setLoading]  = useState(false);

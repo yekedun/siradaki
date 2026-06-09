@@ -16,7 +16,7 @@ export function routeForRole(role: UserRole): Href {
   if (role === 'staff') return '/(app)' as Href;
   if (role === 'pending' || role === 'rejected') return pendingPathForRole(role);
   if (role === 'unknown') return '/(auth)/pending?status=unknown' as Href;
-  return '/(auth)/google-onboarding' as Href;
+  return '/(auth)/social-onboarding' as Href;
 }
 
 export function inviteAcceptedRoute(): Href {

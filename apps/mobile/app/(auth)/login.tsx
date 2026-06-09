@@ -31,6 +31,7 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { colors } from '../../lib/theme';
@@ -39,6 +40,7 @@ import { TextField } from '../../components/ds/TextField';
 import { supabase, determineUserRole } from '../../lib/supabase';
 import { registerForPushNotifications } from '../../lib/notifications';
 import { configureGoogleSignIn, signInWithGoogle } from '../../lib/google-auth';
+import { signInWithApple } from '../../lib/apple-auth';
 import { routeForRole } from '../../lib/router-guard';
 import { trackEvent } from '../../lib/analytics';
 
@@ -90,6 +92,25 @@ export default function LoginScreen() {
       }
       trackEvent('login_success', { method: 'google' });
       // routing is handled by _layout.tsx onAuthStateChange — no explicit navigate needed
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleAppleLogin() {
+    if (loading) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await signInWithApple();
+      if (result.error && result.error !== 'İptal edildi') {
+        trackEvent('login_fail', { method: 'apple', code: 'apple_auth_error' });
+        setError(result.error);
+        return;
+      }
+      if (!result.error) {
+        trackEvent('login_success', { method: 'apple' });
+      }
     } finally {
       setLoading(false);
     }
@@ -188,6 +209,17 @@ export default function LoginScreen() {
           >
             {loading ? 'Giriş yapılıyor…' : 'Google ile Giriş Yap'}
           </Button>
+
+          {Platform.OS === 'ios' && (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              cornerRadius={12}
+              style={styles.appleButton}
+              onPress={handleAppleLogin}
+            />
+          )}
+
           <View style={styles.footerRow}>
             <Text style={styles.footerText}>Hesabın yok mu? </Text>
             <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
@@ -308,6 +340,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat-Regular',
     color: colors.coral[600],
     textAlign: 'center',
+  },
+
+  /* Apple native button — tam genişlik, Google ile aynı yükseklik */
+  appleButton: {
+    width: '100%',
+    height: 52,
   },
 
   /* Divider — "veya" separator */

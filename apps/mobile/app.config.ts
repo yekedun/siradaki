@@ -61,6 +61,7 @@ const baseConfig = ({ config }: ConfigContext): ExpoConfig => ({
         iosUrlScheme: 'com.googleusercontent.apps.434882013340-odqk93o87gvag3j4u2ldbk5br0m34q0k',
       },
     ],
+    'expo-apple-authentication',
     'expo-contacts',
     [
       'expo-build-properties',
