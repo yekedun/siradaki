@@ -54,6 +54,7 @@ interface AppointmentDetailSheetProps {
   onEdit: (id: string) => void;
   onCancel: (id: string) => void;
   onComplete: (id: string) => void;
+  showEdit?: boolean;
 }
 
 export function AppointmentDetailSheet({
@@ -63,6 +64,7 @@ export function AppointmentDetailSheet({
   onEdit,
   onCancel,
   onComplete,
+  showEdit = true,
 }: AppointmentDetailSheetProps) {
   const [busy, setBusy] = useState(false);
   if (!appointment) return null;
@@ -188,10 +190,10 @@ export function AppointmentDetailSheet({
             { label: 'Ara',   onPress: handleCall },
             { label: 'Mesaj', onPress: handleSMS  },
           ] : []),
-          {
+          ...(showEdit ? [{
             label: 'Düzenle',
             onPress: () => { onClose(); onEdit(appointment.id); },
-          },
+          }] : []),
         ].map(a => (
           <TouchableOpacity
             key={a.label}

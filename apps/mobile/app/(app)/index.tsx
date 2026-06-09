@@ -35,6 +35,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Rect, Path, Circle } from 'react-native-svg';
@@ -246,14 +247,15 @@ function CalendarEmptyIcon() {
  * cta: Button variant=accent size=md "Yeni Randevu"
  */
 function EmptyState({ onCta, dateLabel }: { onCta?: () => void; dateLabel?: string }) {
+  const label = dateLabel ?? 'Bugün';
   return (
     <View style={styles.emptyWrap}>
       <View style={styles.emptyIconBox}>
         <CalendarEmptyIcon />
       </View>
-      <Text style={styles.emptyTitle}>Bugün randevu yok</Text>
+      <Text style={styles.emptyTitle}>{label} randevu yok</Text>
       <Text style={styles.emptyBody}>
-        {dateLabel ?? 'Bugün'} için randevu bulunmuyor. Yeni randevu ekleyebilirsiniz.
+        {label} için randevu bulunmuyor. Yeni randevu ekleyebilirsiniz.
       </Text>
       {onCta && (
         <TouchableOpacity style={styles.emptyCtaBtn} onPress={onCta}>
@@ -286,16 +288,17 @@ export default function RandevularScreen() {
   const [staffShopSlug, setStaffShopSlug] = useState<string | null>(null);
   const [items, setItems] = useState<ListItem[]>([]);
   const [services, setServices] = useState<ServiceOption[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const isEmpty = items.length === 0;
+  const isEmpty = !loading && items.length === 0;
 
   useEffect(() => {
     let isMounted = true;
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!isMounted || !user) return;
+      if (!isMounted || !user) { setLoading(false); return; }
       supabase.from('staff').select('id, shop_id').eq('user_id', user.id).eq('is_active', true).maybeSingle()
         .then(({ data }) => {
-          if (!isMounted || !data) return;
+          if (!isMounted || !data) { setLoading(false); return; }
           setStaffId((data as any).id);
           supabase.from('shops').select('slug').eq('id', (data as any).shop_id).maybeSingle()
             .then(({ data: shopData }) => {
@@ -364,6 +367,7 @@ export default function RandevularScreen() {
     }
 
     setItems(result);
+    setLoading(false);
   }, [staffId, dayIndex]);
 
   useEffect(() => {
@@ -435,9 +439,13 @@ export default function RandevularScreen() {
       </View>
 
       {/* DayPicker */}
-      <DayPicker selected={dayIndex} onSelect={setDayIndex} />
+      <DayPicker selected={dayIndex} onSelect={i => { setLoading(true); setDayIndex(i); }} />
 
-      {isEmpty ? (
+      {loading ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="small" color={colors.brand[600]} />
+        </View>
+      ) : isEmpty ? (
         /* Empty state */
         <EmptyState
           onCta={() => setShowAdd(true)}
@@ -488,7 +496,8 @@ export default function RandevularScreen() {
         visible={showDetail}
         onClose={() => { setShowDetail(false); setSelectedAppt(null); }}
         appointment={selectedAppt}
-        onEdit={() => { /* edit flow: close sheet, open AddAppointmentModal in edit mode — future */ }}
+        onEdit={() => {}}
+        showEdit={false}
         onCancel={() => fetchAppointments()}
         onComplete={() => fetchAppointments()}
       />
@@ -718,6 +727,12 @@ const styles = StyleSheet.create({
     color: colors.slate[700],
   },
 
+  loadingWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   /* EmptyState (screen-27 EmptyRandevular):
      flex 1, alignItems center, justifyContent center, paddingHorizontal 28 */
   emptyWrap: {
@@ -780,7 +795,7 @@ const styles = StyleSheet.create({
      boxShadow: '0 12px 24px -10px rgba(30,58,138,0.4)' */
   fab: {
     position: 'absolute',
-    bottom: 28,
+    bottom: 90,
     right: 20,
     zIndex: 10,
     height: 52,
