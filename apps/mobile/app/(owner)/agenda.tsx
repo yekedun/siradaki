@@ -206,8 +206,14 @@ export default function AgendaScreen() {
   }, [barberList, selectedDate]);
 
   useEffect(() => {
-    if (barberList.length) loadAgenda();
-  }, [selectedDate, barberList, loadAgenda]);
+    if (barberList.length) {
+      loadAgenda();
+    } else if (shopId) {
+      // Shop context yüklendi ama personel yok — infinite spinner'ı önle
+      setCols([]);
+      setLoading(false);
+    }
+  }, [selectedDate, barberList, shopId, loadAgenda]);
 
   useFocusEffect(
     useCallback(() => {
