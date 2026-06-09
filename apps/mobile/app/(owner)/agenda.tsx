@@ -49,6 +49,7 @@ import {
   Alert,
   RefreshControl,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { colors } from '../../lib/theme';
 import { OverlineHeader } from '../../components/ds/OverlineHeader';
@@ -114,11 +115,11 @@ interface EditAppointmentInitialValues {
 
 const INIT_COLS: StaffCol[] = [];
 
-/* ── Empty drop zone ─────────────────────────────────────────── */
+/* ── Column empty state ──────────────────────────────────────── */
 function EmptyDropZone() {
   return (
     <View style={styles.dropZone}>
-      <Text style={styles.dropZoneText}>Bırak</Text>
+      <Text style={styles.dropZoneText}>Randevu yok</Text>
     </View>
   );
 }
@@ -143,6 +144,7 @@ export default function AgendaScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showAddBlock, setShowAddBlock] = useState(false);
   const [editingAppt, setEditingAppt] = useState<EditAppointmentInitialValues | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const isMountedRef = useRef(true);
 
@@ -158,7 +160,7 @@ export default function AgendaScreen() {
 
   const loadAgenda = useCallback(async () => {
     const barbers = barberList;
-    if (!barbers.length) { setCols([]); return; }
+    if (!barbers.length) { setCols([]); setLoading(false); return; }
 
     const dayRange = buildIstanbulAppointmentDayRange(selectedDate);
 
@@ -200,6 +202,7 @@ export default function AgendaScreen() {
 
     if (!isMountedRef.current) return;
     setCols(newCols);
+    setLoading(false);
   }, [barberList, selectedDate]);
 
   useEffect(() => {
@@ -313,12 +316,17 @@ export default function AgendaScreen() {
       <DayPicker
         selected={selectedDate}
         onSelect={d => {
+          setLoading(true);
           setSelectedDate(d);
         }}
       />
 
       {/* Two-column horizontal scroll — flex:1, gap:12, padding:'20px 16px 90px' */}
-      {cols.length === 0 ? (
+      {loading ? (
+        <View style={styles.emptyWrap}>
+          <ActivityIndicator size="small" color={colors.brand[600]} />
+        </View>
+      ) : cols.length === 0 ? (
         <View style={styles.emptyWrap}>
           <Text style={styles.emptyText}>Henüz personel veya randevu yok</Text>
         </View>
@@ -326,7 +334,7 @@ export default function AgendaScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.colScroll}
+        style={[styles.colScroll, loading && { opacity: 0 }]}
         contentContainerStyle={styles.colContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
@@ -583,29 +591,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  /* Empty drop zone (AjandaDrag source):
-     border:'2px dashed brand-600' borderRadius:10 padding:'20px 10px'
-     text center 11px semiBold brand-600, bg rgba(30,58,138,0.03) */
   dropZone: {
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: colors.brand[600],
     borderRadius: 10,
     paddingVertical: 20,
     paddingHorizontal: 10,
     alignItems: 'center',
-    backgroundColor: 'rgba(30,58,138,0.03)',
   },
   dropZoneText: {
-    fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    color: colors.brand[600],
+    fontSize: 12,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.slate[400],
   },
 
   /* FAB group — sağ alt köşe */
   fabGroup: {
     position: 'absolute',
-    bottom: 18,
+    bottom: 90,
     right: 20,
     zIndex: 10,
     alignItems: 'flex-end',
