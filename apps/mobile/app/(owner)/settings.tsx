@@ -203,18 +203,20 @@ interface ProfileEditorSheetProps {
   initialAddress: string;
   initialBio: string;
   initialPhone: string;
+  initialVisible: boolean;
   slug: string;
-  onSaved?: (data: { name: string; address: string; bio: string; phone: string }) => void;
+  onSaved?: (data: { name: string; address: string; bio: string; phone: string; is_listed: boolean }) => void;
 }
 
-function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress, initialBio, initialPhone, slug, onSaved }: ProfileEditorSheetProps) {
-  const [name,    setName]    = useState(initialName);
-  const [address, setAddress] = useState(initialAddress);
-  const [bio,     setBio]     = useState(initialBio);
-  const [phone,   setPhone]   = useState(initialPhone);
-  const [visible, setVisible] = useState(true);
-  const [saved,   setSaved]   = useState(false);
-  const [loading, setLoading] = useState(false);
+function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress, initialBio, initialPhone, initialVisible, slug, onSaved }: ProfileEditorSheetProps) {
+  const [name,      setName]      = useState(initialName);
+  const [address,   setAddress]   = useState(initialAddress);
+  const [bio,       setBio]       = useState(initialBio);
+  const [phone,     setPhone]     = useState(initialPhone);
+  const [visible,   setVisible]   = useState(initialVisible);
+  const [saved,     setSaved]     = useState(false);
+  const [loading,   setLoading]   = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Sync state when initial values change (after shop data loads)
   useEffect(() => {
@@ -223,9 +225,11 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
       setAddress(initialAddress);
       setBio(initialBio);
       setPhone(initialPhone);
+      setVisible(initialVisible);
       setSaved(false);
+      setSaveError(null);
     }
-  }, [open, initialName, initialAddress, initialBio, initialPhone]);
+  }, [open, initialName, initialAddress, initialBio, initialPhone, initialVisible]);
 
   const canSave = name.trim().length >= 2;
 
@@ -243,15 +247,17 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
       return;
     }
     setLoading(true);
+    setSaveError(null);
     try {
-      const { error } = await supabase.from('shops').update({ name: name.trim(), address, bio }).eq('id', shopId);
+      const { error } = await supabase
+        .from('shops')
+        .update({ name: name.trim(), address, bio, phone, is_listed: visible })
+        .eq('id', shopId);
       if (error) throw error;
-      const { error: phoneError } = await supabase.from('shops').update({ phone } as any).eq('id', shopId);
-      if (__DEV__ && phoneError) console.warn('[settings] phone update skipped:', phoneError);
-      onSaved?.({ name: name.trim(), address, bio, phone });
+      onSaved?.({ name: name.trim(), address, bio, phone, is_listed: visible });
       setSaved(true);
     } catch {
-      Alert.alert('Hata', 'Bilgiler kaydedilemedi. Lütfen tekrar deneyin.');
+      setSaveError('Bilgiler kaydedilemedi. Lütfen tekrar deneyin.');
     } finally {
       setLoading(false);
     }
@@ -259,6 +265,7 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
 
   function handleClose() {
     setSaved(false);
+    setSaveError(null);
     onClose();
   }
 
@@ -379,6 +386,7 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
                   placeholderTextColor={colors.slate[300]}
                   multiline
                   numberOfLines={3}
+                  maxLength={200}
                   autoCorrect={false}
                   spellCheck={false}
                   style={[styles.textInput, styles.textArea]}
@@ -403,12 +411,17 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
               <ShareLinkBox slug={slug} />
 
               {/* Kaydet */}
+              {saveError && (
+                <Text style={styles.saveErrorText}>{saveError}</Text>
+              )}
               <TouchableOpacity
                 onPress={canSave ? handleSave : undefined}
                 style={[styles.primaryBtn, !canSave && styles.primaryBtnDisabled]}
                 activeOpacity={canSave ? 0.8 : 1}
               >
-                <Text style={styles.primaryBtnText}>Kaydet</Text>
+                <Text style={styles.primaryBtnText}>
+                  {loading ? 'Kaydediliyor…' : 'Kaydet'}
+                </Text>
               </TouchableOpacity>
             </ScrollView>
           )}
@@ -658,6 +671,7 @@ interface ShopData {
   slug: string;
   email: string;
   commission_enabled: boolean;
+  is_listed: boolean;
 }
 
 interface NotificationPrefs {
@@ -704,7 +718,7 @@ export default function SettingsScreen() {
       if (!user) { if (__DEV__) console.warn('[settings] no user — not logged in'); return; }
       supabase
         .from('shops')
-        .select('id, name, address, bio, slug, commission_enabled, working_hours')
+        .select('id, name, address, bio, slug, commission_enabled, working_hours, is_listed')
         .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
         .maybeSingle()
         .then(({ data, error }) => {
@@ -725,6 +739,7 @@ export default function SettingsScreen() {
             slug: data.slug ?? '',
             email: user.email ?? '',
             commission_enabled: data.commission_enabled ?? false,
+            is_listed: data.is_listed ?? true,
           });
           supabase
             .from('staff')
@@ -1065,6 +1080,7 @@ export default function SettingsScreen() {
         initialAddress={shop?.address ?? ''}
         initialBio={shop?.bio ?? ''}
         initialPhone={shop?.phone ?? ''}
+        initialVisible={shop?.is_listed ?? true}
         slug={shop?.slug ?? ''}
         onSaved={(next) => setShop((prev) => prev ? { ...prev, ...next } : prev)}
       />
@@ -1662,6 +1678,14 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 80,
     textAlignVertical: 'top',
+  },
+
+  /* Save error */
+  saveErrorText: {
+    fontSize: 13,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.coral[600],
+    textAlign: 'center',
   },
 
   /* Primary button */
