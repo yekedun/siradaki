@@ -53,6 +53,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { useRouter } from 'expo-router';
+import { UserCheck, Coffee, User } from 'lucide-react-native';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { OverlineHeader } from '../../components/ds/OverlineHeader';
@@ -88,9 +89,9 @@ const PRESET_DURATIONS = [30, 60, 120];
 
 /* Reason options — exact from BlokScreen source */
 const REASONS = [
-  { id: 'anlik',   title: 'Anlık müşteri', meta: 'Şu anda gelen müşteri için' },
-  { id: 'mola',    title: 'Mola',          meta: 'Kahve / dinlenme arası'     },
-  { id: 'kisisel', title: 'Kişisel',       meta: 'Telefon, evrak vs.'         },
+  { id: 'anlik',   title: 'Anlık müşteri', meta: 'Şu anda gelen müşteri için', Icon: UserCheck },
+  { id: 'mola',    title: 'Mola',          meta: 'Kahve / dinlenme arası',     Icon: Coffee    },
+  { id: 'kisisel', title: 'Kişisel',       meta: 'Telefon, evrak vs.',         Icon: User      },
 ] as const;
 
 /* ── SectionLabel ───────────────────────────────────────────────────
@@ -312,8 +313,7 @@ export default function BlockScreen() {
                 style={[styles.reasonRow, sel ? styles.reasonRowActive : styles.reasonRowInactive]}
               >
                 <View style={styles.reasonIconPlaceholder}>
-                  {/* Icon placeholder — lucide icon name: anlik→user-check, mola→coffee, kisisel→user */}
-                  <Text style={[styles.reasonIconDot, sel && styles.reasonIconDotActive]}>•</Text>
+                  <r.Icon size={18} color={sel ? colors.brand[600] : colors.slate[400]} strokeWidth={2} />
                 </View>
                 <View style={styles.reasonRight}>
                   <Text style={[styles.reasonTitle, sel && styles.reasonTitleActive]}>
