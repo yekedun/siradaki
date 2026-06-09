@@ -7,6 +7,7 @@ import { SlotGrid } from '../../components/SlotGrid';
 import { BookingModal } from '../../components/BookingModal';
 import { shouldShowPersonalLinkBadge } from './booking-flow-state';
 import { toTimeLabel } from './booking-time';
+import { toggleService, computeTotals, buildServiceSummary } from './booking-selection';
 import { trackWebEvent } from '../../lib/analytics';
 
 interface StaffMember { id: string; name: string; phone: string | null; }
@@ -36,7 +37,7 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
   const days = buildDays(14);
   const abortRef = useRef<AbortController | null>(null);
 
-  const [selService, setSelService] = useState<string | null>(services[0]?.id ?? null);
+  const [selServices, setSelServices] = useState<string[]>(services[0] ? [services[0].id] : []);
   const [selStaff,   setSelStaff]   = useState<string | null>(preselectedStaffId ?? null);
   const [selDate,    setSelDate]    = useState<Date>(() => {
     const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Istanbul' }));
@@ -57,14 +58,14 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
     modalStartsAtRef.current = selISO;
     trackWebEvent('web_booking_started', {
       shop_slug: shop.slug,
-      ...(selService ? { service_id: selService } : {}),
-      ...(selStaff   ? { staff_id:   selStaff }   : {}),
+      ...(selServices.length ? { service_ids: selServices.join(',') } : {}),
+      ...(selStaff ? { staff_id: selStaff } : {}),
     });
     setModalOpen(true);
   }
 
   const fetchSlots = useCallback(async () => {
-    if (!selService) return;
+    if (selServices.length === 0) return;
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -72,10 +73,10 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
     setSlotsLoad(true); setSlotsErr(null); setSelSlot(null); setIsClosed(false); setRawSlots([]);
     try {
       const qs = new URLSearchParams({
-        shop_slug:  shop.slug,
-        date:       toDateStr(selDate),
-        service_id: selService,
-        staff_id:   selStaff ?? 'any',
+        shop_slug:   shop.slug,
+        date:        toDateStr(selDate),
+        service_ids: selServices.join(','),
+        staff_id:    selStaff ?? 'any',
       });
       const res = await fetch(`${FN_BASE}/widget-get-availability?${qs}`, { signal: controller.signal });
       if (!res.ok) { setSlotsErr('Müsaitlik bilgisi alınamadı.'); return; }
@@ -88,7 +89,7 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
     } finally {
       setSlotsLoad(false);
     }
-  }, [selService, selDate, selStaff, shop.slug]);
+  }, [selServices, selDate, selStaff, shop.slug]);
 
   useEffect(() => { fetchSlots(); }, [fetchSlots]);
 
@@ -105,11 +106,12 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
   const isAllFull = !isClosed && !slotsLoad && rawSlots.length > 0 && rawSlots.every(s => !s.available);
   const selRaw    = rawSlots.find(s => toTimeLabel(s.starts_at, shop.timezone) === selSlot);
   const selISO    = selRaw?.starts_at ?? '';
-  const svc       = services.find(s => s.id === selService);
+  const totals    = computeTotals(services, selServices);
+  const svcSummary = buildServiceSummary(services, selServices);
   const selectedStaff = staff.find(s => s.id === selStaff) ?? (staff.length === 1 ? staff[0] : null);
   const staffName = selectedStaff?.name;
-  const summary   = svc
-    ? `${svc.name} · ${svc.duration_min} dk · ${toDateStr(selDate).split('-').reverse().join('.')} ${selSlot ?? ''}${staffName ? ' · '+staffName : ''}`
+  const summary   = svcSummary
+    ? `${svcSummary} · ${totals.durationMin} dk · ${toDateStr(selDate).split('-').reverse().join('.')} ${selSlot ?? ''}${staffName ? ' · '+staffName : ''}`
     : '';
 
   const preselectedName = preselectedStaffId ? staff.find(s => s.id === preselectedStaffId)?.name : null;
@@ -146,13 +148,23 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
       {/* Body */}
       <div className="max-w-[520px] mx-auto px-5 pt-7 pb-28">
 
-        {/* 1 — Service */}
+        {/* 1 — Service (multi-select) */}
         <Section label="Hizmet Seç">
           <ServiceSelector
             services={services}
-            selected={selService}
-            onSelect={id => { setSelService(id); setSelSlot(null); }}
+            selected={selServices}
+            onToggle={id => { setSelServices(prev => toggleService(prev, id)); setSelSlot(null); }}
           />
+          {totals.count > 0 && (
+            <div className="flex items-center justify-between mt-3 px-4 py-3 bg-[#0B1220] text-[#F9F9F6]">
+              <span className="text-[11px] font-bold tracking-[0.16em] uppercase">
+                {totals.count} hizmet · {totals.durationMin} dk
+              </span>
+              <span className="text-[18px] font-bold tabular-nums text-[#FF4D1C]">
+                {totals.price}₺
+              </span>
+            </div>
+          )}
         </Section>
 
         {/* 2 — Staff (only if >1 member) */}
@@ -241,7 +253,7 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
               onClick={handleBookingStart}
               className="w-full h-14 rounded-none bg-[#FF4D1C] text-white font-bold text-[15px] tracking-[0.04em] uppercase cursor-pointer border-0 font-sans hover:bg-[#D83E14] transition-colors duration-150"
             >
-              Randevu Al — {selSlot}
+              Randevu Al · {totals.price}₺ — {selSlot}
             </button>
           </div>
         </div>
@@ -256,13 +268,13 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
         shopSlug={shop.slug}
         staffId={selStaff}
         staffPhone={selectedStaff?.phone ?? null}
-        serviceId={selService ?? ''}
+        serviceIds={selServices}
         startsAt={modalStartsAtRef.current || selISO}
         onSuccess={() => {
           trackWebEvent('web_booking_completed', {
             shop_slug: shop.slug,
-            ...(selService ? { service_id: selService } : {}),
-            ...(selStaff   ? { staff_id:   selStaff }   : {}),
+            ...(selServices.length ? { service_ids: selServices.join(',') } : {}),
+            ...(selStaff ? { staff_id: selStaff } : {}),
           });
           fetchSlots();
         }}

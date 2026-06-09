@@ -17,7 +17,7 @@ interface BookingModalProps {
   shopSlug: string;
   staffId: string | null;
   staffPhone?: string | null;
-  serviceId: string;
+  serviceIds: string[];
   startsAt: string;
   onSuccess: () => void;
 }
@@ -243,7 +243,7 @@ function ModalError({ errorType, errorMessage, onClose }: { errorType: ErrorType
 
 export function BookingModal({
   open, onClose, summary,
-  shopId, shopSlug, staffId, staffPhone, serviceId, startsAt, onSuccess,
+  shopId, shopSlug, staffId, staffPhone, serviceIds, startsAt, onSuccess,
 }: BookingModalProps) {
   const [state,          setState]         = useState<ModalState>('form');
   const [errorType,      setErrorType]     = useState<ErrorType>('conflict');
@@ -265,7 +265,7 @@ export function BookingModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           shop_slug:      shopSlug,
-          service_id:     serviceId,
+          service_ids:    serviceIds,
           staff_id:       staffId,
           starts_at:      startsAt,
           customer_name:  name.trim(),
