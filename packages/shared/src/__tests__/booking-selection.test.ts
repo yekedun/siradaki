@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { toggleService, computeTotals, buildServiceSummary, type SelectableService } from './booking-selection';
+import { describe, it, expect } from "vitest";
+import { toggleService, computeTotals, buildServiceSummary, type SelectableService } from "../booking-selection.ts";
 
 const SERVICES: SelectableService[] = [
   { id: 'a', name: 'Saç Kesim', duration_min: 30, price: 200 },

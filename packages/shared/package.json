@@ -10,7 +10,8 @@
     "./constants": "./src/constants.ts",
     "./types": "./src/types.ts",
     "./theme": "./src/theme.ts",
-    "./phone-utils": "./src/phone-utils.ts"
+    "./phone-utils": "./src/phone-utils.ts",
+    "./booking-selection": "./src/booking-selection.ts"
   },
   "peerDependencies": {
     "@supabase/supabase-js": ">=2.0.0",

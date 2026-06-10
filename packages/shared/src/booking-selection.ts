@@ -1,4 +1,4 @@
-// Pure helpers for multi-service selection in the web booking flow.
+// Pure helpers for multi-service selection in booking flows (web + mobile).
 // No React, no IO — unit-testable in isolation.
 
 export interface SelectableService {

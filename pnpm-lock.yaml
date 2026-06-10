@@ -144,6 +144,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@berber/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@supabase/ssr':
         specifier: ^0.10.3
         version: 0.10.3(@supabase/supabase-js@2.107.0)

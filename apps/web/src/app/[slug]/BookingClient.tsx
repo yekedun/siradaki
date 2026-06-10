@@ -7,7 +7,7 @@ import { SlotGrid } from '../../components/SlotGrid';
 import { BookingModal } from '../../components/BookingModal';
 import { shouldShowPersonalLinkBadge } from './booking-flow-state';
 import { toTimeLabel } from './booking-time';
-import { toggleService, computeTotals, buildServiceSummary } from './booking-selection';
+import { toggleService, computeTotals, buildServiceSummary } from '@berber/shared/booking-selection';
 import { trackWebEvent } from '../../lib/analytics';
 
 interface StaffMember { id: string; name: string; phone: string | null; }
