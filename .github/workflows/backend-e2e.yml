@@ -99,7 +99,7 @@ jobs:
 
       - name: Upload edge function logs
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: edge-functions-log
           path: edge-functions.log
