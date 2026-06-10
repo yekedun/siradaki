@@ -172,7 +172,7 @@ describe('availability helpers', () => {
     ).toEqual({
       customerName: '',
       customerPhone: '',
-      serviceId: null,
+      serviceIds: [],
       staffId: 'staff-1',
       date: '2026-06-06',
       time: '09:00',

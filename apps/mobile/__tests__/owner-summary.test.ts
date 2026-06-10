@@ -9,6 +9,8 @@ describe('owner summary revenue RPC shape', () => {
     const rpcEnd = types.indexOf('get_shop_dashboard_stats:', rpcStart);
     const rpcType = types.slice(rpcStart, rpcEnd);
 
-    expect(rpcType).toContain('service_name: string | null');
+    // Asserts the column exists in the RPC return shape; the regenerated types
+    // mark RETURNS TABLE columns non-null, so don't pin nullability here.
+    expect(rpcType).toContain('service_name: string');
   });
 });

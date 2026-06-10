@@ -107,7 +107,7 @@ interface EditAppointmentInitialValues {
   id: string;
   customerName: string;
   customerPhone: string | null;
-  serviceId: string | null;
+  serviceIds: string[];
   staffId: string | null;
   date: string;
   time: string;
@@ -291,7 +291,7 @@ export default function AgendaScreen() {
   async function handleEditAppointment(id: string) {
     const { data, error } = await supabase
       .from('appointments')
-      .select('id, staff_id, service_id, starts_at, customer_name, customer_phone, customer_notes, notes')
+      .select('id, staff_id, service_id, starts_at, customer_name, customer_phone, customer_notes, notes, appointment_services(service_id, sequence_order)')
       .eq('id', id)
       .maybeSingle();
 
@@ -302,11 +302,18 @@ export default function AgendaScreen() {
     }
 
     const start = new Date((data as any).starts_at);
+    const joinRows = ((data as any).appointment_services ?? []) as { service_id: string; sequence_order: number | null }[];
+    const serviceIds = joinRows.length > 0
+      ? joinRows
+          .slice()
+          .sort((a, b) => (a.sequence_order ?? 0) - (b.sequence_order ?? 0))
+          .map((r) => r.service_id)
+      : ((data as any).service_id ? [(data as any).service_id as string] : []);
     setEditingAppt({
       id: (data as any).id,
       customerName: (data as any).customer_name ?? '',
       customerPhone: (data as any).customer_phone ?? null,
-      serviceId: (data as any).service_id ?? null,
+      serviceIds,
       staffId: (data as any).staff_id ?? null,
       date: formatLocalAppointmentDate(start),
       time: formatTime(start),
@@ -468,7 +475,7 @@ export default function AgendaScreen() {
           id: editingAppt.id,
           customerName: editingAppt.customerName,
           customerPhone: editingAppt.customerPhone,
-          serviceId: editingAppt.serviceId,
+          serviceIds: editingAppt.serviceIds,
           staffId: editingAppt.staffId,
           date: editingAppt.date,
           time: editingAppt.time,
@@ -480,14 +487,15 @@ export default function AgendaScreen() {
             return;
           }
           if (editingAppt) {
-            if (!data.staffId || !data.serviceId) {
+            if (!data.staffId || data.serviceIds.length === 0) {
               Alert.alert('Hata', 'Berber ve hizmet seçimi zorunludur.');
               return;
             }
             const { error } = await supabase.rpc('update_appointment_atomic', {
               p_appointment_id: editingAppt.id,
               p_staff_id: data.staffId,
-              p_service_id: data.serviceId,
+              p_service_id: data.serviceIds[0],
+              p_service_ids: data.serviceIds,
               p_starts_at: buildLocalAppointmentTimestamp(data.date, data.time),
               p_customer_name: data.customerName,
               p_customer_phone: data.customerPhone || undefined,
@@ -498,7 +506,7 @@ export default function AgendaScreen() {
               Alert.alert('Hata', error.message || 'Randevu güncellenemedi.');
               return;
             }
-            trackEvent('appointment_edited', { service_id: data.serviceId, staff_id: data.staffId });
+            trackEvent('appointment_edited', { service_ids: data.serviceIds.join(','), staff_id: data.staffId });
             setShowAdd(false);
             setEditingAppt(null);
             loadAgenda();
@@ -507,7 +515,8 @@ export default function AgendaScreen() {
           const { error: fnErr } = await supabase.functions.invoke('app-book-appointment', {
             body: {
               shop_slug: shopSlug,
-              service_id: data.serviceId,
+              service_id: data.serviceIds[0],
+              service_ids: data.serviceIds,
               staff_id: data.staffId,
               starts_at: buildLocalAppointmentTimestamp(data.date, data.time),
               customer_name: data.customerName,
@@ -539,7 +548,7 @@ export default function AgendaScreen() {
             Alert.alert('Hata', msg);
             return;
           }
-          trackEvent('appointment_created', { shop_slug: shopSlug, service_id: data.serviceId, staff_id: data.staffId });
+          trackEvent('appointment_created', { shop_slug: shopSlug, service_ids: data.serviceIds.join(','), staff_id: data.staffId });
           setShowAdd(false);
           loadAgenda();
         }}

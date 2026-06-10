@@ -8,7 +8,7 @@ interface StaffContext {
   shopSlug: string | null;
   staffName: string;
   workingHours: Record<string, unknown> | null;
-  services: Array<{ id: string; label: string; dur: number; price: string }>;
+  services: Array<{ id: string; label: string; dur: number; price: string; priceValue: number }>;
 }
 
 export default function StaffAvailabilityRoute() {
@@ -72,6 +72,7 @@ export default function StaffAvailabilityRoute() {
             label: service.name ?? '',
             dur: service.duration_min ?? 30,
             price: `${Math.round((service.price_cents ?? 0) / 100)}₺`,
+            priceValue: Math.round((service.price_cents ?? 0) / 100),
           })),
         });
         setLoading(false);

@@ -308,7 +308,7 @@ export default function RandevularScreen() {
           supabase.from('services').select('id, name, duration_min, price_cents').eq('shop_id', (data as any).shop_id).eq('is_active', true)
             .then(({ data: svcs }) => {
               if (!isMounted) return;
-              if (svcs) setServices((svcs as any[]).map(s => ({ id: s.id, label: s.name, dur: s.duration_min, price: `${Math.round(s.price_cents/100)}₺` })));
+              if (svcs) setServices((svcs as any[]).map(s => ({ id: s.id, label: s.name, dur: s.duration_min, price: `${Math.round(s.price_cents/100)}₺`, priceValue: Math.round(s.price_cents/100) })));
             });
         });
     });
@@ -516,7 +516,8 @@ export default function RandevularScreen() {
             const { error } = await supabase.functions.invoke('app-book-appointment', {
               body: {
                 shop_slug: staffShopSlug,
-                service_id: data.serviceId,
+                service_id: data.serviceIds[0],
+                service_ids: data.serviceIds,
                 staff_id: data.staffId ?? staffId,
                 starts_at: `${data.date}T${data.time}:00`,
                 customer_name: data.customerName,
