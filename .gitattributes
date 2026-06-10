@@ -1,0 +1,2 @@
+# Shell scripts must keep LF endings — CRLF breaks bash on Windows (e.g. pnpm db:sync)
+*.sh text eol=lf
