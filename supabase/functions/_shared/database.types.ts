@@ -364,6 +364,7 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
+          is_listed: boolean
           name: string | null
           owner_id: string | null
           owner_user_id: string
@@ -382,6 +383,7 @@ export type Database = {
           created_at?: string
           display_name: string
           id?: string
+          is_listed?: boolean
           name?: string | null
           owner_id?: string | null
           owner_user_id: string
@@ -400,6 +402,7 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          is_listed?: boolean
           name?: string | null
           owner_id?: string | null
           owner_user_id?: string
