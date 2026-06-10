@@ -24,17 +24,52 @@ describe('tour step definitions', () => {
     }
   });
 
-  it('modal steps declare the add-modal host and surrounding steps close it', () => {
-    const modalSteps = ownerTourSteps.filter((s) => s.host === 'add-modal');
-    expect(modalSteps.length).toBe(3);
-    // first modal step opens the modal
-    expect(modalSteps[0].onEnter).toContain('owner-open-add-modal');
-    // the step right after the modal block closes it
-    const lastModalIdx = ownerTourSteps.indexOf(modalSteps[modalSteps.length - 1]);
-    expect(ownerTourSteps[lastModalIdx + 1].onEnter).toContain('owner-close-add-modal');
-    // the step right before the modal block closes it too (for back navigation)
-    const firstModalIdx = ownerTourSteps.indexOf(modalSteps[0]);
-    expect(ownerTourSteps[firstModalIdx - 1].onEnter).toContain('owner-close-add-modal');
+  it.each([
+    ['owner', ownerTourSteps, 'owner', 3],
+    ['staff', staffTourSteps, 'staff', 2],
+  ] as const)(
+    '%s modal steps declare the add-modal host and surrounding steps close it',
+    (_role, steps, prefix, expectedCount) => {
+      const modalSteps = steps.filter((s) => s.host === 'add-modal');
+      expect(modalSteps.length).toBe(expectedCount);
+      // first modal step opens the modal
+      expect(modalSteps[0].onEnter).toContain(`${prefix}-open-add-modal`);
+      // the step right after the modal block closes it
+      const lastModalIdx = steps.indexOf(modalSteps[modalSteps.length - 1]);
+      expect(steps[lastModalIdx + 1].onEnter).toContain(`${prefix}-close-add-modal`);
+      // the step right before the modal block closes it too (for back navigation)
+      const firstModalIdx = steps.indexOf(modalSteps[0]);
+      expect(steps[firstModalIdx - 1].onEnter).toContain(`${prefix}-close-add-modal`);
+    },
+  );
+
+  it('every onEnter action id is in the known set', () => {
+    const knownActionIds = new Set([
+      'owner-open-add-modal',
+      'owner-close-add-modal',
+      'staff-open-add-modal',
+      'staff-close-add-modal',
+    ]);
+    for (const steps of [ownerTourSteps, staffTourSteps]) {
+      for (const step of steps) {
+        if (step.onEnter) {
+          for (const actionId of step.onEnter) {
+            expect(knownActionIds.has(actionId)).toBe(true);
+          }
+        }
+      }
+    }
+  });
+
+  it('every defined route matches the expected pattern', () => {
+    const routePattern = /^\/\((owner|app)\)(\/[a-z-]+)?$/;
+    for (const steps of [ownerTourSteps, staffTourSteps]) {
+      for (const step of steps) {
+        if (step.route !== undefined) {
+          expect(step.route).toMatch(routePattern);
+        }
+      }
+    }
   });
 
   it('owner tour starts and ends with centered steps', () => {
