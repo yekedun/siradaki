@@ -687,6 +687,7 @@ export type Database = {
           p_customer_notes?: string
           p_customer_phone?: string
           p_service_id: string
+          p_service_ids?: string[]
           p_staff_id: string
           p_starts_at: string
         }
