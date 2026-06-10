@@ -167,7 +167,7 @@ export default function AgendaScreen() {
     const dayRange = buildIstanbulAppointmentDayRange(selectedDate);
 
     const [{ data: appts, error: apptsErr }, { data: blocks, error: blocksErr }] = await Promise.all([
-      supabase.from('appointments').select('id, staff_id, customer_name, starts_at, ends_at, status, notes, customer_notes, services(name, duration_min)')
+      supabase.from('appointments').select('id, staff_id, customer_name, starts_at, ends_at, status, notes, customer_notes, services(name, duration_min), appointment_services(sequence_order, services:service_id(name))')
         .in('staff_id', barbers.map(b => b.id))
         .gte('starts_at', dayRange.start).lt('starts_at', dayRange.end)
         .neq('status', 'cancelled'),
