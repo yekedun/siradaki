@@ -104,6 +104,15 @@ describe('TourContext state machine', () => {
     );
   });
 
+  it('start while a tour is already running is a no-op', () => {
+    const { getByTestId } = renderHarness();
+    fireEvent.press(getByTestId('start'));  // idle → a:0
+    fireEvent.press(getByTestId('next'));   // a:0 → b:1
+    expect(getByTestId('state').props.children).toBe('b:1');
+    fireEvent.press(getByTestId('start'));  // should be ignored
+    expect(getByTestId('state').props.children).toBe('b:1');
+  });
+
   it('registerTarget stores and unregisters refs', () => {
     let api!: ReturnType<typeof useTour>;
     function Grab() {

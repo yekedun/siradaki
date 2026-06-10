@@ -71,6 +71,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const start = useCallback(
     (steps: TourStep[], storageKey: string) => {
       if (steps.length === 0) return;
+      if (activeRef.current !== null) return;
       enterStep({ steps, index: 0, storageKey }, 0);
     },
     [enterStep],
