@@ -10,6 +10,9 @@ import { colors, radius } from '../../lib/theme';
 
 /** Turkish day abbreviations Mon→Sun (index 0=Monday, 6=Sunday). */
 const TR_DAYS_SHORT = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'] as const;
+/** Full Turkish day names indexed by JS getDay() (0=Sunday). */
+const TR_DAYS_FULL = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'] as const;
+const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'] as const;
 
 /**
  * Maps a JS Date (getDay() returns 0=Sunday…6=Saturday) to the
@@ -25,27 +28,23 @@ interface DayPickerProps {
    */
   selected: Date;
   onSelect: (date: Date) => void;
-  /**
-   * Total number of days to show.  Defaults to 7.
-   * Days are arranged as: 2 before today … today … N-3 after today,
-   * matching the source layout (d.setDate(today - 2 + i)).
-   */
+  /** Total number of days to show.  Defaults to 7. */
   dayCount?: number;
+  /**
+   * How many days before today the window starts.  Defaults to 0
+   * (today is the first cell).  Owner agenda passes 2 so recent past
+   * days remain reviewable.
+   */
+  pastDays?: number;
 }
 
-export function DayPicker({ selected, onSelect, dayCount = 7 }: DayPickerProps) {
+export function DayPicker({ selected, onSelect, dayCount = 7, pastDays = 0 }: DayPickerProps) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  /**
-   * Source window: starts 2 days before today.
-   *   days[0] = today − 2
-   *   days[2] = today
-   *   days[6] = today + 4
-   */
   const days: Date[] = Array.from({ length: dayCount }, (_, i) => {
     const d = new Date(today);
-    d.setDate(today.getDate() + i);
+    d.setDate(today.getDate() - pastDays + i);
     return d;
   });
 
@@ -65,6 +64,9 @@ export function DayPicker({ selected, onSelect, dayCount = 7 }: DayPickerProps) 
             key={d.toISOString()}
             onPress={() => onSelect(d)}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={`${d.getDate()} ${TR_MONTHS[d.getMonth()]} ${TR_DAYS_FULL[d.getDay()]}`}
+            accessibilityState={{ selected: isSel }}
             style={[styles.day, isSel ? styles.dayActive : styles.dayDefault]}
           >
             {/*

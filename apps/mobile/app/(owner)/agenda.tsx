@@ -66,7 +66,8 @@ import {
 } from '../../lib/appointment-time';
 import type { AppointmentWorkingHours } from '../../lib/appointment-time';
 import { appointmentRowToAgendaItem } from '../../lib/appointment-mappers';
-import { formatTime, translateReason, AppointmentState as AppState } from '../../lib/utils';
+import { formatTime, translateReason, formatAgendaMetaDate, AppointmentState as AppState } from '../../lib/utils';
+import { parseBookingFunctionError } from '../../lib/booking-errors';
 import { AddAppointmentModal } from '../../components/AddAppointmentModal';
 import { AppointmentDetailSheet, AppointmentDetail } from '../../components/AppointmentDetailSheet';
 import { AddBlockModal } from '../../components/AddBlockModal';
@@ -325,18 +326,26 @@ export default function AgendaScreen() {
   return (
     <View style={styles.screen}>
       {/* Header */}
-      <OverlineHeader eyebrow="Dükkan Sahibi" title="Ajanda" trailing={<OwnerSettingsAvatar />} />
+      <OverlineHeader
+        eyebrow="Dükkan Sahibi"
+        title="Ajanda"
+        meta={formatAgendaMetaDate(selectedDate)}
+        trailing={<OwnerSettingsAvatar />}
+      />
 
-      {/* DayPicker — gap:6, padding:'0 16px' */}
+      {/* DayPicker — gap:6, padding:'0 16px' — 2 geçmiş gün incelenebilir */}
       <DayPicker
         selected={selectedDate}
+        pastDays={2}
         onSelect={d => {
           setLoading(true);
           setSelectedDate(d);
         }}
       />
 
-      {/* Two-column horizontal scroll — flex:1, gap:12, padding:'20px 16px 90px' */}
+      {/* Agenda body — dış scroll dikey (pull-to-refresh burada), iç scroll yatay kolonlar.
+          Dikey scroll dışta olmalı: yoğun günlerde ekran altına taşan randevular
+          ancak böyle erişilebilir; RefreshControl da yalnızca dikey scroll'da çalışır. */}
       {loading ? (
         <View style={styles.emptyWrap}>
           <ActivityIndicator size="small" color={colors.brand[600]} />
@@ -349,66 +358,71 @@ export default function AgendaScreen() {
             style={styles.emptyCtaBtn}
             onPress={() => router.push('/(owner)/team' as any)}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Ekip Ekle"
           >
             <Text style={styles.emptyCtaText}>Ekip Ekle →</Text>
           </TouchableOpacity>
         </View>
-      ) : null}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={[styles.colScroll, loading && { opacity: 0 }]}
-        contentContainerStyle={styles.colContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-      >
-        {cols.map(col => (
-          <View key={col.id} style={styles.col}>
-            {/* Column header — padding:'0 4px 4px' */}
-            <View style={styles.colHeader}>
-              <Text style={styles.colName}>{col.name}</Text>
-              <Text style={styles.colMeta}>
-                {col.count} randevu{col.blok > 0 ? ` · ${col.blok} blok` : ''}
-              </Text>
-            </View>
+      ) : (
+        <ScrollView
+          style={styles.vScroll}
+          contentContainerStyle={styles.vScrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+        >
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.colContent}
+          >
+            {cols.map(col => (
+              <View key={col.id} style={styles.col}>
+                {/* Column header — padding:'0 4px 4px' */}
+                <View style={styles.colHeader}>
+                  <Text style={styles.colName}>{col.name}</Text>
+                  <Text style={styles.colMeta}>
+                    {col.count} randevu{col.blok > 0 ? ` · ${col.blok} blok` : ''}
+                  </Text>
+                </View>
 
-            {/* Items — gap:10 */}
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.itemContent}
-            >
-              {col.items.length === 0 ? (
-                <EmptyDropZone />
-              ) : (
-                col.items.map(item =>
-                  item.type === 'blok' ? (
-                    <BlokCard
-                      key={item.id}
-                      time={item.time}
-                      endTime={item.endTime}
-                      duration={item.dur}
-                      label={item.label}
-                    />
+                {/* Items — gap:10 */}
+                <View style={styles.itemContent}>
+                  {col.items.length === 0 ? (
+                    <EmptyDropZone />
                   ) : (
-                    <AppointmentCard
-                      key={item.id}
-                      time={item.time}
-                      endTime={item.endTime}
-                      duration={item.dur}
-                      name={item.name}
-                      service={item.svc}
-                      notes={item.notes}
-                      state={item.state}
-                      onPress={() => handleOpenDetail(item)}
-                    />
-                  )
-                )
-              )}
-            </ScrollView>
-          </View>
-        ))}
-      </ScrollView>
+                    col.items.map(item =>
+                      item.type === 'blok' ? (
+                        <BlokCard
+                          key={item.id}
+                          time={item.time}
+                          endTime={item.endTime}
+                          duration={item.dur}
+                          label={item.label}
+                        />
+                      ) : (
+                        <AppointmentCard
+                          key={item.id}
+                          time={item.time}
+                          endTime={item.endTime}
+                          duration={item.dur}
+                          name={item.name}
+                          service={item.svc}
+                          notes={item.notes}
+                          state={item.state}
+                          onPress={() => handleOpenDetail(item)}
+                        />
+                      )
+                    )
+                  )}
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        </ScrollView>
+      )}
 
       {/* FAB group — Randevu Ekle + Blok Ekle */}
       <View style={styles.fabGroup}>
@@ -416,6 +430,8 @@ export default function AgendaScreen() {
           style={styles.blockBtn}
           onPress={() => setShowAddBlock(true)}
           activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Blok Ekle"
         >
           <Text style={styles.blockBtnText}>Blok Ekle</Text>
         </TouchableOpacity>
@@ -525,27 +541,7 @@ export default function AgendaScreen() {
             },
           });
           if (fnErr) {
-            const ctx = (fnErr as any)?.context;
-            let status = ctx?.status ?? 0;
-            let ctxBody: any = ctx?.body;
-            // FunctionsHttpError.context is the Response; body needs to be read
-            if (ctx && typeof ctx.json === 'function') {
-              try { ctxBody = await ctx.clone().json(); } catch { try { ctxBody = await ctx.clone().text(); } catch {} }
-              if (!status) status = ctx.status ?? 0;
-            }
-            if (__DEV__) console.warn('[agenda] app-book-appointment error status=', status, 'body=', ctxBody, 'message=', fnErr.message);
-            // Backend "error" alanı her zaman gerçek Türkçe mesajı içerir — onu önceliklendiriyoruz
-            const serverMsg = (ctxBody && typeof ctxBody === 'object' && typeof ctxBody.error === 'string')
-              ? ctxBody.error
-              : (typeof ctxBody === 'string' ? ctxBody : '');
-            let msg: string;
-            if (status === 409) msg = serverMsg || 'Bu saat dolu. Başka bir saat seçin.';
-            else if (status === 404) msg = serverMsg || 'Dükkan veya hizmet bulunamadı. Sayfayı yenileyin.';
-            else if (status === 429) msg = serverMsg || 'Çok fazla deneme. Birkaç dakika bekleyin.';
-            else if (status === 401) msg = 'Oturum gerekli. Tekrar giriş yapın.';
-            else if (status === 400) msg = serverMsg || 'Geçersiz bilgi.';
-            else msg = `Randevu eklenemedi (HTTP ${status || '?'}): ${serverMsg || fnErr.message || 'bilinmeyen hata'}`;
-            Alert.alert('Hata', msg);
+            Alert.alert('Hata', await parseBookingFunctionError(fnErr));
             return;
           }
           trackEvent('appointment_created', { shop_slug: shopSlug, service_ids: data.serviceIds.join(','), staff_id: data.staffId });
@@ -563,15 +559,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.slate[50],
   },
 
-  /* Horizontal column scroll — flex:1, gap:12, padding:'20px 16px 90px' */
-  colScroll: { flex: 1 },
+  /* Outer vertical scroll — pull-to-refresh + tall-day access */
+  vScroll: { flex: 1 },
+  vScrollContent: {
+    flexGrow: 1,
+    /* FAB grubu (bottom:90 + ~100px yükseklik) son kartları örtmesin */
+    paddingBottom: 150,
+  },
+
+  /* Inner horizontal column row — gap:12, padding:'20px 16px' */
   colContent: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
     paddingHorizontal: 16,
     paddingTop: 20,
-    paddingBottom: 24,
   },
 
   /* Each column — flex:'0 0 230px' */
@@ -639,14 +641,18 @@ const styles = StyleSheet.create({
 
   dropZone: {
     borderRadius: 10,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.slate[300],
     paddingVertical: 20,
     paddingHorizontal: 10,
     alignItems: 'center',
   },
+  /* slate[500]: slate[400] on slate[50] failed 4.5:1 contrast at 12px */
   dropZoneText: {
     fontSize: 12,
     fontFamily: 'Montserrat-Regular',
-    color: colors.slate[400],
+    color: colors.slate[500],
   },
 
   /* FAB group — sağ alt köşe */
@@ -659,8 +665,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  /* Blok ekle — ghost pill */
+  /* Blok ekle — ghost pill (minHeight 44 = dokunma hedefi kuralı) */
   blockBtn: {
+    minHeight: 44,
+    justifyContent: 'center',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,

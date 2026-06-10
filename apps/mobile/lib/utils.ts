@@ -30,6 +30,22 @@ export function buildForwardAgendaDays(from: Date = new Date(), dayCount = 7): D
   return Array.from({ length: dayCount }, (_, index) => getForwardAgendaDateByIndex(index, from));
 }
 
+/* ── Turkish date display ────────────────────────────────────── */
+
+export const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'] as const;
+export const TR_DAYS_FULL = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'] as const;
+const TR_DAYS_ABBR = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'] as const;
+
+/** "10 Haziran 2026, Çar" — agenda header meta line. */
+export function formatAgendaMetaDate(d: Date): string {
+  return `${d.getDate()} ${TR_MONTHS[d.getMonth()]} ${d.getFullYear()}, ${TR_DAYS_ABBR[d.getDay()]}`;
+}
+
+/** "10 Haziran" — short day label for empty states. */
+export function formatDayMonth(d: Date): string {
+  return `${d.getDate()} ${TR_MONTHS[d.getMonth()]}`;
+}
+
 /* ── Currency ────────────────────────────────────────────────── */
 
 /**

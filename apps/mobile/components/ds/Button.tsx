@@ -18,6 +18,7 @@ interface ButtonProps {
   onPress?: () => void;
   full?: boolean;
   disabled?: boolean;
+  accessibilityLabel?: string;
 }
 
 export function Button({
@@ -27,11 +28,15 @@ export function Button({
   onPress,
   full = false,
   disabled = false,
+  accessibilityLabel,
 }: ButtonProps) {
   return (
     <TouchableOpacity
       onPress={disabled ? undefined : onPress}
       activeOpacity={disabled ? 1 : 0.8}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? (typeof children === 'string' ? children : undefined)}
+      accessibilityState={{ disabled }}
       style={[
         styles.base,
         styles[`size_${size}` as keyof typeof styles] as ViewStyle,

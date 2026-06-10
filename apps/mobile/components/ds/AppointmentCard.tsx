@@ -34,6 +34,8 @@ export function AppointmentCard({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={onPress ? 0.85 : 1}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={`${time}, ${name}, ${service}${isDone ? ', tamamlandı' : isActive ? ', şu anda' : ''}`}
       style={[
         styles.base,
         isActive ? styles.bgActive : styles.bgDefault,
@@ -122,7 +124,8 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   durDefault: { color: colors.slate[500] },
-  durActive:  { color: 'rgba(255,255,255,0.6)' },
+  /* 0.7 alpha keeps ≥4.5:1 contrast on brand[600] for small text */
+  durActive:  { color: 'rgba(255,255,255,0.7)' },
 
   /* Info column */
   info: { flex: 1, minWidth: 0 },
@@ -139,7 +142,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   serviceDefault: { color: colors.slate[500] },
-  serviceActive:  { color: 'rgba(255,255,255,0.6)' },
+  serviceActive:  { color: 'rgba(255,255,255,0.7)' },
 
   notesLine: {
     fontSize: 11,
@@ -148,7 +151,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontStyle: 'italic',
   },
-  notesLineActive: { color: 'rgba(255,255,255,0.5)' },
+  notesLineActive: { color: 'rgba(255,255,255,0.7)' },
 
   /* Shared overrides */
   textWhite:    { color: '#ffffff' },
