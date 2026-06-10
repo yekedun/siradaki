@@ -210,7 +210,7 @@ export function AvailabilityScreen({
   async function handleSaveAppointment(data: {
     customerName: string;
     customerPhone: string;
-    serviceId: string;
+    serviceIds: string[];
     staffId: string | null;
     date: string;
     time: string;
@@ -228,7 +228,8 @@ export function AvailabilityScreen({
     const { error: fnErr } = await supabase.functions.invoke('app-book-appointment', {
       body: {
         shop_slug: shopSlug,
-        service_id: data.serviceId,
+        service_id: data.serviceIds[0],
+        service_ids: data.serviceIds,
         staff_id: data.staffId,
         starts_at: buildLocalAppointmentTimestamp(data.date, data.time),
         customer_name: data.customerName,

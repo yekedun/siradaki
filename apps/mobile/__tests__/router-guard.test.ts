@@ -20,7 +20,7 @@ describe('router guard helpers', () => {
     expect(routeForRole('owner')).toBe('/(owner)');
     expect(routeForRole('staff')).toBe('/(app)');
     expect(routeForRole('unknown')).toBe('/(auth)/pending?status=unknown');
-    expect(routeForRole('new_user')).toBe('/(auth)/google-onboarding');
+    expect(routeForRole('new_user')).toBe('/(auth)/social-onboarding');
   });
 
   it('routes accepted invites to the staff app group', () => {

@@ -10,12 +10,15 @@ const RATE_LIMIT_MAX = 10;
 
 interface BookRequest {
   shop_slug: string;
-  service_id: string;
+  service_id?: string;           // legacy single-service (still accepted)
+  service_ids?: string[];        // multi-service
   staff_id?: string | null;
   barber_id?: string | null;
   starts_at: string;
   customer_name: string;
   customer_phone?: string | null;
+  notes?: string | null;            // key sent by current mobile clients
+  customer_notes?: string | null;   // canonical key (parity with widget fn)
 }
 
 function mapRpcErrorStatus(code?: string): number {
@@ -78,11 +81,17 @@ serve(async (req) => {
     return error("Geçersiz JSON");
   }
 
-  const { shop_slug, service_id, starts_at, customer_name, customer_phone } = body;
+  const { shop_slug, service_id, service_ids, starts_at, customer_name, customer_phone } = body;
   const staff_id = body.staff_id ?? body.barber_id ?? null;
+  const customer_notes = body.customer_notes ?? body.notes ?? null;
 
-  if (!shop_slug || !service_id || !starts_at || !customer_name) {
-    return error("shop_slug, service_id, starts_at, customer_name zorunlu");
+  // Normalize to a de-duplicated id list (array form wins; else single fallback).
+  const serviceIdList: string[] = Array.isArray(service_ids) && service_ids.length > 0
+    ? Array.from(new Set(service_ids.map((s) => String(s).trim()).filter(Boolean)))
+    : (service_id ? [String(service_id).trim()] : []);
+
+  if (!shop_slug || serviceIdList.length === 0 || !starts_at || !customer_name) {
+    return error("shop_slug, service_ids, starts_at, customer_name zorunlu");
   }
   if (customer_name.trim().length < 2) return error("İsim en az 2 karakter olmalı");
   if (customer_phone && !isValidPhone(customer_phone.trim())) {
@@ -102,12 +111,13 @@ serve(async (req) => {
   const { data, error: rpcError } = await supabase.rpc("create_appointment_atomic" as never, {
     p_shop_slug: shop_slug,
     p_shop_id: null,
-    p_service_id: service_id,
+    p_service_id: serviceIdList[0],
+    p_service_ids: serviceIdList,
     p_staff_id: staff_id,
     p_starts_at: starts_at,
     p_customer_name: customer_name,
     p_customer_phone: customer_phone ?? null,
-    p_customer_notes: null,
+    p_customer_notes: customer_notes,
     p_customer_user_id: user.id,
   } as never);
 

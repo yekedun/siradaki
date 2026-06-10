@@ -24,7 +24,11 @@ export async function getAppointments(
       customer_name, customer_phone, customer_notes,
       booked_price_cents, completed_price_cents,
       staff:staff_id ( id, name ),
-      service:service_id ( id, name, duration_min )
+      service:service_id ( id, name, duration_min ),
+      appointment_services (
+        sequence_order,
+        service:service_id ( id, name, duration_min )
+      )
     `)
     .in('staff_id', staffIds)
     .order('starts_at');

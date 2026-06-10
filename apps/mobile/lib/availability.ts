@@ -38,7 +38,8 @@ export interface StaffSlotOption {
 export interface AvailabilityAppointmentInitialValues {
   customerName: string;
   customerPhone: string;
-  serviceId: string | null;
+  /** Empty = no preselection; the user picks services inside the modal. */
+  serviceIds: string[];
   staffId: string;
   date: string;
   time: string;
@@ -78,7 +79,7 @@ export function buildAvailabilityAppointmentInitialValues({
   return {
     customerName: '',
     customerPhone: '',
-    serviceId: null,
+    serviceIds: [],
     staffId,
     date: formatAvailabilityDate(startsAt),
     time: formatAvailabilityTime(startsAt),

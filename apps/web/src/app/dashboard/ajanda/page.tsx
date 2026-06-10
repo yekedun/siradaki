@@ -16,6 +16,7 @@ type Appt = {
   booked_price_cents: number | null;
   staff: { id: string; name: string } | null;
   service: { id: string; name: string } | null;
+  appointment_services: { sequence_order: number; service: { id: string; name: string } | null }[] | null;
 };
 
 function addDays(dateStr: string, n: number): string {
@@ -153,7 +154,15 @@ export default function AjandaPage() {
                     </div>
                     <p className="text-sm font-medium text-gray-900">{a.customer_name}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {a.service?.name ?? '—'} · {a.staff?.name ?? '—'}
+                      {(() => {
+                        const names = (a.appointment_services ?? [])
+                          .slice()
+                          .sort((x, y) => x.sequence_order - y.sequence_order)
+                          .map((r) => r.service?.name)
+                          .filter(Boolean) as string[];
+                        return names.length > 0 ? names.join(', ') : (a.service?.name ?? '—');
+                      })()}
+                      {' · '}{a.staff?.name ?? '—'}
                       {a.booked_price_cents ? ` · ${Math.round(a.booked_price_cents / 100)} ₺` : ''}
                     </p>
                     {a.customer_phone && (

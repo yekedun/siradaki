@@ -34,6 +34,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointment_services: {
+        Row: {
+          appointment_id: string
+          created_at: string
+          duration_min: number
+          id: string
+          price_cents: number | null
+          sequence_order: number
+          service_id: string
+        }
+        Insert: {
+          appointment_id: string
+          created_at?: string
+          duration_min: number
+          id?: string
+          price_cents?: number | null
+          sequence_order?: number
+          service_id: string
+        }
+        Update: {
+          appointment_id?: string
+          created_at?: string
+          duration_min?: number
+          id?: string
+          price_cents?: number | null
+          sequence_order?: number
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_services_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointment_slots: {
         Row: {
           appointment_id: string
@@ -532,6 +577,7 @@ export type Database = {
           p_customer_phone?: string
           p_customer_user_id?: string
           p_service_id?: string
+          p_service_ids?: string[]
           p_shop_id?: string
           p_shop_slug?: string
           p_staff_id?: string
@@ -580,8 +626,8 @@ export type Database = {
           completed_shop_share_cents: number
           ends_at: string
           id: string
-          service_id: string | null
-          service_name: string | null
+          service_id: string
+          service_name: string
           staff_id: string
           starts_at: string
           status: string
@@ -641,6 +687,7 @@ export type Database = {
           p_customer_notes?: string
           p_customer_phone?: string
           p_service_id: string
+          p_service_ids?: string[]
           p_staff_id: string
           p_starts_at: string
         }
@@ -1341,3 +1388,4 @@ export const Constants = {
     },
   },
 } as const
+

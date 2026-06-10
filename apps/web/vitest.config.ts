@@ -10,6 +10,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Subpath alias must come before the bare-package alias (first match wins).
+      "@berber/shared/booking-selection": path.resolve(__dirname, "../../packages/shared/src/booking-selection.ts"),
       "@berber/shared": path.resolve(__dirname, "../../packages/shared/src/index.ts"),
       "@berber/db": path.resolve(__dirname, "../../packages/db/src/index.ts"),
     },

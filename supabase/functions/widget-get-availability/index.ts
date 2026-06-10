@@ -70,14 +70,18 @@ serve(async (req) => {
   const url          = new URL(req.url);
   const shopSlug     = url.searchParams.get("shop_slug") ?? url.searchParams.get("slug");
   const date         = url.searchParams.get("date");
-  const serviceId    = url.searchParams.get("service_id");
+  // service_ids = comma-separated UUIDs (multi-service). Falls back to single service_id.
+  const serviceIdsParam = url.searchParams.get("service_ids");
+  const serviceIds = serviceIdsParam
+    ? serviceIdsParam.split(",").map((s) => s.trim()).filter(Boolean)
+    : (url.searchParams.get("service_id") ? [url.searchParams.get("service_id")!.trim()] : []);
   const durationParam = url.searchParams.get("duration_min");
   const durationFromParam = parseDurationMin(durationParam);
   // staff_id = UUID → belirli personel | "any" veya yoksa → en az 1 personel müsait slot
   const staffIdParam = url.searchParams.get("staff_id");
 
-  if (!shopSlug || !date || (!serviceId && !durationParam)) {
-    return error("shop_slug, date ve service_id veya duration_min zorunlu");
+  if (!shopSlug || !date || (serviceIds.length === 0 && !durationParam)) {
+    return error("shop_slug, date ve service_id(ler) veya duration_min zorunlu");
   }
 
   if (Number.isNaN(durationFromParam)) {
@@ -98,18 +102,20 @@ serve(async (req) => {
 
   let durationMin = durationFromParam;
 
-  if (serviceId) {
-    // Hizmeti doğrula
-    const { data: service } = await supabase
+  if (serviceIds.length > 0) {
+    // Tüm hizmetleri doğrula + toplam süreyi hesapla
+    const { data: svcRows } = await supabase
       .from("services")
-      .select("duration_min")
-      .eq("id", serviceId)
+      .select("id, duration_min")
+      .in("id", serviceIds)
       .eq("shop_id", shop.id)
-      .eq("is_active", true)
-      .single();
+      .eq("is_active", true);
 
-    if (!service) return error("Hizmet bulunamadı", 404);
-    durationMin = durationFromParam ?? service.duration_min;
+    if (!svcRows || svcRows.length !== serviceIds.length) {
+      return error("Hizmet bulunamadı", 404);
+    }
+    const total = svcRows.reduce((sum, s) => sum + s.duration_min, 0);
+    durationMin = durationFromParam ?? total;
   }
 
   if (!durationMin) {

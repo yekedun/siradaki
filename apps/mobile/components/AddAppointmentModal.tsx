@@ -52,9 +52,10 @@ import { colors } from '../lib/theme';
 import { ContactPickerSheet } from './ContactPickerSheet';
 import {
   getAppointmentDayIndex,
-  getInitialAppointmentServiceId,
+  getInitialAppointmentServiceIds,
   isAppointmentModalSaveEnabled,
-  resolveAppointmentServiceId,
+  resolveAppointmentServiceIds,
+  toggleAppointmentService,
 } from '../lib/appointment-modal-state';
 import {
   AppointmentWorkingHours,
@@ -68,6 +69,7 @@ export interface ServiceOption {
   label: string;
   dur: number;
   price: string;
+  priceValue: number;
 }
 
 export interface StaffOption {
@@ -76,9 +78,9 @@ export interface StaffOption {
 }
 
 const DEFAULT_SERVICES: ServiceOption[] = [
-  { id: 'sac',       label: 'Saç kesim',    dur: 30, price: '200₺' },
-  { id: 'sakal',     label: 'Sakal tıraşı', dur: 20, price: '120₺' },
-  { id: 'sac-sakal', label: 'Saç + Sakal',  dur: 45, price: '280₺' },
+  { id: 'sac',       label: 'Saç kesim',    dur: 30, price: '200₺', priceValue: 200 },
+  { id: 'sakal',     label: 'Sakal tıraşı', dur: 20, price: '120₺', priceValue: 120 },
+  { id: 'sac-sakal', label: 'Saç + Sakal',  dur: 45, price: '280₺', priceValue: 280 },
 ];
 
 /* ── Time slots — exact from source ADD_TIMES ───────────────────── */
@@ -144,7 +146,7 @@ export interface AddAppointmentModalProps {
   onSave: (data: {
     customerName: string;
     customerPhone: string;
-    serviceId: string;
+    serviceIds: string[];
     staffId: string | null;
     date: string;
     time: string;
@@ -164,7 +166,8 @@ export interface AddAppointmentModalProps {
     id?: string;
     customerName: string;
     customerPhone?: string | null;
-    serviceId: string | null;
+    /** Empty array = no preselection (availability flow); user picks in the modal. */
+    serviceIds: string[];
     staffId: string | null;
     date: string;
     time: string;
@@ -189,7 +192,7 @@ export function AddAppointmentModal({
   const [name,           setName]           = useState('');
   const [phone,          setPhone]          = useState('');
   const [notes,          setNotes]          = useState('');
-  const [svc,            setSvc]            = useState<string | null>(() => getInitialAppointmentServiceId(services));
+  const [svcIds,         setSvcIds]         = useState<string[]>(() => getInitialAppointmentServiceIds(services));
   const [dayIdx,         setDayIdx]         = useState(0);              // index 0 = today
   const [slot,           setSlot]           = useState('');
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(initialStaffId ?? null);
@@ -215,7 +218,7 @@ export function AddAppointmentModal({
     const initKey = mode === 'edit'
       ? `edit:${initialValues?.id ?? initialValues?.date ?? ''}:${initialValues?.time ?? ''}`
       : initialValues
-        ? `create:${initialValues.staffId ?? ''}:${initialValues.date}:${initialValues.time}:${initialValues.serviceId ?? ''}`
+        ? `create:${initialValues.staffId ?? ''}:${initialValues.date}:${initialValues.time}:${initialValues.serviceIds.join(',')}`
         : 'create';
     if (initializedKeyRef.current === initKey) return;
 
@@ -223,7 +226,7 @@ export function AddAppointmentModal({
       setName(initialValues.customerName);
       setPhone(initialValues.customerPhone ?? '');
       setNotes(initialValues.notes ?? '');
-      setSvc(resolveAppointmentServiceId(initialValues.serviceId, services));
+      setSvcIds(resolveAppointmentServiceIds(initialValues.serviceIds, services));
       setDayIdx(getAppointmentDayIndex(days, initialValues.date));
       setSlot(initialValues.time);
       setSelectedStaffId(initialValues.staffId ?? null);
@@ -235,7 +238,10 @@ export function AddAppointmentModal({
       setName(initialValues.customerName);
       setPhone(initialValues.customerPhone ?? '');
       setNotes(initialValues.notes ?? '');
-      setSvc(initialValues.serviceId ? resolveAppointmentServiceId(initialValues.serviceId, services) : null);
+      // Empty initial selection (availability flow) stays empty — user picks in the modal.
+      setSvcIds(initialValues.serviceIds.length > 0
+        ? resolveAppointmentServiceIds(initialValues.serviceIds, services)
+        : []);
       setDayIdx(getAppointmentDayIndex(days, initialValues.date));
       setSlot(initialValues.time);
       setSelectedStaffId(initialValues.staffId ?? initialStaffId ?? null);
@@ -246,7 +252,7 @@ export function AddAppointmentModal({
     setName('');
     setPhone('');
     setNotes('');
-    setSvc(getInitialAppointmentServiceId(services));
+    setSvcIds(getInitialAppointmentServiceIds(services));
     setDayIdx(0);
     setSlot('');
     setSelectedStaffId(initialStaffId ?? null);
@@ -255,18 +261,22 @@ export function AddAppointmentModal({
 
   useEffect(() => {
     if (!visible) return;
-    if (mode === 'create' && initialValues && initialValues.serviceId === null) {
-      setSvc((current) => (current && services.some((service) => service.id === current) ? current : null));
+    if (mode === 'create' && initialValues && initialValues.serviceIds.length === 0) {
+      setSvcIds((current) => current.filter((id) => services.some((service) => service.id === id)));
       return;
     }
-    setSvc((current) => resolveAppointmentServiceId(current, services));
+    setSvcIds((current) => resolveAppointmentServiceIds(current, services));
   }, [visible, mode, initialValues, services]);
 
-  const curSvc  = services.find(s => s.id === svc);
+  const selSvcs = svcIds
+    .map((id) => services.find((s) => s.id === id))
+    .filter((s): s is ServiceOption => Boolean(s));
+  const totalDur = selSvcs.reduce((sum, s) => sum + s.dur, 0);
+  const totalPrice = selSvcs.reduce((sum, s) => sum + s.priceValue, 0);
   const canSave = isAppointmentModalSaveEnabled({
     customerName: name,
     slot,
-    serviceId: svc,
+    serviceIds: svcIds,
     staffListHasItems: !!(staffList && staffList.length > 0),
     selectedStaffId,
   });
@@ -279,13 +289,13 @@ export function AddAppointmentModal({
   );
 
   const endTime = useMemo(
-    () => (slot && curSvc ? addMins(slot, curSvc.dur) : null),
-    [slot, curSvc],
+    () => (slot && totalDur > 0 ? addMins(slot, totalDur) : null),
+    [slot, totalDur],
   );
 
   const timeSlots = useMemo(
-    () => generateAppointmentTimesForDate(selDate, workingHours, curSvc?.dur ?? 30, serverNowMs),
-    [selDate, workingHours, curSvc, serverNowMs],
+    () => generateAppointmentTimesForDate(selDate, workingHours, totalDur || 30, serverNowMs),
+    [selDate, workingHours, totalDur, serverNowMs],
   );
   const visibleTimeSlots = useMemo(
     () => (slot && !timeSlots.includes(slot) ? [slot, ...timeSlots] : timeSlots),
@@ -294,12 +304,12 @@ export function AddAppointmentModal({
 
   function handleSave() {
     if (!canSave) return;
-    if (!svc) return;
+    if (svcIds.length === 0) return;
     const trimmedNotes = notes.trim();
     onSave({
       customerName: name.trim(),
       customerPhone: phone,
-      serviceId: svc,
+      serviceIds: svcIds,
       staffId: selectedStaffId,
       date: formatLocalAppointmentDate(selDate),
       time: slot,
@@ -428,11 +438,11 @@ export function AddAppointmentModal({
                 Aktif hizmet bulunamadı. Önce Hizmetler ekranından en az bir aktif hizmet ekleyin.
               </Text>
             ) : services.map(o => {
-              const sel = svc === o.id;
+              const sel = svcIds.includes(o.id);
               return (
                 <TouchableOpacity
                   key={o.id}
-                  onPress={() => setSvc(o.id)}
+                  onPress={() => setSvcIds((current) => toggleAppointmentService(current, o.id))}
                   activeOpacity={0.8}
                   style={[styles.serviceRow, sel ? styles.serviceRowActive : styles.serviceRowInactive]}
                 >
@@ -447,11 +457,10 @@ export function AddAppointmentModal({
             })}
           </View>
 
-          {/* Duration hint when service selected:
-              "Süre seçilen hizmetten gelir: {dur} dk" (12px Regular slate-500 marginTop 6) */}
-          {curSvc && (
+          {/* Totals line: sum of selected services (slot step = total duration) */}
+          {selSvcs.length > 0 && (
             <Text style={styles.durationHint}>
-              Süre seçilen hizmetten gelir: {curSvc.dur} dk
+              Toplam: {totalDur} dk · {totalPrice}₺{selSvcs.length > 1 ? ` · ${selSvcs.length} hizmet` : ''}
             </Text>
           )}
 
@@ -496,14 +505,14 @@ export function AddAppointmentModal({
               overline "Özet" (11px SemiBold 0.16em uppercase slate-500)
               main "{label} · {dateLabel} · {slot}" (14px SemiBold marginTop 6 ink-900)
               sub  "Bitiş: {endTime} ({dur} dk)"     (12px Regular fg-3 marginTop 4) */}
-          {slot && curSvc && (
+          {slot && selSvcs.length > 0 && (
             <View style={styles.summaryCard}>
               <Text style={styles.summaryOverline}>Özet</Text>
               <Text style={styles.summaryMain}>
-                {curSvc.label} · {dateLabel} · {slot}
+                {selSvcs.map((s) => s.label).join(' + ')} · {dateLabel} · {slot}
               </Text>
               <Text style={styles.summarySub}>
-                Bitiş: {endTime} ({curSvc.dur} dk)
+                Bitiş: {endTime} ({totalDur} dk · {totalPrice}₺)
               </Text>
             </View>
           )}

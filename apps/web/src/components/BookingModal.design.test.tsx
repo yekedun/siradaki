@@ -14,7 +14,7 @@ describe('BookingModal design system surface', () => {
         shopId="shop-1"
         shopSlug="kuafor-neco"
         staffId={null}
-        serviceId="svc-1"
+        serviceIds={['svc-1']}
         startsAt="2026-06-08T09:00:00.000Z"
         onSuccess={vi.fn()}
       />,

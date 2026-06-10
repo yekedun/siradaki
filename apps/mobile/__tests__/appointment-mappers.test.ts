@@ -34,6 +34,24 @@ describe('appointmentRowToAgendaItem', () => {
     expect(item.svc).toBe('Hizmet');
   });
 
+  it('joins all service names for multi-service appointments and uses the time range as duration', () => {
+    const item = appointmentRowToAgendaItem({
+      id: 'appt-4',
+      customer_name: 'Multi',
+      starts_at: '2026-05-24T12:00:00+03:00',
+      ends_at: '2026-05-24T12:50:00+03:00',
+      status: 'confirmed',
+      services: { name: 'Saç Kesim', duration_min: 30 },
+      appointment_services: [
+        { sequence_order: 1, services: { name: 'Sakal' } },
+        { sequence_order: 0, services: { name: 'Saç Kesim' } },
+      ],
+    }, new Date('2026-05-24T09:00:00+03:00'));
+
+    expect(item.svc).toBe('Saç Kesim + Sakal');
+    expect(item.dur).toBe(50);
+  });
+
   it('prefers customer_notes for appointment card notes', () => {
     const item = appointmentRowToAgendaItem({
       id: 'appt-3',

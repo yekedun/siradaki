@@ -6,6 +6,7 @@ export interface ServiceOption {
   label: string;
   dur: number;
   price: string;
+  priceValue: number;
 }
 
 export interface StaffOption {
@@ -79,6 +80,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
             label: s.name ?? '',
             dur: s.duration_min ?? 30,
             price: `${Math.round((s.price_cents ?? 0) / 100)}₺`,
+            priceValue: Math.round((s.price_cents ?? 0) / 100),
           })),
         );
         setLoading(false);

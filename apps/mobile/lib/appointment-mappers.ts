@@ -5,6 +5,11 @@ interface AppointmentServiceJoin {
   duration_min?: number | null;
 }
 
+interface AppointmentServicesRow {
+  sequence_order?: number | null;
+  services?: { name?: string | null } | { name?: string | null }[] | null;
+}
+
 export interface AppointmentAgendaRow {
   id: string;
   customer_name: string;
@@ -14,6 +19,12 @@ export interface AppointmentAgendaRow {
   notes?: string | null;
   customer_notes?: string | null;
   services?: AppointmentServiceJoin | AppointmentServiceJoin[] | null;
+  appointment_services?: AppointmentServicesRow[] | null;
+}
+
+function joinedServiceName(row: AppointmentServicesRow): string | null {
+  const svc = Array.isArray(row.services) ? row.services[0] : row.services;
+  return svc?.name ?? null;
 }
 
 export function appointmentRowToAgendaItem(row: AppointmentAgendaRow, now = new Date()) {
@@ -21,7 +32,13 @@ export function appointmentRowToAgendaItem(row: AppointmentAgendaRow, now = new 
   const end = new Date(row.ends_at);
   const service = Array.isArray(row.services) ? row.services[0] : row.services;
   const fallbackDuration = Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000));
-  const dur = service?.duration_min ?? fallbackDuration;
+  const names = (row.appointment_services ?? [])
+    .slice()
+    .sort((a, b) => (a.sequence_order ?? 0) - (b.sequence_order ?? 0))
+    .map(joinedServiceName)
+    .filter((n): n is string => Boolean(n));
+  // For multi-service rows ends_at - starts_at is the authoritative total duration.
+  const dur = names.length > 1 ? fallbackDuration : service?.duration_min ?? fallbackDuration;
   const state: AppState = row.status === 'completed' ? 'done'
     : (start <= now && now < end) ? 'active' : 'upcoming';
 
@@ -32,7 +49,7 @@ export function appointmentRowToAgendaItem(row: AppointmentAgendaRow, now = new 
     endTime: formatTime(end),
     dur,
     name: row.customer_name,
-    svc: service?.name ?? 'Hizmet',
+    svc: names.length > 0 ? names.join(' + ') : (service?.name ?? 'Hizmet'),
     notes: row.customer_notes ?? row.notes ?? null,
     state,
   };

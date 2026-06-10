@@ -45,6 +45,7 @@ import { AddAppointmentModal, ServiceOption } from '../../components/AddAppointm
 import { supabase } from '../../lib/supabase';
 import { createDebounce } from '../../lib/debounce';
 import { buildForwardAgendaDays, formatTime, getForwardAgendaDateByIndex, translateReason } from '../../lib/utils';
+import { appointmentRowToAgendaItem } from '../../lib/appointment-mappers';
 
 /* ── TR day labels ──────────────────────────────────────────────── */
 const TR_DAYS_SHORT = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'] as const;
@@ -308,7 +309,7 @@ export default function RandevularScreen() {
           supabase.from('services').select('id, name, duration_min, price_cents').eq('shop_id', (data as any).shop_id).eq('is_active', true)
             .then(({ data: svcs }) => {
               if (!isMounted) return;
-              if (svcs) setServices((svcs as any[]).map(s => ({ id: s.id, label: s.name, dur: s.duration_min, price: `${Math.round(s.price_cents/100)}₺` })));
+              if (svcs) setServices((svcs as any[]).map(s => ({ id: s.id, label: s.name, dur: s.duration_min, price: `${Math.round(s.price_cents/100)}₺`, priceValue: Math.round(s.price_cents/100) })));
             });
         });
     });
@@ -323,7 +324,7 @@ export default function RandevularScreen() {
     const dayEnd = new Date(targetDate); dayEnd.setDate(targetDate.getDate()+1); dayEnd.setHours(0,0,0,0);
 
     const [{ data: appts }, { data: blocks }] = await Promise.all([
-      supabase.from('appointments').select('id, customer_name, service_name, starts_at, duration_min, status, notes')
+      supabase.from('appointments').select('id, customer_name, starts_at, ends_at, status, notes, customer_notes, services(name, duration_min), appointment_services(sequence_order, services:service_id(name))')
         .eq('staff_id', staffId).neq('status', 'cancelled')
         .gte('starts_at', dayStart.toISOString()).lt('starts_at', dayEnd.toISOString()).order('starts_at'),
       supabase.from('blocks').select('id, starts_at, ends_at, reason')
@@ -337,15 +338,11 @@ export default function RandevularScreen() {
     const upcoming: (ListItem & {_startMs: number})[] = [];
 
     for (const a of ((appts ?? []) as any[])) {
-      const start = new Date(a.starts_at);
-      const end = new Date(start.getTime() + (a.duration_min ?? 30) * 60000);
-      const timeStr = formatTime(start);
-      const state: ApptState = a.status === 'completed' ? 'done'
-        : (start <= now && now < end) ? 'active' : 'upcoming';
-      const item: ListItem = { kind: 'appt', id: a.id, time: timeStr, duration: a.duration_min ?? 30, name: a.customer_name, service: a.service_name, notes: a.notes ?? null, state, isDetail: state !== 'done' };
-      if (state === 'done') done.push(item);
-      else if (state === 'active') active.push(item);
-      else upcoming.push({ ...item, _startMs: start.getTime() } as any);
+      const mapped = appointmentRowToAgendaItem(a, now);
+      const item: ListItem = { kind: 'appt', id: mapped.id, time: mapped.time, duration: mapped.dur, name: mapped.name, service: mapped.svc, notes: mapped.notes, state: mapped.state, isDetail: mapped.state !== 'done' };
+      if (mapped.state === 'done') done.push(item);
+      else if (mapped.state === 'active') active.push(item);
+      else upcoming.push({ ...item, _startMs: new Date(a.starts_at).getTime() } as any);
     }
 
     for (const b of ((blocks ?? []) as any[])) {
@@ -516,7 +513,8 @@ export default function RandevularScreen() {
             const { error } = await supabase.functions.invoke('app-book-appointment', {
               body: {
                 shop_slug: staffShopSlug,
-                service_id: data.serviceId,
+                service_id: data.serviceIds[0],
+                service_ids: data.serviceIds,
                 staff_id: data.staffId ?? staffId,
                 starts_at: `${data.date}T${data.time}:00`,
                 customer_name: data.customerName,
