@@ -744,7 +744,7 @@ export default function SettingsScreen() {
       if (!user) { if (__DEV__) console.warn('[settings] no user — not logged in'); return; }
       supabase
         .from('shops')
-        .select('id, name, address, bio, slug, commission_enabled, working_hours, is_listed')
+        .select('id, name, address, bio, phone, slug, commission_enabled, working_hours, is_listed')
         .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
         .maybeSingle()
         .then(({ data, error }) => {
@@ -761,7 +761,7 @@ export default function SettingsScreen() {
             name: data.name ?? '',
             address: data.address ?? '',
             bio: data.bio ?? '',
-            phone: '',
+            phone: data.phone ?? '',
             slug: data.slug ?? '',
             email: user.email ?? '',
             commission_enabled: data.commission_enabled ?? false,
