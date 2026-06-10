@@ -1,0 +1,1 @@
+export const AGENDA_ACTIONS_BOTTOM_OFFSET = 16;

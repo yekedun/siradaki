@@ -73,6 +73,7 @@ import { AppointmentDetailSheet, AppointmentDetail } from '../../components/Appo
 import { AddBlockModal } from '../../components/AddBlockModal';
 import { useShop } from '../../lib/ShopContext';
 import { useRouter } from 'expo-router';
+import { AGENDA_ACTIONS_BOTTOM_OFFSET } from '../../lib/agenda-layout';
 
 
 interface AppItem {
@@ -658,7 +659,7 @@ const styles = StyleSheet.create({
   /* FAB group — sağ alt köşe */
   fabGroup: {
     position: 'absolute',
-    bottom: 90,
+    bottom: AGENDA_ACTIONS_BOTTOM_OFFSET,
     right: 20,
     zIndex: 10,
     alignItems: 'flex-end',
