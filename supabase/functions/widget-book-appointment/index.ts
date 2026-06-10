@@ -52,7 +52,7 @@ serve(async (req) => {
   if (rateLimited) {
     return error("Çok fazla istek. 10 dakika sonra tekrar deneyin.", 429, {
       code: "RATE_LIMITED",
-      retry_after: RATE_LIMIT_WINDOW_SEC,
+      retry_after: 600,
     });
   }
 
