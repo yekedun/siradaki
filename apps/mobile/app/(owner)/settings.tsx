@@ -49,7 +49,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -206,18 +208,20 @@ interface ProfileEditorSheetProps {
   initialAddress: string;
   initialBio: string;
   initialPhone: string;
+  initialVisible: boolean;
   slug: string;
-  onSaved?: (data: { name: string; address: string; bio: string; phone: string }) => void;
+  onSaved?: (data: { name: string; address: string; bio: string; phone: string; is_listed: boolean }) => void;
 }
 
-function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress, initialBio, initialPhone, slug, onSaved }: ProfileEditorSheetProps) {
-  const [name,    setName]    = useState(initialName);
-  const [address, setAddress] = useState(initialAddress);
-  const [bio,     setBio]     = useState(initialBio);
-  const [phone,   setPhone]   = useState(initialPhone);
-  const [visible, setVisible] = useState(true);
-  const [saved,   setSaved]   = useState(false);
-  const [loading, setLoading] = useState(false);
+function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress, initialBio, initialPhone, initialVisible, slug, onSaved }: ProfileEditorSheetProps) {
+  const [name,      setName]      = useState(initialName);
+  const [address,   setAddress]   = useState(initialAddress);
+  const [bio,       setBio]       = useState(initialBio);
+  const [phone,     setPhone]     = useState(initialPhone);
+  const [visible,   setVisible]   = useState(initialVisible);
+  const [saved,     setSaved]     = useState(false);
+  const [loading,   setLoading]   = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Sync state when initial values change (after shop data loads)
   useEffect(() => {
@@ -226,9 +230,11 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
       setAddress(initialAddress);
       setBio(initialBio);
       setPhone(initialPhone);
+      setVisible(initialVisible);
       setSaved(false);
+      setSaveError(null);
     }
-  }, [open, initialName, initialAddress, initialBio, initialPhone]);
+  }, [open, initialName, initialAddress, initialBio, initialPhone, initialVisible]);
 
   const canSave = name.trim().length >= 2;
 
@@ -246,15 +252,17 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
       return;
     }
     setLoading(true);
+    setSaveError(null);
     try {
-      const { error } = await supabase.from('shops').update({ name: name.trim(), address, bio }).eq('id', shopId);
+      const { error } = await supabase
+        .from('shops')
+        .update({ name: name.trim(), address, bio, phone, is_listed: visible })
+        .eq('id', shopId);
       if (error) throw error;
-      const { error: phoneError } = await supabase.from('shops').update({ phone } as any).eq('id', shopId);
-      if (__DEV__ && phoneError) console.warn('[settings] phone update skipped:', phoneError);
-      onSaved?.({ name: name.trim(), address, bio, phone });
+      onSaved?.({ name: name.trim(), address, bio, phone, is_listed: visible });
       setSaved(true);
     } catch {
-      Alert.alert('Hata', 'Bilgiler kaydedilemedi. Lütfen tekrar deneyin.');
+      setSaveError('Bilgiler kaydedilemedi. Lütfen tekrar deneyin.');
     } finally {
       setLoading(false);
     }
@@ -262,6 +270,7 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
 
   function handleClose() {
     setSaved(false);
+    setSaveError(null);
     onClose();
   }
 
@@ -274,6 +283,10 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
     >
       <Pressable style={styles.sheetBackdrop} onPress={handleClose}>
         <Pressable style={styles.sheetContainer} onPress={() => {}}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+          >
           {/* Drag handle */}
           <View style={styles.sheetHandle} />
 
@@ -382,6 +395,7 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
                   placeholderTextColor={colors.slate[300]}
                   multiline
                   numberOfLines={3}
+                  maxLength={200}
                   autoCorrect={false}
                   spellCheck={false}
                   style={[styles.textInput, styles.textArea]}
@@ -403,15 +417,21 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
               </View>
 
               {/* Kaydet */}
+              {saveError && (
+                <Text style={styles.saveErrorText}>{saveError}</Text>
+              )}
               <TouchableOpacity
                 onPress={canSave ? handleSave : undefined}
                 style={[styles.primaryBtn, !canSave && styles.primaryBtnDisabled]}
                 activeOpacity={canSave ? 0.8 : 1}
               >
-                <Text style={styles.primaryBtnText}>Kaydet</Text>
+                <Text style={styles.primaryBtnText}>
+                  {loading ? 'Kaydediliyor…' : 'Kaydet'}
+                </Text>
               </TouchableOpacity>
             </ScrollView>
           )}
+          </KeyboardAvoidingView>
         </Pressable>
       </Pressable>
     </Modal>
@@ -437,6 +457,19 @@ interface HoursEditorSheetProps {
   staffId?: string | null;
   onSaved?: (schedule: ScheduleDay[]) => void;
   initialSchedule?: ScheduleDay[];
+}
+
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const BREAK_RE = /^([01]\d|2[0-3]):[0-5]\d–([01]\d|2[0-3]):[0-5]\d$/;
+
+function validateSchedule(schedule: ScheduleDay[]): string | null {
+  for (const d of schedule) {
+    if (!d.open) continue;
+    if (!TIME_RE.test(d.start)) return `${d.label}: Açılış saati geçersiz — HH:MM formatında gir`;
+    if (!TIME_RE.test(d.end))   return `${d.label}: Kapanış saati geçersiz — HH:MM formatında gir`;
+    if (d.brk && !BREAK_RE.test(d.brk)) return `${d.label}: Mola formatı geçersiz — HH:MM–HH:MM formatında gir`;
+  }
+  return null;
 }
 
 function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSaved, initialSchedule }: HoursEditorSheetProps) {
@@ -601,6 +634,11 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
             {/* Save */}
             <TouchableOpacity
               onPress={async () => {
+                const validationError = validateSchedule(schedule);
+                if (validationError) {
+                  Alert.alert('Geçersiz Saat', validationError);
+                  return;
+                }
                 if (shopId) {
                   const wh = shopHoursScheduleToWorkingHours(schedule);
                   // WorkingHours is JSON-compatible; cast required because the type lacks an index signature
@@ -621,6 +659,7 @@ function HoursEditorSheet({ open, onClose, shopName = '', shopId, staffId, onSav
                 }
                 onSaved?.(schedule);
                 onClose();
+                Alert.alert('Kaydedildi', 'Çalışma saatleri güncellendi.');
               }}
               style={styles.primaryBtn}
               activeOpacity={0.8}
@@ -661,6 +700,7 @@ interface ShopData {
   slug: string;
   email: string;
   commission_enabled: boolean;
+  is_listed: boolean;
 }
 
 interface NotificationPrefs {
@@ -707,7 +747,7 @@ export default function SettingsScreen() {
       if (!user) { if (__DEV__) console.warn('[settings] no user — not logged in'); return; }
       supabase
         .from('shops')
-        .select('id, name, address, bio, slug, commission_enabled, working_hours')
+        .select('id, name, address, bio, phone, slug, commission_enabled, working_hours, is_listed')
         .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
         .maybeSingle()
         .then(({ data, error }) => {
@@ -724,10 +764,11 @@ export default function SettingsScreen() {
             name: data.name ?? '',
             address: data.address ?? '',
             bio: data.bio ?? '',
-            phone: '',
+            phone: data.phone ?? '',
             slug: data.slug ?? '',
             email: user.email ?? '',
             commission_enabled: data.commission_enabled ?? false,
+            is_listed: data.is_listed ?? true,
           });
           supabase
             .from('staff')
@@ -869,13 +910,6 @@ export default function SettingsScreen() {
           </Text>
         </View>
 
-        {/* Account info card */}
-        <View style={styles.accountCard}>
-          <Text style={styles.accountOverline}>Dükkan Sahibi</Text>
-          <Text style={styles.accountName}>{shop?.name ?? '—'}</Text>
-          <Text style={styles.accountEmail}>{shop?.email ?? '—'}</Text>
-        </View>
-
         {/* Profile clickable card */}
         <TouchableOpacity
           onPress={() => {
@@ -896,6 +930,7 @@ export default function SettingsScreen() {
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={styles.profileCardName}>{shop?.name ?? '—'}</Text>
             <Text style={styles.profileCardMeta}>{shop?.address?.split(',')[0] ?? '—'} · {shop?.slug ?? ''}</Text>
+            <Text style={styles.profileCardEmail}>{shop?.email ?? '—'}</Text>
           </View>
           <View style={styles.profileEditBadge}>
             <Text style={styles.profileEditText}>Düzenle</Text>
@@ -920,6 +955,7 @@ export default function SettingsScreen() {
           >
             <View style={{ flex: 1 }}>
               <Text style={styles.opRowTitle}>Dükkan Saatleri</Text>
+              <Text style={styles.opRowMeta}>{hoursSubtitle}</Text>
             </View>
             <View style={styles.chevronWrap}>
               <View style={styles.chevronLine1} />
@@ -1015,7 +1051,8 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Profil düzenle */}
+        {/* Hesap */}
+        <Text style={styles.sectionLabel}>Hesap</Text>
         <TouchableOpacity
           onPress={() => setSelfEditOpen(true)}
           style={styles.selfEditBtn}
@@ -1032,13 +1069,14 @@ export default function SettingsScreen() {
         >
           <Text style={styles.signOutBtnText}>Çıkış yap</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handleDeleteAccount}
-          style={[styles.signOutBtn, { marginTop: 12 }]}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.signOutBtnText}>Hesabımı Sil</Text>
-        </TouchableOpacity>
+        <View style={styles.deleteAccountWrap}>
+          <TouchableOpacity
+            onPress={handleDeleteAccount}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.deleteAccountLink}>Hesabımı Sil</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Yasal */}
         <View style={styles.legalSection}>
@@ -1074,6 +1112,7 @@ export default function SettingsScreen() {
         initialAddress={shop?.address ?? ''}
         initialBio={shop?.bio ?? ''}
         initialPhone={shop?.phone ?? ''}
+        initialVisible={shop?.is_listed ?? true}
         slug={shop?.slug ?? ''}
         onSaved={(next) => setShop((prev) => prev ? { ...prev, ...next } : prev)}
       />
@@ -1115,13 +1154,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 16,
   },
-  eyebrow: {
-    fontSize: 11,
-    fontFamily: 'Montserrat-SemiBold',
-    letterSpacing: 2.5,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-  },
   pageTitle: {
     fontSize: 32,
     fontFamily: 'Montserrat-Bold',
@@ -1135,37 +1167,6 @@ const styles = StyleSheet.create({
     color: colors.slate[500],
     marginTop: 4,
     lineHeight: 19.5,
-  },
-
-  /* Account card */
-  accountCard: {
-    marginHorizontal: 20,
-    backgroundColor: colors.slate[0],
-    borderWidth: 1,
-    borderColor: colors.slate[200],
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    marginBottom: 8,
-  },
-  accountOverline: {
-    fontSize: 10,
-    fontFamily: 'Montserrat-Bold',
-    letterSpacing: 1.96,
-    textTransform: 'uppercase',
-    color: colors.slate[500],
-  },
-  accountName: {
-    fontSize: 17,
-    fontFamily: 'Montserrat-Bold',
-    color: colors.ink[900],
-    marginTop: 6,
-  },
-  accountEmail: {
-    fontSize: 13,
-    fontFamily: 'Montserrat-Regular',
-    color: colors.slate[500],
-    marginTop: 2,
   },
 
   /* Profile card */
@@ -1207,6 +1208,12 @@ const styles = StyleSheet.create({
     color: colors.slate[500],
     marginTop: 3,
   },
+  profileCardEmail: {
+    fontSize: 11,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.slate[400],
+    marginTop: 2,
+  },
   profileEditBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1246,10 +1253,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: colors.slate[100],
-  },
-  opRowBorderTop: {
-    borderTopWidth: 1,
-    borderTopColor: colors.slate[100],
   },
   opRowLast: {
     borderBottomWidth: 0,
@@ -1346,7 +1349,7 @@ const styles = StyleSheet.create({
   /* Sign out */
   selfEditBtn: {
     marginHorizontal: 20,
-    marginTop: 28,
+    marginTop: 0,
     height: 52,
     borderRadius: 12,
     borderWidth: 1,
@@ -1375,6 +1378,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Montserrat-SemiBold',
     color: colors.coral[600],
+  },
+  deleteAccountWrap: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  deleteAccountLink: {
+    fontSize: 12,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.slate[400],
+    textDecorationLine: 'underline',
   },
 
   /* Footer */
@@ -1554,19 +1568,6 @@ const styles = StyleSheet.create({
     color: colors.brand[600],
   },
 
-  /* Toggle row (main screen) */
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.slate[100],
-  },
-  toggleRowLast: {
-    borderBottomWidth: 0,
-  },
-
   /* Toggle row (in sheet) */
   sheetToggleRow: {
     flexDirection: 'row',
@@ -1694,6 +1695,14 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
 
+  /* Save error */
+  saveErrorText: {
+    fontSize: 13,
+    fontFamily: 'Montserrat-Regular',
+    color: colors.coral[600],
+    textAlign: 'center',
+  },
+
   /* Primary button */
   primaryBtn: {
     height: 52,
@@ -1766,9 +1775,9 @@ const styles = StyleSheet.create({
     borderColor: colors.slate[200],
   },
   dayTabText: {
-    fontSize: 9,
+    fontSize: 11,
     fontFamily: 'Montserrat-Bold',
-    letterSpacing: 1.0,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   dayTabTextSel: {
