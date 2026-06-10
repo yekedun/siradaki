@@ -1,43 +1,49 @@
+import { toggleService } from '@berber/shared/booking-selection';
+
 export interface AppointmentModalService {
   id: string;
   label: string;
   dur: number;
   price: string;
+  priceValue: number;
 }
 
 interface SaveState {
   customerName: string;
   slot: string;
-  serviceId: string | null;
+  serviceIds: string[];
   staffListHasItems: boolean;
   selectedStaffId: string | null;
 }
 
 const DESIGN_DEFAULT_SERVICE_ID = 'sac-sakal';
 
-export function getInitialAppointmentServiceId(
+export function getInitialAppointmentServiceIds(
   services: AppointmentModalService[],
-): string | null {
+): string[] {
   if (services.some((service) => service.id === DESIGN_DEFAULT_SERVICE_ID)) {
-    return DESIGN_DEFAULT_SERVICE_ID;
+    return [DESIGN_DEFAULT_SERVICE_ID];
   }
-  return services[0]?.id ?? null;
+  return services[0] ? [services[0].id] : [];
 }
 
-export function resolveAppointmentServiceId(
-  currentServiceId: string | null,
+export function resolveAppointmentServiceIds(
+  currentServiceIds: string[],
   services: AppointmentModalService[],
-): string | null {
-  if (currentServiceId && services.some((service) => service.id === currentServiceId)) {
-    return currentServiceId;
-  }
-  return getInitialAppointmentServiceId(services);
+): string[] {
+  const valid = currentServiceIds.filter((id) => services.some((service) => service.id === id));
+  if (valid.length > 0) return valid;
+  return getInitialAppointmentServiceIds(services);
+}
+
+export function toggleAppointmentService(current: string[], id: string): string[] {
+  return toggleService(current, id);
 }
 
 export function isAppointmentModalSaveEnabled(state: SaveState): boolean {
   return state.customerName.trim().length >= 2
     && !!state.slot
-    && !!state.serviceId
+    && state.serviceIds.length > 0
     && (!state.staffListHasItems || !!state.selectedStaffId);
 }
 
