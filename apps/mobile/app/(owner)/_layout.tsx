@@ -10,80 +10,88 @@
  *   { key:'ayarlar', icon:'settings',      label:'Ayarlar' }
  */
 import { Tabs } from 'expo-router';
+import { View } from 'react-native';
 import { BarChart3, CalendarDays, CalendarCheck2, Wallet, Users } from 'lucide-react-native';
 import { colors } from '../../lib/theme';
 import { ShopProvider } from '../../lib/ShopContext';
+import { TourProvider } from '../../lib/tour/TourContext';
+import { TourOverlayHost } from '../../components/TourOverlay';
 
 const ICON_SIZE = 20;
 
 export default function OwnerLayout() {
   return (
     <ShopProvider>
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: 'rgba(247,248,250,0.94)',
-          borderTopColor: colors.slate[200],
-          borderTopWidth: 1,
-          height: 74,
-          paddingBottom: 6,
-        },
-        tabBarActiveTintColor:   colors.ink[900],
-        tabBarInactiveTintColor: colors.slate[500],
-        tabBarLabelStyle: {
-          fontFamily: 'Montserrat-SemiBold',
-          fontSize: 10,
-          letterSpacing: 0.4,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Özet',
-          tabBarIcon: ({ color }) => <BarChart3 size={ICON_SIZE} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="agenda"
-        options={{
-          title: 'Ajanda',
-          tabBarIcon: ({ color }) => <CalendarDays size={ICON_SIZE} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="availability"
-        options={{
-          title: 'Müsaitlik',
-          tabBarIcon: ({ color }) => <CalendarCheck2 size={ICON_SIZE} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="earnings"
-        options={{
-          title: 'Kazanç',
-          tabBarIcon: ({ color }) => <Wallet size={ICON_SIZE} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="team"
-        options={{
-          title: 'Ekip',
-          tabBarIcon: ({ color }) => <Users size={ICON_SIZE} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Ayarlar',
-          href: null,
-        }}
-      />
-      {/* Non-tab screens — hidden from tab bar */}
-      <Tabs.Screen name="onboarding" options={{ href: null }} />
-      <Tabs.Screen name="services"   options={{ href: null }} />
-    </Tabs>
+      <TourProvider>
+        <View style={{ flex: 1 }}>
+          <Tabs
+            screenOptions={{
+              headerShown: false,
+              tabBarStyle: {
+                backgroundColor: 'rgba(247,248,250,0.94)',
+                borderTopColor: colors.slate[200],
+                borderTopWidth: 1,
+                height: 74,
+                paddingBottom: 6,
+              },
+              tabBarActiveTintColor:   colors.ink[900],
+              tabBarInactiveTintColor: colors.slate[500],
+              tabBarLabelStyle: {
+                fontFamily: 'Montserrat-SemiBold',
+                fontSize: 10,
+                letterSpacing: 0.4,
+              },
+            }}
+          >
+            <Tabs.Screen
+              name="index"
+              options={{
+                title: 'Özet',
+                tabBarIcon: ({ color }) => <BarChart3 size={ICON_SIZE} color={color} />,
+              }}
+            />
+            <Tabs.Screen
+              name="agenda"
+              options={{
+                title: 'Ajanda',
+                tabBarIcon: ({ color }) => <CalendarDays size={ICON_SIZE} color={color} />,
+              }}
+            />
+            <Tabs.Screen
+              name="availability"
+              options={{
+                title: 'Müsaitlik',
+                tabBarIcon: ({ color }) => <CalendarCheck2 size={ICON_SIZE} color={color} />,
+              }}
+            />
+            <Tabs.Screen
+              name="earnings"
+              options={{
+                title: 'Kazanç',
+                tabBarIcon: ({ color }) => <Wallet size={ICON_SIZE} color={color} />,
+              }}
+            />
+            <Tabs.Screen
+              name="team"
+              options={{
+                title: 'Ekip',
+                tabBarIcon: ({ color }) => <Users size={ICON_SIZE} color={color} />,
+              }}
+            />
+            <Tabs.Screen
+              name="settings"
+              options={{
+                title: 'Ayarlar',
+                href: null,
+              }}
+            />
+            {/* Non-tab screens — hidden from tab bar */}
+            <Tabs.Screen name="onboarding" options={{ href: null }} />
+            <Tabs.Screen name="services"   options={{ href: null }} />
+          </Tabs>
+          <TourOverlayHost host="root" />
+        </View>
+      </TourProvider>
     </ShopProvider>
   );
 }
