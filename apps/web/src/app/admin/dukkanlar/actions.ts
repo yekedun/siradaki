@@ -109,7 +109,7 @@ export async function reactivateShop(shopId: string, adminKey: string) {
 
 export type ShopStatus = 'pending' | 'active' | 'rejected' | 'suspended';
 
-export type Owner = { name: string; email: string | null } | null;
+export type Owner = { name: string; email: string | null; phone: string | null } | null;
 
 export type Shop = {
   id: string;
@@ -118,6 +118,8 @@ export type Shop = {
   status: ShopStatus;
   created_at: string;
   owner_user_id: string;
+  address: string | null;
+  phone: string | null;
   owner: Owner;
 };
 
@@ -136,7 +138,7 @@ export async function getShops(
 
   const { data, count, error } = await supabase
     .from('shops')
-    .select('id, name, slug, status, created_at, owner_user_id', { count: 'exact' })
+    .select('id, name, slug, status, created_at, owner_user_id, address, phone', { count: 'exact' })
     .in('status', statuses)
     .order('created_at', { ascending: false })
     .range(page * pageSize, (page + 1) * pageSize - 1);
@@ -145,15 +147,15 @@ export async function getShops(
   const shops = data ?? [];
   const shopIds = shops.map(s => s.id);
 
-  let ownerByShopId: Record<string, { name: string; email: string | null }> = {};
+  let ownerByShopId: Record<string, { name: string; email: string | null; phone: string | null }> = {};
   if (shopIds.length > 0) {
     const { data: staffRows } = await supabase
       .from('staff')
-      .select('shop_id, name, email')
+      .select('shop_id, name, email, phone')
       .in('shop_id', shopIds)
       .eq('role', 'admin');
     ownerByShopId = Object.fromEntries(
-      (staffRows ?? []).map(s => [s.shop_id, { name: s.name, email: s.email }])
+      (staffRows ?? []).map(s => [s.shop_id, { name: s.name, email: s.email, phone: s.phone }])
     );
   }
 
