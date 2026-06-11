@@ -155,12 +155,14 @@ describe('getShops', () => {
     const shopRow = {
       id: 'shop-1',
       name: 'Test Berber',
+      display_name: 'Test Berber',
       slug: 'test-berber',
       status: 'pending',
       created_at: '2026-01-01T00:00:00Z',
       owner_user_id: 'user-1',
       address: 'İstanbul',
       phone: '05001112233',
+      is_listed: true,
     };
     const staffRow = {
       shop_id: 'shop-1',
@@ -198,13 +200,15 @@ describe('getShops', () => {
   it('owner yoksa null döner', async () => {
     const shopRow = {
       id: 'shop-2',
-      name: 'Boş Berber',
+      name: null,
+      display_name: 'Boş Berber',
       slug: 'bos-berber',
       status: 'pending',
       created_at: '2026-01-01T00:00:00Z',
       owner_user_id: 'user-2',
       address: null,
       phone: null,
+      is_listed: false,
     };
 
     serviceClient.from

@@ -113,7 +113,8 @@ export type Owner = { name: string; email: string | null; phone: string | null }
 
 export type Shop = {
   id: string;
-  name: string;
+  name: string | null;
+  display_name: string;
   slug: string;
   status: ShopStatus;
   created_at: string;
@@ -139,7 +140,7 @@ export async function getShops(
 
   const { data, count, error } = await supabase
     .from('shops')
-    .select('id, name, slug, status, created_at, owner_user_id, address, phone, is_listed', { count: 'exact' })
+    .select('id, name, display_name, slug, status, created_at, owner_user_id, address, phone, is_listed', { count: 'exact' })
     .in('status', statuses)
     .order('created_at', { ascending: false })
     .range(page * pageSize, (page + 1) * pageSize - 1);
@@ -155,9 +156,10 @@ export async function getShops(
       .select('shop_id, name, email, phone')
       .in('shop_id', shopIds)
       .eq('role', 'admin');
-    ownerByShopId = Object.fromEntries(
-      (staffRows ?? []).map(s => [s.shop_id, { name: s.name, email: s.email, phone: s.phone }])
-    );
+    ownerByShopId = (staffRows ?? []).reduce<typeof ownerByShopId>((acc, s) => {
+      if (!acc[s.shop_id]) acc[s.shop_id] = { name: s.name, email: s.email, phone: s.phone };
+      return acc;
+    }, {});
   }
 
   return {

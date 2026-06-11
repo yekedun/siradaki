@@ -82,7 +82,7 @@ export default function DukkanlarPage() {
 
   const displayed = search.trim()
     ? shops.filter(s =>
-        s.name.toLowerCase().includes(search.toLowerCase()) ||
+        (s.display_name || (s.name ?? '')).toLowerCase().includes(search.toLowerCase()) ||
         s.slug.toLowerCase().includes(search.toLowerCase()) ||
         (s.owner?.name ?? '').toLowerCase().includes(search.toLowerCase()) ||
         (s.owner?.email ?? '').toLowerCase().includes(search.toLowerCase())
@@ -209,7 +209,7 @@ function ShopRow({ shop, expanded, disabled, onToggle, onApprove, onReject, onSu
         {/* Dükkan adı + slug */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {shop.name}
+            {shop.display_name || shop.name}
           </div>
           <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 1 }}>
             siradaki.app/{shop.slug}
