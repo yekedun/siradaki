@@ -22,6 +22,8 @@ import { supabase } from '../../lib/supabase';
 import { deleteCurrentAccount } from '../../lib/delete-account';
 import { buildBarberLink } from '../../lib/onboarding-utils';
 import { StaffSelfEditModal } from '../../components/StaffSelfEditModal';
+import { TourTarget, useTour } from '../../lib/tour/TourContext';
+import { staffTourSteps, TOUR_SEEN_STAFF_KEY } from '../../lib/tour/steps';
 
 interface Profile {
   name: string;
@@ -72,6 +74,7 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 
 export default function HesabimScreen() {
   const router = useRouter();
+  const { start: startTour } = useTour();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [dailySummary, setDailySummary] = useState<DailySummaryPrefState>({ enabled: true });
   const [copied, setCopied] = useState(false);
@@ -253,25 +256,27 @@ export default function HesabimScreen() {
 
         {/* Randevu linki — only shown when staff has a slug */}
         {profile?.barberLink ? (
-          <View style={styles.linkSection}>
-            <Text style={styles.linkSectionLabel}>Randevu Linkim</Text>
-            <View style={styles.linkCard}>
-              <Text style={styles.linkUrl} numberOfLines={1} ellipsizeMode="tail">
-                {profile.barberLink}
-              </Text>
-              <TouchableOpacity style={styles.copyBtn} onPress={handleCopy} activeOpacity={0.75}>
-                <Text style={[styles.copyBtnText, copied && { color: colors.mint[600] }]}>
-                  {copied ? 'Kopyalandı!' : 'Kopyala'}
+          <TourTarget id="staff-settings">
+            <View style={styles.linkSection}>
+              <Text style={styles.linkSectionLabel}>Randevu Linkim</Text>
+              <View style={styles.linkCard}>
+                <Text style={styles.linkUrl} numberOfLines={1} ellipsizeMode="tail">
+                  {profile.barberLink}
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.75}>
-                <Text style={styles.shareBtnText}>Paylaş</Text>
-              </TouchableOpacity>
+                <TouchableOpacity style={styles.copyBtn} onPress={handleCopy} activeOpacity={0.75}>
+                  <Text style={[styles.copyBtnText, copied && { color: colors.mint[600] }]}>
+                    {copied ? 'Kopyalandı!' : 'Kopyala'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.75}>
+                  <Text style={styles.shareBtnText}>Paylaş</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.linkHint}>
+                Müşterilerinle bu linki paylaş — doğrudan sana randevu alabilirler.
+              </Text>
             </View>
-            <Text style={styles.linkHint}>
-              Müşterilerinle bu linki paylaş — doğrudan sana randevu alabilirler.
-            </Text>
-          </View>
+          </TourTarget>
         ) : null}
 
         {/* Bildirimler */}
@@ -291,6 +296,23 @@ export default function HesabimScreen() {
           <Text style={styles.notifHint}>
             Yeni randevu ve iptal bildirimleri her zaman gönderilir.
           </Text>
+        </View>
+
+        {/* Uygulama Turu */}
+        <View style={styles.notifSection}>
+          <Text style={styles.linkSectionLabel}>Yardım</Text>
+          <TouchableOpacity
+            style={styles.notifCard}
+            onPress={() => startTour(staffTourSteps, TOUR_SEEN_STAFF_KEY)}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Uygulama turunu başlat"
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.notifTitle}>Uygulama Turu</Text>
+              <Text style={styles.notifMeta}>Uygulamayı adım adım yeniden keşfet</Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Danger actions */}

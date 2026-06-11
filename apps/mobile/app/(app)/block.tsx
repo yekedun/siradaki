@@ -41,6 +41,7 @@
  *   Button variant="secondary" size="lg" full "Yeni Blok Ekle"
  */
 import React, { useEffect, useState } from 'react';
+import { TourTarget } from '../../lib/tour/TourContext';
 import {
   Alert,
   View,
@@ -210,6 +211,7 @@ export default function BlockScreen() {
   /* ── Form state ─────────────────────────────────────────────── */
   return (
     <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
+      <TourTarget id="staff-block" style={{ flex: 1 }}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -373,6 +375,7 @@ export default function BlockScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      </TourTarget>
     </SafeAreaView>
   );
 }
