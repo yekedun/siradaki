@@ -212,169 +212,169 @@ export default function BlockScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['bottom', 'left', 'right']}>
       <TourTarget id="staff-block" style={{ flex: 1 }}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* OverlineHeader eyebrow="Blok Ekle" title="Takvimi Kapat"
-            meta="Şu andan itibaren seçtiğin süre boyunca takvim kapalı görünür." */}
-        <OverlineHeader
-          title="Takvimi Kapat"
-          meta="Şu andan itibaren seçtiğin süre boyunca takvim kapalı görünür."
-        />
-
-        {/* Current time card */}
-        <View style={styles.px20}>
-          <Card padding={16}>
-            {/* overline "Şu An · 10:42" */}
-            <Text style={styles.currentTimeOverline}>Şu An · {startTime}</Text>
-            {/* sub "Blok başlangıç saati otomatik atanır." */}
-            <Text style={styles.currentTimeSub}>Blok başlangıç saati otomatik atanır.</Text>
-          </Card>
-        </View>
-
-        {/* All-day toggle */}
-        <View style={styles.allDayRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.allDayTitle}>Bugünü Tamamen Kapat</Text>
-            <Text style={styles.allDaySub}>Tüm gün için blok oluşturur</Text>
-          </View>
-          <Switch
-            value={allDay}
-            onValueChange={setAllDay}
-            trackColor={{ false: colors.slate[400], true: colors.ink[900] }}
-            ios_backgroundColor={colors.slate[400]}
-            thumbColor="#fff"
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* OverlineHeader eyebrow="Blok Ekle" title="Takvimi Kapat"
+              meta="Şu andan itibaren seçtiğin süre boyunca takvim kapalı görünür." */}
+          <OverlineHeader
+            title="Takvimi Kapat"
+            meta="Şu andan itibaren seçtiğin süre boyunca takvim kapalı görünür."
           />
-        </View>
 
-        {/* SectionLabel "Süre" — hidden when all-day */}
-        {!allDay && (
-          <>
-            <SectionLabel>Süre</SectionLabel>
-
-            {/* Preset duration chips: 30dk / 1sa / 2sa / Özel */}
-            <View style={styles.durGrid}>
-              {PRESET_DURATIONS.map(d => {
-                const sel = dur === d;
-                return (
-                  <TouchableOpacity
-                    key={d}
-                    style={[styles.durChip, sel ? styles.durChipActive : styles.durChipInactive]}
-                    onPress={() => { setDur(d); setShowCustom(false); }}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.durNum, sel && styles.durNumActive]}>
-                      {d < 60 ? d : d / 60}
-                    </Text>
-                    <Text style={[styles.durUnit, sel && styles.durUnitActive]}>
-                      {d < 60 ? 'dk' : 'sa'}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-              <TouchableOpacity
-                style={[styles.durChip, dur === 'custom' ? styles.durChipActive : styles.durChipInactive]}
-                onPress={() => { setDur('custom'); setShowCustom(true); }}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.durNum, dur === 'custom' && styles.durNumActive]}>Özel</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Custom minutes input */}
-            {showCustom && (
-              <View style={{ paddingHorizontal: 20, marginTop: 8 }}>
-                <TextField
-                  label="Dakika"
-                  value={customInput}
-                  onChangeText={setCustomInput}
-                  keyboardType="number-pad"
-                  placeholder="örn. 45"
-                />
-              </View>
-            )}
-          </>
-        )}
-
-        {/* SectionLabel "Sebep" */}
-        <SectionLabel>Sebep</SectionLabel>
-
-        {/* Reason list: flex col gap 8, padding '0 20px'
-            Each row: padding 14, borderRadius 12, flex row gap 12
-            Title 15px SemiBold; Meta 12px Regular opacity 0.6 marginTop 2 */}
-        <View style={styles.reasonList}>
-          {REASONS.map(r => {
-            const sel = reason === r.id;
-            return (
-              <TouchableOpacity
-                key={r.id}
-                onPress={() => setReason(r.id)}
-                activeOpacity={0.8}
-                style={[styles.reasonRow, sel ? styles.reasonRowActive : styles.reasonRowInactive]}
-              >
-                <View style={styles.reasonIconPlaceholder}>
-                  <r.Icon size={18} color={sel ? colors.brand[600] : colors.slate[400]} strokeWidth={2} />
-                </View>
-                <View style={styles.reasonRight}>
-                  <Text style={[styles.reasonTitle, sel && styles.reasonTitleActive]}>
-                    {r.title}
-                  </Text>
-                  <Text style={[styles.reasonMeta, sel && styles.reasonMetaActive]}>
-                    {r.meta}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* SectionLabel "Önizleme" */}
-        <SectionLabel>Önizleme</SectionLabel>
-
-        {/* Preview BlokCard:
-            bg slate-100, 1px dashed slate-400, borderRadius 12, padding '16px 18px'
-            12px Bold 0.18em uppercase fg-2: "{curReason.title.toUpperCase()} · {dur}DK" */}
-        <View style={styles.px20}>
-          <View style={styles.previewCard}>
-            <Text style={styles.previewText}>
-              {curReason.title.toUpperCase()} · {effectiveDur}DK
-            </Text>
+          {/* Current time card */}
+          <View style={styles.px20}>
+            <Card padding={16}>
+              {/* overline "Şu An · 10:42" */}
+              <Text style={styles.currentTimeOverline}>Şu An · {startTime}</Text>
+              {/* sub "Blok başlangıç saati otomatik atanır." */}
+              <Text style={styles.currentTimeSub}>Blok başlangıç saati otomatik atanır.</Text>
+            </Card>
           </View>
-        </View>
 
-        {/* Button variant="primary" size="lg" full "Kapat" */}
-        <View style={styles.btnWrap}>
-          <TouchableOpacity style={styles.primaryBtn} disabled={saving} onPress={async () => {
-            if (!staffId) {
-              Alert.alert('Hata', 'Hesap bilgileri yüklenemedi. Lütfen tekrar deneyin.');
-              return;
-            }
+          {/* All-day toggle */}
+          <View style={styles.allDayRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.allDayTitle}>Bugünü Tamamen Kapat</Text>
+              <Text style={styles.allDaySub}>Tüm gün için blok oluşturur</Text>
+            </View>
+            <Switch
+              value={allDay}
+              onValueChange={setAllDay}
+              trackColor={{ false: colors.slate[400], true: colors.ink[900] }}
+              ios_backgroundColor={colors.slate[400]}
+              thumbColor="#fff"
+            />
+          </View>
 
-            if (!allDay && dur === 'custom' && effectiveDur === 0) {
-              Alert.alert('Hata', 'Lütfen geçerli bir süre girin.');
-              return;
-            }
+          {/* SectionLabel "Süre" — hidden when all-day */}
+          {!allDay && (
+            <>
+              <SectionLabel>Süre</SectionLabel>
 
-            setSaving(true);
-            try {
-              const { error } = await supabase.functions.invoke('create-manual-block', {
-                body: { staff_id: staffId, duration_min: effectiveDur, reason: REASON_MAP[reason] },
-              });
-              if (error) {
-                Alert.alert('Hata', `Blok eklenemedi: ${error.message}`);
+              {/* Preset duration chips: 30dk / 1sa / 2sa / Özel */}
+              <View style={styles.durGrid}>
+                {PRESET_DURATIONS.map(d => {
+                  const sel = dur === d;
+                  return (
+                    <TouchableOpacity
+                      key={d}
+                      style={[styles.durChip, sel ? styles.durChipActive : styles.durChipInactive]}
+                      onPress={() => { setDur(d); setShowCustom(false); }}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.durNum, sel && styles.durNumActive]}>
+                        {d < 60 ? d : d / 60}
+                      </Text>
+                      <Text style={[styles.durUnit, sel && styles.durUnitActive]}>
+                        {d < 60 ? 'dk' : 'sa'}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+                <TouchableOpacity
+                  style={[styles.durChip, dur === 'custom' ? styles.durChipActive : styles.durChipInactive]}
+                  onPress={() => { setDur('custom'); setShowCustom(true); }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.durNum, dur === 'custom' && styles.durNumActive]}>Özel</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Custom minutes input */}
+              {showCustom && (
+                <View style={{ paddingHorizontal: 20, marginTop: 8 }}>
+                  <TextField
+                    label="Dakika"
+                    value={customInput}
+                    onChangeText={setCustomInput}
+                    keyboardType="number-pad"
+                    placeholder="örn. 45"
+                  />
+                </View>
+              )}
+            </>
+          )}
+
+          {/* SectionLabel "Sebep" */}
+          <SectionLabel>Sebep</SectionLabel>
+
+          {/* Reason list: flex col gap 8, padding '0 20px'
+              Each row: padding 14, borderRadius 12, flex row gap 12
+              Title 15px SemiBold; Meta 12px Regular opacity 0.6 marginTop 2 */}
+          <View style={styles.reasonList}>
+            {REASONS.map(r => {
+              const sel = reason === r.id;
+              return (
+                <TouchableOpacity
+                  key={r.id}
+                  onPress={() => setReason(r.id)}
+                  activeOpacity={0.8}
+                  style={[styles.reasonRow, sel ? styles.reasonRowActive : styles.reasonRowInactive]}
+                >
+                  <View style={styles.reasonIconPlaceholder}>
+                    <r.Icon size={18} color={sel ? colors.brand[600] : colors.slate[400]} strokeWidth={2} />
+                  </View>
+                  <View style={styles.reasonRight}>
+                    <Text style={[styles.reasonTitle, sel && styles.reasonTitleActive]}>
+                      {r.title}
+                    </Text>
+                    <Text style={[styles.reasonMeta, sel && styles.reasonMetaActive]}>
+                      {r.meta}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* SectionLabel "Önizleme" */}
+          <SectionLabel>Önizleme</SectionLabel>
+
+          {/* Preview BlokCard:
+              bg slate-100, 1px dashed slate-400, borderRadius 12, padding '16px 18px'
+              12px Bold 0.18em uppercase fg-2: "{curReason.title.toUpperCase()} · {dur}DK" */}
+          <View style={styles.px20}>
+            <View style={styles.previewCard}>
+              <Text style={styles.previewText}>
+                {curReason.title.toUpperCase()} · {effectiveDur}DK
+              </Text>
+            </View>
+          </View>
+
+          {/* Button variant="primary" size="lg" full "Kapat" */}
+          <View style={styles.btnWrap}>
+            <TouchableOpacity style={styles.primaryBtn} disabled={saving} onPress={async () => {
+              if (!staffId) {
+                Alert.alert('Hata', 'Hesap bilgileri yüklenemedi. Lütfen tekrar deneyin.');
                 return;
               }
-              setBlocked(true);
-            } finally {
-              setSaving(false);
-            }
-          }}>
-            <Text style={styles.primaryBtnText}>{saving ? 'Kaydediliyor...' : 'Kapat'}</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+
+              if (!allDay && dur === 'custom' && effectiveDur === 0) {
+                Alert.alert('Hata', 'Lütfen geçerli bir süre girin.');
+                return;
+              }
+
+              setSaving(true);
+              try {
+                const { error } = await supabase.functions.invoke('create-manual-block', {
+                  body: { staff_id: staffId, duration_min: effectiveDur, reason: REASON_MAP[reason] },
+                });
+                if (error) {
+                  Alert.alert('Hata', `Blok eklenemedi: ${error.message}`);
+                  return;
+                }
+                setBlocked(true);
+              } finally {
+                setSaving(false);
+              }
+            }}>
+              <Text style={styles.primaryBtnText}>{saving ? 'Kaydediliyor...' : 'Kapat'}</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </TourTarget>
     </SafeAreaView>
   );
