@@ -11,7 +11,7 @@
  * around the measured target. Centered balloon when there is no target
  * or measurement fails (spec §5: the tour must never deadlock).
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useId, useState } from 'react';
 import {
   BackHandler,
   StyleSheet,
@@ -29,6 +29,8 @@ const SPOT_PADDING = 6;
 const SPOT_RADIUS = 12;
 const MEASURE_INTERVAL_MS = 150;
 const MEASURE_MAX_ATTEMPTS = 20; // 3s, then fall back to centered balloon
+const BALLOON_EST_HEIGHT = 220;
+const SCRIM_COLOR = 'rgba(11,18,32,0.72)'; // colors.ink[900] @ 72%
 
 interface SpotRect {
   x: number;
@@ -51,6 +53,8 @@ function TourOverlay() {
   const insets = useSafeAreaInsets();
   const [rect, setRect] = useState<SpotRect | null>(null);
   const [settled, setSettled] = useState(false);
+  const rawId = useId();
+  const maskId = rawId.replace(/:/g, '');
 
   const step = active!.steps[active!.index];
   const isFirst = active!.index === 0;
@@ -71,6 +75,7 @@ function TourOverlay() {
     }
     let attempts = 0;
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const tick = () => {
       if (cancelled) return;
       attempts += 1;
@@ -83,14 +88,14 @@ function TourOverlay() {
             setRect({ x, y, width, height });
             setSettled(true);
           } else if (attempts < MEASURE_MAX_ATTEMPTS) {
-            setTimeout(tick, MEASURE_INTERVAL_MS);
+            timer = setTimeout(tick, MEASURE_INTERVAL_MS);
           } else {
             setRect(null);
             setSettled(true);
           }
         });
       } else if (attempts < MEASURE_MAX_ATTEMPTS) {
-        setTimeout(tick, MEASURE_INTERVAL_MS);
+        timer = setTimeout(tick, MEASURE_INTERVAL_MS);
       } else {
         setRect(null); // target never mounted (empty state etc.) → centered balloon
         setSettled(true);
@@ -99,6 +104,7 @@ function TourOverlay() {
     tick();
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
     };
   }, [step.targetId, getTarget]);
 
@@ -125,14 +131,18 @@ function TourOverlay() {
 
   // Balloon below the spotlight when there is room, otherwise above; centered as fallback.
   const balloonBelow = spot ? spot.y + spot.height + 12 : null;
-  const balloonAbove = spot ? winH - spot.y + 12 : null;
-  const placeBelow = spot ? spot.y + spot.height + 220 < winH : false;
+  const balloonAboveRaw = spot ? winH - spot.y + 12 : null;
+  // Clamp so the balloon never overflows past the safe-area top.
+  const balloonAbove = balloonAboveRaw !== null
+    ? Math.min(balloonAboveRaw, winH - insets.top - (BALLOON_EST_HEIGHT + 12))
+    : null;
+  const placeBelow = spot ? spot.y + spot.height + BALLOON_EST_HEIGHT < winH : false;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="auto">
       <Svg width={winW} height={winH}>
         <Defs>
-          <Mask id="spotlight">
+          <Mask id={maskId}>
             <Rect x={0} y={0} width={winW} height={winH} fill="#fff" />
             {spot && (
               <Rect
@@ -151,8 +161,8 @@ function TourOverlay() {
           y={0}
           width={winW}
           height={winH}
-          fill="rgba(11,18,32,0.72)"
-          mask="url(#spotlight)"
+          fill={SCRIM_COLOR}
+          mask={`url(#${maskId})`}
         />
       </Svg>
 
@@ -210,7 +220,7 @@ function TourOverlay() {
 const styles = StyleSheet.create({
   dimOnly: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(11,18,32,0.72)',
+    backgroundColor: SCRIM_COLOR,
   },
   balloon: {
     position: 'absolute',
@@ -221,7 +231,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.slate[0],
     borderRadius: radius.lg,
     padding: 18,
-    shadowColor: '#0B1220',
+    shadowColor: colors.ink[900],
     shadowOpacity: 0.25,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 8 },
