@@ -968,22 +968,22 @@ export default function SettingsScreen() {
 
           {/* Hizmetler */}
           <TourTarget id="settings-services">
-          <TouchableOpacity
-            onPress={() => router.push('/(owner)/services')}
-            style={[styles.opRow]}
-            activeOpacity={0.75}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.opRowTitle}>Hizmetler</Text>
-              <Text style={styles.opRowMeta}>
-                Sunulan hizmetleri ve fiyatları yönet
-              </Text>
-            </View>
-            <View style={styles.chevronWrap}>
-              <View style={styles.chevronLine1} />
-              <View style={styles.chevronLine2} />
-            </View>
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push('/(owner)/services')}
+              style={[styles.opRow]}
+              activeOpacity={0.75}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.opRowTitle}>Hizmetler</Text>
+                <Text style={styles.opRowMeta}>
+                  Sunulan hizmetleri ve fiyatları yönet
+                </Text>
+              </View>
+              <View style={styles.chevronWrap}>
+                <View style={styles.chevronLine1} />
+                <View style={styles.chevronLine2} />
+              </View>
+            </TouchableOpacity>
           </TourTarget>
 
           {/* Uygulama Turu */}
@@ -991,6 +991,8 @@ export default function SettingsScreen() {
             onPress={() => startTour(ownerTourSteps, TOUR_SEEN_OWNER_KEY)}
             style={[styles.opRow, styles.opRowLast]}
             activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Uygulama turunu başlat"
           >
             <View style={{ flex: 1 }}>
               <Text style={styles.opRowTitle}>Uygulama Turu</Text>
