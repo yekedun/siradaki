@@ -120,6 +120,7 @@ export type Shop = {
   owner_user_id: string;
   address: string | null;
   phone: string | null;
+  is_listed: boolean;
   owner: Owner;
 };
 
@@ -138,7 +139,7 @@ export async function getShops(
 
   const { data, count, error } = await supabase
     .from('shops')
-    .select('id, name, slug, status, created_at, owner_user_id, address, phone', { count: 'exact' })
+    .select('id, name, slug, status, created_at, owner_user_id, address, phone, is_listed', { count: 'exact' })
     .in('status', statuses)
     .order('created_at', { ascending: false })
     .range(page * pageSize, (page + 1) * pageSize - 1);

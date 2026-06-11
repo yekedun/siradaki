@@ -186,13 +186,13 @@ describe('getShops', () => {
     const result = await getShops('secret', 0, 20);
 
     expect(result.total).toBe(1);
-    expect(result.data[0].owner).toEqual({
+    expect(result.data[0]!.owner).toEqual({
       name: 'Ali Veli',
       email: 'ali@example.com',
       phone: '05551234567',
     });
-    expect(result.data[0].address).toBe('İstanbul');
-    expect(result.data[0].phone).toBe('05001112233');
+    expect(result.data[0]!.address).toBe('İstanbul');
+    expect(result.data[0]!.phone).toBe('05001112233');
   });
 
   it('owner yoksa null döner', async () => {
@@ -223,6 +223,6 @@ describe('getShops', () => {
     const { getShops } = await import('./actions');
     const result = await getShops('secret', 0, 20);
 
-    expect(result.data[0].owner).toBeNull();
+    expect(result.data[0]!.owner).toBeNull();
   });
 });

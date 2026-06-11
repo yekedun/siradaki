@@ -40,6 +40,7 @@ export default function DukkanlarPage() {
   const [page,        setPage]        = useState(0);
   const [filter,      setFilter]      = useState<FilterStatus>('all');
   const [search,      setSearch]      = useState('');
+  const [expandedId,  setExpandedId]  = useState<string | null>(null);
   const [isPending,   startTransition] = useTransition();
   const [loadError,   setLoadError]   = useState('');
 
@@ -75,10 +76,16 @@ export default function DukkanlarPage() {
     });
   }
 
+  function toggleExpand(id: string) {
+    setExpandedId(prev => prev === id ? null : id);
+  }
+
   const displayed = search.trim()
     ? shops.filter(s =>
         s.name.toLowerCase().includes(search.toLowerCase()) ||
-        s.slug.toLowerCase().includes(search.toLowerCase())
+        s.slug.toLowerCase().includes(search.toLowerCase()) ||
+        (s.owner?.name ?? '').toLowerCase().includes(search.toLowerCase()) ||
+        (s.owner?.email ?? '').toLowerCase().includes(search.toLowerCase())
       )
     : shops;
 
@@ -92,13 +99,13 @@ export default function DukkanlarPage() {
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <input
           type="text"
-          placeholder="Ad veya slug ara…"
+          placeholder="Dükkan adı, slug, owner adı veya e-posta ara…"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, minWidth: 200, padding: '8px 12px', fontSize: 14,
+          style={{ flex: 1, minWidth: 220, padding: '8px 12px', fontSize: 14,
             border: '1px solid #CBD5E1', borderRadius: 8, outline: 'none' }}
         />
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {FILTER_OPTIONS.map(opt => (
             <button
               key={opt.value}
@@ -118,18 +125,20 @@ export default function DukkanlarPage() {
       </div>
 
       {loadError && (
-        <p style={{ color: '#EF4444', fontSize: 14 }}>{loadError}</p>
+        <p style={{ color: '#EF4444', fontSize: 14, margin: 0 }}>{loadError}</p>
       )}
 
-      {/* Liste */}
       {displayed.length === 0 && !loadError && (
         <p style={{ color: '#64748B', fontSize: 14 }}>Kayıt bulunamadı.</p>
       )}
+
       {displayed.map(shop => (
         <ShopRow
           key={shop.id}
           shop={shop}
+          expanded={expandedId === shop.id}
           disabled={isPending}
+          onToggle={() => toggleExpand(shop.id)}
           onApprove={() => handleAction(() => approveShop(shop.id, adminKey))}
           onReject={()  => handleAction(() => rejectShop(shop.id, adminKey))}
           onSuspend={()  => handleAction(() => suspendShop(shop.id, adminKey))}
@@ -167,71 +176,161 @@ export default function DukkanlarPage() {
   );
 }
 
-function ShopRow({ shop, disabled, onApprove, onReject, onSuspend, onReactivate }: {
+function ShopRow({ shop, expanded, disabled, onToggle, onApprove, onReject, onSuspend, onReactivate }: {
   shop: Shop;
+  expanded: boolean;
   disabled: boolean;
+  onToggle: () => void;
   onApprove: () => void;
   onReject: () => void;
   onSuspend: () => void;
   onReactivate: () => void;
 }) {
   return (
-    <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10,
-      padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: 600, fontSize: 15 }}>{shop.name}</div>
-        <div style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>
-          siradaki.app/{shop.slug} · {new Date(shop.created_at).toLocaleString('tr-TR')}
-        </div>
-        {shop.owner && (
-          <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>
-            {shop.owner.name}
-            {shop.owner.email && (
-              <> · <a href={`mailto:${shop.owner.email}`} style={{ color: '#1E3A8A' }}>
-                {shop.owner.email}
-              </a></>
-            )}
+    <div style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: 10, overflow: 'hidden' }}>
+
+      {/* Kompakt satır */}
+      <div
+        onClick={onToggle}
+        style={{
+          padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 16,
+          cursor: 'pointer', userSelect: 'none',
+          background: expanded ? '#F8FAFC' : '#fff',
+          borderBottom: expanded ? '1px solid #E2E8F0' : 'none',
+        }}
+      >
+        {/* Chevron */}
+        <span style={{
+          fontSize: 10, color: '#94A3B8', flexShrink: 0,
+          display: 'inline-block', transition: 'transform 0.15s',
+          transform: expanded ? 'rotate(90deg)' : 'none',
+        }}>▶</span>
+
+        {/* Dükkan adı + slug */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {shop.name}
           </div>
-        )}
+          <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 1 }}>
+            siradaki.app/{shop.slug}
+          </div>
+        </div>
+
+        {/* Owner özet */}
+        <div style={{ minWidth: 180, fontSize: 13, color: '#475569' }}>
+          {shop.owner ? (
+            <>
+              <div style={{ fontWeight: 500 }}>{shop.owner.name}</div>
+              <div style={{ color: '#94A3B8', fontSize: 12 }}>{shop.owner.email ?? '—'}</div>
+            </>
+          ) : (
+            <span style={{ color: '#CBD5E1', fontStyle: 'italic', fontSize: 12 }}>Owner kaydı yok</span>
+          )}
+        </div>
+
+        {/* Durum badge */}
+        <span style={{
+          background: STATUS_COLOR[shop.status] + '22',
+          color: STATUS_COLOR[shop.status],
+          padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+          flexShrink: 0,
+        }}>
+          {STATUS_LABEL[shop.status] ?? shop.status}
+        </span>
+
+        {/* Aksiyon butonları — tıklama izole */}
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+          {shop.status === 'pending' && (
+            <>
+              <button disabled={disabled} onClick={onApprove}
+                style={{ padding: '6px 12px', background: '#10B981', color: '#fff',
+                  border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 13 }}>
+                Onayla
+              </button>
+              <button disabled={disabled} onClick={onReject}
+                style={{ padding: '6px 12px', background: '#EF4444', color: '#fff',
+                  border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 13 }}>
+                Reddet
+              </button>
+            </>
+          )}
+          {shop.status === 'active' && (
+            <button disabled={disabled} onClick={onSuspend}
+              style={{ padding: '6px 12px', background: '#6B7280', color: '#fff',
+                border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 13 }}>
+              Durdur
+            </button>
+          )}
+          {shop.status === 'suspended' && (
+            <button disabled={disabled} onClick={onReactivate}
+              style={{ padding: '6px 12px', background: '#1E3A8A', color: '#fff',
+                border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 13 }}>
+              Aktif Et
+            </button>
+          )}
+        </div>
       </div>
 
-      <span style={{
-        background: STATUS_COLOR[shop.status] + '22',
-        color: STATUS_COLOR[shop.status],
-        padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-      }}>
-        {STATUS_LABEL[shop.status] ?? shop.status}
-      </span>
+      {/* Expanded detay paneli */}
+      {expanded && (
+        <div style={{
+          padding: '16px 20px 20px 48px',
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 32px',
+          background: '#F8FAFC',
+        }}>
+          {/* Sol: Owner */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8',
+              textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+              Hesap Sahibi
+            </div>
+            {shop.owner ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <DetailRow label="Ad Soyad" value={shop.owner.name} />
+                <DetailRow label="E-posta" value={shop.owner.email}
+                  href={shop.owner.email ? `mailto:${shop.owner.email}` : undefined} />
+                <DetailRow label="Telefon" value={shop.owner.phone}
+                  href={shop.owner.phone ? `tel:${shop.owner.phone}` : undefined} />
+              </div>
+            ) : (
+              <p style={{ fontSize: 13, color: '#CBD5E1', fontStyle: 'italic', margin: 0 }}>
+                Kayıt bilgisi bulunamadı
+              </p>
+            )}
+          </div>
 
-      {shop.status === 'pending' && (
-        <>
-          <button disabled={disabled} onClick={onApprove}
-            style={{ padding: '7px 14px', background: '#10B981', color: '#fff',
-              border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 13 }}>
-            Onayla
-          </button>
-          <button disabled={disabled} onClick={onReject}
-            style={{ padding: '7px 14px', background: '#EF4444', color: '#fff',
-              border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 13 }}>
-            Reddet
-          </button>
-        </>
+          {/* Sağ: Dükkan */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#94A3B8',
+              textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+              Dükkan Detayı
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <DetailRow label="Adres" value={shop.address} />
+              <DetailRow label="Dükkan Tel" value={shop.phone}
+                href={shop.phone ? `tel:${shop.phone}` : undefined} />
+              <DetailRow label="Listeleme" value={shop.is_listed ? 'Listede' : 'Gizli'} />
+              <DetailRow label="Kayıt" value={new Date(shop.created_at).toLocaleString('tr-TR')} />
+            </div>
+          </div>
+        </div>
       )}
+    </div>
+  );
+}
 
-      {shop.status === 'active' && (
-        <button disabled={disabled} onClick={onSuspend}
-          style={{ padding: '7px 14px', background: '#6B7280', color: '#fff',
-            border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 13 }}>
-          Durdur
-        </button>
-      )}
-
-      {shop.status === 'suspended' && (
-        <button disabled={disabled} onClick={onReactivate}
-          style={{ padding: '7px 14px', background: '#1E3A8A', color: '#fff',
-            border: 'none', borderRadius: 7, cursor: 'pointer', fontSize: 13 }}>
-          Aktif Et
-        </button>
+function DetailRow({ label, value, href }: {
+  label: string;
+  value: string | null | undefined;
+  href?: string;
+}) {
+  return (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', fontSize: 13 }}>
+      <span style={{ color: '#94A3B8', minWidth: 80, flexShrink: 0 }}>{label}:</span>
+      {href && value ? (
+        <a href={href} style={{ color: '#1E3A8A' }}>{value}</a>
+      ) : (
+        <span style={{ color: value ? '#1E293B' : '#CBD5E1' }}>{value ?? '—'}</span>
       )}
     </div>
   );
