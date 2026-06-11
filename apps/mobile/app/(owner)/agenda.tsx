@@ -153,8 +153,7 @@ export default function AgendaScreen() {
   const isMountedRef = useRef(true);
 
   useTourAction('owner-open-add-modal', () => {
-    setEditingAppt(null);
-    setShowAdd(true);
+    handleAddAppointment();
   });
   useTourAction('owner-close-add-modal', () => {
     setShowAdd(false);
