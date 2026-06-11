@@ -3,7 +3,7 @@ import React from 'react';
 import { Text, TouchableOpacity } from 'react-native';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TourProvider, useTour, type TourStep } from '../TourContext';
+import { TourProvider, useTour, useAutoStartTour, type TourStep } from '../TourContext';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
@@ -113,6 +113,70 @@ describe('TourContext state machine', () => {
     expect(getByTestId('state').props.children).toBe('b:1');
   });
 
+  it('skip runs onExitTour actions of the current step (Finding 2)', () => {
+    const cleanup = jest.fn();
+    const stepsWithExit: TourStep[] = [
+      { id: 'x', title: 'X', body: 'x' },
+      { id: 'y', title: 'Y', body: 'y', onExitTour: ['cleanup-thing'] },
+    ];
+    function ExitHarness() {
+      const tour = useTour();
+      React.useEffect(() => tour.registerAction('cleanup-thing', cleanup), []);
+      return (
+        <>
+          <Text testID="state">
+            {tour.active ? `${tour.active.steps[tour.active.index].id}` : 'idle'}
+          </Text>
+          <TouchableOpacity testID="start" onPress={() => tour.start(stepsWithExit, 'tour_exit_test_v1')} />
+          <TouchableOpacity testID="next" onPress={tour.next} />
+          <TouchableOpacity testID="skip" onPress={tour.skip} />
+        </>
+      );
+    }
+    const { getByTestId } = render(
+      <TourProvider>
+        <ExitHarness />
+      </TourProvider>,
+    );
+    fireEvent.press(getByTestId('start'));
+    fireEvent.press(getByTestId('next')); // now on step 'y'
+    expect(getByTestId('state').props.children).toBe('y');
+    expect(cleanup).not.toHaveBeenCalled();
+    fireEvent.press(getByTestId('skip'));
+    expect(getByTestId('state').props.children).toBe('idle');
+    expect(cleanup).toHaveBeenCalledTimes(1);
+  });
+
+  it('finish (next on last step) runs onExitTour actions (Finding 2)', () => {
+    const cleanup = jest.fn();
+    const stepsWithExit: TourStep[] = [
+      { id: 'p', title: 'P', body: 'p', onExitTour: ['cleanup-thing'] },
+    ];
+    function ExitHarness2() {
+      const tour = useTour();
+      React.useEffect(() => tour.registerAction('cleanup-thing', cleanup), []);
+      return (
+        <>
+          <Text testID="state">
+            {tour.active ? `${tour.active.steps[tour.active.index].id}` : 'idle'}
+          </Text>
+          <TouchableOpacity testID="start" onPress={() => tour.start(stepsWithExit, 'tour_exit2_test_v1')} />
+          <TouchableOpacity testID="next" onPress={tour.next} />
+        </>
+      );
+    }
+    const { getByTestId } = render(
+      <TourProvider>
+        <ExitHarness2 />
+      </TourProvider>,
+    );
+    fireEvent.press(getByTestId('start'));
+    expect(getByTestId('state').props.children).toBe('p');
+    fireEvent.press(getByTestId('next')); // finish (last step)
+    expect(getByTestId('state').props.children).toBe('idle');
+    expect(cleanup).toHaveBeenCalledTimes(1);
+  });
+
   it('registerTarget stores and unregisters refs', () => {
     let api!: ReturnType<typeof useTour>;
     function Grab() {
@@ -130,5 +194,39 @@ describe('TourContext state machine', () => {
     expect(api.getTarget('t1')).toBe(ref);
     act(() => unregister());
     expect(api.getTarget('t1')).toBeUndefined();
+  });
+});
+
+describe('useAutoStartTour timer cleanup (Finding 3)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('clears the 800ms setTimeout when the component unmounts before it fires', async () => {
+    const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
+    (AsyncStorage.getItem as jest.Mock).mockResolvedValue(null);
+
+    function AutoHarness() {
+      useAutoStartTour(steps, 'tour_auto_test_v1');
+      return null;
+    }
+    const { unmount } = render(
+      <TourProvider>
+        <AutoHarness />
+      </TourProvider>,
+    );
+
+    // Let the AsyncStorage promise resolve so setTimeout is scheduled
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    unmount();
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    clearTimeoutSpy.mockRestore();
   });
 });

@@ -40,10 +40,26 @@ describe('tour step definitions', () => {
       // the step right before the modal block closes it too (for back navigation)
       const firstModalIdx = steps.indexOf(modalSteps[0]);
       expect(steps[firstModalIdx - 1].onEnter).toContain(`${prefix}-close-add-modal`);
+      // Finding 1: the LAST modal step must also reopen the modal on onEnter
+      // so that back-navigation from the trailing step re-shows the modal.
+      expect(modalSteps[modalSteps.length - 1].onEnter).toContain(`${prefix}-open-add-modal`);
     },
   );
 
-  it('every onEnter action id is in the known set', () => {
+  it.each([
+    ['owner', ownerTourSteps, 'owner-close-add-modal'],
+    ['staff', staffTourSteps, 'staff-close-add-modal'],
+  ] as const)(
+    '%s every add-modal step declares the role close action in onExitTour (Finding 2)',
+    (_role, steps, closeAction) => {
+      const modalSteps = steps.filter((s) => s.host === 'add-modal');
+      for (const step of modalSteps) {
+        expect(step.onExitTour).toContain(closeAction);
+      }
+    },
+  );
+
+  it('every onEnter / onExitTour action id is in the known set', () => {
     const knownActionIds = new Set([
       'owner-open-add-modal',
       'owner-close-add-modal',
@@ -52,10 +68,11 @@ describe('tour step definitions', () => {
     ]);
     for (const steps of [ownerTourSteps, staffTourSteps]) {
       for (const step of steps) {
-        if (step.onEnter) {
-          for (const actionId of step.onEnter) {
-            expect(knownActionIds.has(actionId)).toBe(true);
-          }
+        for (const actionId of step.onEnter ?? []) {
+          expect(knownActionIds.has(actionId)).toBe(true);
+        }
+        for (const actionId of step.onExitTour ?? []) {
+          expect(knownActionIds.has(actionId)).toBe(true);
         }
       }
     }

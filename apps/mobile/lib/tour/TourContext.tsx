@@ -31,6 +31,8 @@ export interface TourStep {
   host?: string;
   /** Idempotent action ids run when this step becomes active (either direction) */
   onEnter?: string[];
+  /** Action ids run when the tour is finished/skipped while on this step (e.g. close a modal). */
+  onExitTour?: string[];
   title: string;
   body: string;
 }
@@ -80,6 +82,8 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const finish = useCallback(() => {
     const tour = activeRef.current;
     if (!tour) return;
+    const step = tour.steps[tour.index];
+    for (const id of step.onExitTour ?? []) actions.current.get(id)?.();
     setActive(null);
     AsyncStorage.setItem(tour.storageKey, '1').catch(() => {});
   }, []);
@@ -167,18 +171,20 @@ export function useAutoStartTour(steps: TourStep[], storageKey: string) {
   const startedRef = useRef(false);
   useEffect(() => {
     let cancelled = false;
+    let timerId: ReturnType<typeof setTimeout> | undefined;
     AsyncStorage.getItem(storageKey)
       .then((seen) => {
         if (cancelled || seen != null || startedRef.current) return;
         startedRef.current = true;
         // Let the first screen settle (data fetch spinners, fonts) before spotlighting.
-        setTimeout(() => {
+        timerId = setTimeout(() => {
           if (!cancelled) start(steps, storageKey);
         }, 800);
       })
       .catch(() => {});
     return () => {
       cancelled = true;
+      clearTimeout(timerId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
