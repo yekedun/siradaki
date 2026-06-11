@@ -73,6 +73,7 @@ import { AppointmentDetailSheet, AppointmentDetail } from '../../components/Appo
 import { AddBlockModal } from '../../components/AddBlockModal';
 import { useShop } from '../../lib/ShopContext';
 import { useRouter } from 'expo-router';
+import { TourTarget, useTourAction } from '../../lib/tour/TourContext';
 
 
 interface AppItem {
@@ -150,6 +151,15 @@ export default function AgendaScreen() {
   const [loading, setLoading] = useState(true);
 
   const isMountedRef = useRef(true);
+
+  useTourAction('owner-open-add-modal', () => {
+    setEditingAppt(null);
+    setShowAdd(true);
+  });
+  useTourAction('owner-close-add-modal', () => {
+    setShowAdd(false);
+    setEditingAppt(null);
+  });
 
   // Refresh context (services + staff) when modal opens so newly added entries appear
   useEffect(() => {
@@ -334,95 +344,99 @@ export default function AgendaScreen() {
       />
 
       {/* DayPicker — gap:6, padding:'0 16px' — 2 geçmiş gün incelenebilir */}
-      <DayPicker
-        selected={selectedDate}
-        pastDays={2}
-        onSelect={d => {
-          setLoading(true);
-          setSelectedDate(d);
-        }}
-      />
+      <TourTarget id="ajanda-daypicker">
+        <DayPicker
+          selected={selectedDate}
+          pastDays={2}
+          onSelect={d => {
+            setLoading(true);
+            setSelectedDate(d);
+          }}
+        />
+      </TourTarget>
 
       {/* Agenda body — dış scroll dikey (pull-to-refresh burada), iç scroll yatay kolonlar.
           Dikey scroll dışta olmalı: yoğun günlerde ekran altına taşan randevular
           ancak böyle erişilebilir; RefreshControl da yalnızca dikey scroll'da çalışır. */}
-      {loading ? (
-        <View style={styles.emptyWrap}>
-          <ActivityIndicator size="small" color={colors.brand[600]} />
-        </View>
-      ) : cols.length === 0 ? (
-        <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>Henüz personel eklenmedi</Text>
-          <Text style={styles.emptySubText}>Randevu alabilmek için önce ekibini tanıt.</Text>
-          <TouchableOpacity
-            style={styles.emptyCtaBtn}
-            onPress={() => router.push('/(owner)/team' as any)}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel="Ekip Ekle"
-          >
-            <Text style={styles.emptyCtaText}>Ekip Ekle →</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <ScrollView
-          style={styles.vScroll}
-          contentContainerStyle={styles.vScrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-          }
-        >
+      <TourTarget id="ajanda-timeline" style={{ flex: 1 }}>
+        {loading ? (
+          <View style={styles.emptyWrap}>
+            <ActivityIndicator size="small" color={colors.brand[600]} />
+          </View>
+        ) : cols.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyText}>Henüz personel eklenmedi</Text>
+            <Text style={styles.emptySubText}>Randevu alabilmek için önce ekibini tanıt.</Text>
+            <TouchableOpacity
+              style={styles.emptyCtaBtn}
+              onPress={() => router.push('/(owner)/team' as any)}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Ekip Ekle"
+            >
+              <Text style={styles.emptyCtaText}>Ekip Ekle →</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
           <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.colContent}
+            style={styles.vScroll}
+            contentContainerStyle={styles.vScrollContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            }
           >
-            {cols.map(col => (
-              <View key={col.id} style={styles.col}>
-                {/* Column header — padding:'0 4px 4px' */}
-                <View style={styles.colHeader}>
-                  <Text style={styles.colName}>{col.name}</Text>
-                  <Text style={styles.colMeta}>
-                    {col.count} randevu{col.blok > 0 ? ` · ${col.blok} blok` : ''}
-                  </Text>
-                </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.colContent}
+            >
+              {cols.map(col => (
+                <View key={col.id} style={styles.col}>
+                  {/* Column header — padding:'0 4px 4px' */}
+                  <View style={styles.colHeader}>
+                    <Text style={styles.colName}>{col.name}</Text>
+                    <Text style={styles.colMeta}>
+                      {col.count} randevu{col.blok > 0 ? ` · ${col.blok} blok` : ''}
+                    </Text>
+                  </View>
 
-                {/* Items — gap:10 */}
-                <View style={styles.itemContent}>
-                  {col.items.length === 0 ? (
-                    <EmptyDropZone />
-                  ) : (
-                    col.items.map(item =>
-                      item.type === 'blok' ? (
-                        <BlokCard
-                          key={item.id}
-                          time={item.time}
-                          endTime={item.endTime}
-                          duration={item.dur}
-                          label={item.label}
-                        />
-                      ) : (
-                        <AppointmentCard
-                          key={item.id}
-                          time={item.time}
-                          endTime={item.endTime}
-                          duration={item.dur}
-                          name={item.name}
-                          service={item.svc}
-                          notes={item.notes}
-                          state={item.state}
-                          onPress={() => handleOpenDetail(item)}
-                        />
+                  {/* Items — gap:10 */}
+                  <View style={styles.itemContent}>
+                    {col.items.length === 0 ? (
+                      <EmptyDropZone />
+                    ) : (
+                      col.items.map(item =>
+                        item.type === 'blok' ? (
+                          <BlokCard
+                            key={item.id}
+                            time={item.time}
+                            endTime={item.endTime}
+                            duration={item.dur}
+                            label={item.label}
+                          />
+                        ) : (
+                          <AppointmentCard
+                            key={item.id}
+                            time={item.time}
+                            endTime={item.endTime}
+                            duration={item.dur}
+                            name={item.name}
+                            service={item.svc}
+                            notes={item.notes}
+                            state={item.state}
+                            onPress={() => handleOpenDetail(item)}
+                          />
+                        )
                       )
-                    )
-                  )}
+                    )}
+                  </View>
                 </View>
-              </View>
-            ))}
+              ))}
+            </ScrollView>
           </ScrollView>
-        </ScrollView>
-      )}
+        )}
+      </TourTarget>
 
       {/* FAB group — Randevu Ekle + Blok Ekle */}
       <View style={styles.fabGroup}>
@@ -436,13 +450,15 @@ export default function AgendaScreen() {
           <Text style={styles.blockBtnText}>Blok Ekle</Text>
         </TouchableOpacity>
         <View style={styles.fab}>
-          <Button
-            variant="accent"
-            size="lg"
-            onPress={handleAddAppointment}
-          >
-            + Randevu Ekle
-          </Button>
+          <TourTarget id="ajanda-fab">
+            <Button
+              variant="accent"
+              size="lg"
+              onPress={handleAddAppointment}
+            >
+              + Randevu Ekle
+            </Button>
+          </TourTarget>
         </View>
       </View>
 

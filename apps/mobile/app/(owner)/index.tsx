@@ -58,6 +58,8 @@ import { OwnerSettingsAvatar } from '../../components/ds/OwnerSettingsAvatar';
 import { supabase } from '../../lib/supabase';
 import { estimatedAppointmentRevenueCents } from '../../lib/revenue-mappers';
 import { useShop } from '../../lib/ShopContext';
+import { TourTarget, useAutoStartTour } from '../../lib/tour/TourContext';
+import { ownerTourSteps, TOUR_SEEN_OWNER_KEY } from '../../lib/tour/steps';
 
 /* ── Sparkline (bar-chart approximation in RN) ──────────────── */
 function Sparkline({ data }: { data: number[] }) {
@@ -225,6 +227,7 @@ const kpi = StyleSheet.create({
 /* ── Main Screen ─────────────────────────────────────────────── */
 export default function OzetScreen() {
   const { shopId, staffList: contextStaff } = useShop();
+  useAutoStartTour(ownerTourSteps, TOUR_SEEN_OWNER_KEY);
   const [filter,     setFilter]     = useState('all');
   const [refreshing, setRefreshing] = useState(false);
   const [kpiTotal,     setKpiTotal]     = useState('—');
@@ -339,40 +342,48 @@ export default function OzetScreen() {
       <OverlineHeader
         title="Bugün"
         meta={new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'short' })}
-        trailing={<OwnerSettingsAvatar />}
+        trailing={
+          <TourTarget id="ozet-avatar">
+            <OwnerSettingsAvatar />
+          </TourTarget>
+        }
       />
 
       {/* ChipRow — gap:8, padding:'4px 20px 4px', overflowX:auto */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.chipScroll}
-        contentContainerStyle={styles.chipContent}
-      >
-        {staffList.map(s => (
-          <Chip key={s.id} selected={filter === s.id} onPress={() => setFilter(s.id)}>
-            {s.name}
-          </Chip>
-        ))}
-      </ScrollView>
+      <TourTarget id="ozet-chips">
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chipScroll}
+          contentContainerStyle={styles.chipContent}
+        >
+          {staffList.map(s => (
+            <Chip key={s.id} selected={filter === s.id} onPress={() => setFilter(s.id)}>
+              {s.name}
+            </Chip>
+          ))}
+        </ScrollView>
+      </TourTarget>
 
       {/* KPI row — gap:8, padding:'14px 16px 0' */}
-      <View style={styles.kpiRow}>
-        <KpiPolished
-          label="Toplam"
-          value={kpiTotal}
-        />
-        <KpiPolished
-          label="Tamamlanan"
-          value={kpiCompleted}
-        />
-        <KpiPolished
-          label="Tahmini"
-          value={kpiRevenue}
-          unit="₺"
-          accent
-        />
-      </View>
+      <TourTarget id="ozet-kpi">
+        <View style={styles.kpiRow}>
+          <KpiPolished
+            label="Toplam"
+            value={kpiTotal}
+          />
+          <KpiPolished
+            label="Tamamlanan"
+            value={kpiCompleted}
+          />
+          <KpiPolished
+            label="Tahmini"
+            value={kpiRevenue}
+            unit="₺"
+            accent
+          />
+        </View>
+      </TourTarget>
 
       <SectionLabel>Öngörüler (30 gün)</SectionLabel>
       <View style={styles.insightsCard}>
