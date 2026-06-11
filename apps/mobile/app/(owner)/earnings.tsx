@@ -20,6 +20,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { TourTarget } from '../../lib/tour/TourContext';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { estimatedAppointmentRevenueCents } from '../../lib/revenue-mappers';
@@ -168,25 +169,27 @@ export default function EarningsScreen() {
       </ChipRow>
 
       {/* Hero KPI card */}
-      <View style={styles.heroCard}>
-        <Text style={styles.heroEyebrow}>
-          Tamamlanan Ciro · {data.label}
-        </Text>
-        <View style={styles.heroValueRow}>
-          <Text style={styles.heroValue}>{data.ciro} </Text>
-          <Text style={styles.heroUnit}>TL</Text>
-        </View>
-        <View style={styles.heroSubRow}>
-          <View>
-            <Text style={styles.heroSubLabel}>Usta komisyonu</Text>
-            <Text style={styles.heroSubValueAmber}>{data.komisyon} TL</Text>
+      <TourTarget id="earnings-summary">
+        <View style={styles.heroCard}>
+          <Text style={styles.heroEyebrow}>
+            Tamamlanan Ciro · {data.label}
+          </Text>
+          <View style={styles.heroValueRow}>
+            <Text style={styles.heroValue}>{data.ciro} </Text>
+            <Text style={styles.heroUnit}>TL</Text>
           </View>
-          <View>
-            <Text style={styles.heroSubLabel}>Dükkan payı</Text>
-            <Text style={styles.heroSubValue}>{data.dukkam} TL</Text>
+          <View style={styles.heroSubRow}>
+            <View>
+              <Text style={styles.heroSubLabel}>Usta komisyonu</Text>
+              <Text style={styles.heroSubValueAmber}>{data.komisyon} TL</Text>
+            </View>
+            <View>
+              <Text style={styles.heroSubLabel}>Dükkan payı</Text>
+              <Text style={styles.heroSubValue}>{data.dukkam} TL</Text>
+            </View>
           </View>
         </View>
-      </View>
+      </TourTarget>
 
       {/* Section label */}
       <Text style={styles.sectionLabel}>Personel Dağılımı</Text>

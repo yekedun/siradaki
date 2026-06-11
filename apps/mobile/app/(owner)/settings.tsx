@@ -65,6 +65,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
+import { TourTarget, useTour } from '../../lib/tour/TourContext';
+import { ownerTourSteps, TOUR_SEEN_OWNER_KEY } from '../../lib/tour/steps';
 import { colors } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { deleteCurrentAccount } from '../../lib/delete-account';
@@ -727,6 +729,7 @@ function normalizePrefs(raw: unknown): NotificationPrefs {
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { start: startTour } = useTour();
 
   const [profileOpen,        setProfileOpen]        = useState(false);
   const [selfEditOpen,       setSelfEditOpen]       = useState(false);
@@ -942,7 +945,7 @@ export default function SettingsScreen() {
         </TouchableOpacity>
 
         {/* Rezervasyon Linki — prominent card */}
-        <BookingLinkCard slug={shop?.slug ?? ''} />
+        <TourTarget id="settings-link"><BookingLinkCard slug={shop?.slug ?? ''} /></TourTarget>
 
         {/* Section: Operasyon */}
         <Text style={styles.sectionLabel}>Operasyon</Text>
@@ -964,16 +967,36 @@ export default function SettingsScreen() {
           </TouchableOpacity>
 
           {/* Hizmetler */}
+          <TourTarget id="settings-services">
+            <TouchableOpacity
+              onPress={() => router.push('/(owner)/services')}
+              style={[styles.opRow]}
+              activeOpacity={0.75}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.opRowTitle}>Hizmetler</Text>
+                <Text style={styles.opRowMeta}>
+                  Sunulan hizmetleri ve fiyatları yönet
+                </Text>
+              </View>
+              <View style={styles.chevronWrap}>
+                <View style={styles.chevronLine1} />
+                <View style={styles.chevronLine2} />
+              </View>
+            </TouchableOpacity>
+          </TourTarget>
+
+          {/* Uygulama Turu */}
           <TouchableOpacity
-            onPress={() => router.push('/(owner)/services')}
+            onPress={() => startTour(ownerTourSteps, TOUR_SEEN_OWNER_KEY)}
             style={[styles.opRow, styles.opRowLast]}
             activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Uygulama turunu başlat"
           >
             <View style={{ flex: 1 }}>
-              <Text style={styles.opRowTitle}>Hizmetler</Text>
-              <Text style={styles.opRowMeta}>
-                Sunulan hizmetleri ve fiyatları yönet
-              </Text>
+              <Text style={styles.opRowTitle}>Uygulama Turu</Text>
+              <Text style={styles.opRowMeta}>Uygulamayı adım adım yeniden keşfet</Text>
             </View>
             <View style={styles.chevronWrap}>
               <View style={styles.chevronLine1} />

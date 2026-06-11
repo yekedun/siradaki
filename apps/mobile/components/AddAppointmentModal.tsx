@@ -50,6 +50,8 @@ import {
 import { User } from 'lucide-react-native';
 import { colors } from '../lib/theme';
 import { ContactPickerSheet } from './ContactPickerSheet';
+import { TourTarget } from '../lib/tour/TourContext';
+import { TourOverlayHost } from './TourOverlay';
 import {
   getAppointmentDayIndex,
   getInitialAppointmentServiceIds,
@@ -344,18 +346,20 @@ export function AddAppointmentModal({
           showsVerticalScrollIndicator={false}
         >
           {/* ── Müşteri Adı ────────────────────────────────────── */}
-          <View style={styles.fieldWrap}>
-            <Text style={styles.fieldLabel}>Müşteri Adı</Text>
-            <TextInput
-              style={styles.textInput}
-              value={name}
-              onChangeText={setName}
-              placeholder="Örn. Ahmet Yılmaz"
-              placeholderTextColor={colors.slate[300]}
-              autoCorrect={false}
-              spellCheck={false}
-            />
-          </View>
+          <TourTarget id="add-customer">
+            <View style={styles.fieldWrap}>
+              <Text style={styles.fieldLabel}>Müşteri Adı</Text>
+              <TextInput
+                style={styles.textInput}
+                value={name}
+                onChangeText={setName}
+                placeholder="Örn. Ahmet Yılmaz"
+                placeholderTextColor={colors.slate[300]}
+                autoCorrect={false}
+                spellCheck={false}
+              />
+            </View>
+          </TourTarget>
 
           {/* ── Telefon ────────────────────────────────────────── */}
           <View style={[styles.fieldWrap, styles.fieldGap]}>
@@ -425,37 +429,39 @@ export function AddAppointmentModal({
           )}
 
           {/* ── Hizmet section label ────────────────────────────── */}
-          <Text style={styles.sectionLabel}>Hizmet</Text>
+          <TourTarget id="add-services">
+            <Text style={styles.sectionLabel}>Hizmet</Text>
 
-          {/* Service selector rows:
-              border 1px sel=ink-900 unsel=slate-200
-              bg sel=ink-900 unsel=slate-0
-              borderRadius 12, padding '12px 14px', flex row, justifyContent space-between
-              Left: 14px SemiBold; Right: 12px opacity sel=0.8 unsel=0.55 */}
-          <View style={styles.serviceList}>
-            {services.length === 0 ? (
-              <Text style={styles.emptyHint}>
-                Aktif hizmet bulunamadı. Önce Hizmetler ekranından en az bir aktif hizmet ekleyin.
-              </Text>
-            ) : services.map(o => {
-              const sel = svcIds.includes(o.id);
-              return (
-                <TouchableOpacity
-                  key={o.id}
-                  onPress={() => setSvcIds((current) => toggleAppointmentService(current, o.id))}
-                  activeOpacity={0.8}
-                  style={[styles.serviceRow, sel ? styles.serviceRowActive : styles.serviceRowInactive]}
-                >
-                  <Text style={[styles.serviceLabel, sel && styles.serviceLabelActive]}>
-                    {o.label}
-                  </Text>
-                  <Text style={[styles.serviceMeta, sel ? styles.serviceMetaActive : styles.serviceMetaInactive]}>
-                    {o.dur} dk · {o.price}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+            {/* Service selector rows:
+                border 1px sel=ink-900 unsel=slate-200
+                bg sel=ink-900 unsel=slate-0
+                borderRadius 12, padding '12px 14px', flex row, justifyContent space-between
+                Left: 14px SemiBold; Right: 12px opacity sel=0.8 unsel=0.55 */}
+            <View style={styles.serviceList}>
+              {services.length === 0 ? (
+                <Text style={styles.emptyHint}>
+                  Aktif hizmet bulunamadı. Önce Hizmetler ekranından en az bir aktif hizmet ekleyin.
+                </Text>
+              ) : services.map(o => {
+                const sel = svcIds.includes(o.id);
+                return (
+                  <TouchableOpacity
+                    key={o.id}
+                    onPress={() => setSvcIds((current) => toggleAppointmentService(current, o.id))}
+                    activeOpacity={0.8}
+                    style={[styles.serviceRow, sel ? styles.serviceRowActive : styles.serviceRowInactive]}
+                  >
+                    <Text style={[styles.serviceLabel, sel && styles.serviceLabelActive]}>
+                      {o.label}
+                    </Text>
+                    <Text style={[styles.serviceMeta, sel ? styles.serviceMetaActive : styles.serviceMetaInactive]}>
+                      {o.dur} dk · {o.price}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </TourTarget>
 
           {/* Totals line: sum of selected services (slot step = total duration) */}
           {selSvcs.length > 0 && (
@@ -474,31 +480,33 @@ export function AddAppointmentModal({
           />
 
           {/* ── Saat section label ─────────────────────────────── */}
-          <Text style={styles.sectionLabel}>Saat</Text>
+          <TourTarget id="add-time">
+            <Text style={styles.sectionLabel}>Saat</Text>
 
-          {/* Time slot grid: 4 cols, gap 6
-              Each: height 38, borderRadius 8, sel=ink-900 bg, unsel=slate-0
-              13px SemiBold tabular-nums */}
-          {visibleTimeSlots.length === 0 && (
-            <Text style={styles.emptyHint}>
-              Bu tarih için uygun saat bulunamadı. Çalışma saatleri ayarlanmamış olabilir — Ayarlar → Dükkan Saatleri bölümünü kontrol et.
-            </Text>
-          )}
-          <View style={styles.timeGrid}>
-            {visibleTimeSlots.map(t => {
-              const sel = slot === t;
-              return (
-                <TouchableOpacity
-                  key={t}
-                  onPress={() => setSlot(t)}
-                  activeOpacity={0.8}
-                  style={[styles.timeCell, sel ? styles.timeCellActive : styles.timeCellInactive]}
-                >
-                  <Text style={[styles.timeCellText, sel && styles.timeCellTextActive]}>{t}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+            {/* Time slot grid: 4 cols, gap 6
+                Each: height 38, borderRadius 8, sel=ink-900 bg, unsel=slate-0
+                13px SemiBold tabular-nums */}
+            {visibleTimeSlots.length === 0 && (
+              <Text style={styles.emptyHint}>
+                Bu tarih için uygun saat bulunamadı. Çalışma saatleri ayarlanmamış olabilir — Ayarlar → Dükkan Saatleri bölümünü kontrol et.
+              </Text>
+            )}
+            <View style={styles.timeGrid}>
+              {visibleTimeSlots.map(t => {
+                const sel = slot === t;
+                return (
+                  <TouchableOpacity
+                    key={t}
+                    onPress={() => setSlot(t)}
+                    activeOpacity={0.8}
+                    style={[styles.timeCell, sel ? styles.timeCellActive : styles.timeCellInactive]}
+                  >
+                    <Text style={[styles.timeCellText, sel && styles.timeCellTextActive]}>{t}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </TourTarget>
 
           {/* ── ÖZET summary card (shown when slot selected) ──────
               bg slate-100, borderRadius 12, padding 14
@@ -518,6 +526,8 @@ export function AddAppointmentModal({
           )}
         </ScrollView>
       </SafeAreaView>
+
+      <TourOverlayHost host="add-modal" />
 
       <ContactPickerSheet
         visible={pickerVisible}

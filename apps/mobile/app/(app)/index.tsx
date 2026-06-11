@@ -44,6 +44,8 @@ import { appointmentRowToAgendaItem } from '../../lib/appointment-mappers';
 import { buildLocalAppointmentTimestamp } from '../../lib/appointment-time';
 import type { AppointmentWorkingHours } from '../../lib/appointment-time';
 import { parseBookingFunctionError } from '../../lib/booking-errors';
+import { TourTarget, useAutoStartTour, useTourAction } from '../../lib/tour/TourContext';
+import { staffTourSteps, TOUR_SEEN_STAFF_KEY } from '../../lib/tour/steps';
 
 type ApptState = 'upcoming' | 'active' | 'done';
 
@@ -135,6 +137,11 @@ export default function RandevularScreen() {
   }, []);
 
   const isEmpty = !loading && !loadError && items.length === 0;
+
+  useAutoStartTour(staffTourSteps, TOUR_SEEN_STAFF_KEY);
+  // staff-open-add-modal reuses handleAddAppointment (includes get_server_time RPC prelude)
+  useTourAction('staff-open-add-modal', () => handleAddAppointment());
+  useTourAction('staff-close-add-modal', () => setShowAdd(false));
 
   useEffect(() => {
     let isMounted = true;
@@ -307,72 +314,76 @@ export default function RandevularScreen() {
         }}
       />
 
-      {loading ? (
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator size="small" color={colors.brand[600]} />
-        </View>
-      ) : loadError ? (
-        <ErrorState onRetry={() => { setLoading(true); fetchAppointments(); }} />
-      ) : (
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={[styles.scrollContent, isEmpty && styles.scrollContentEmpty]}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-          }
-        >
-          {isEmpty ? (
-            <EmptyState
-              onCta={handleAddAppointment}
-              dateLabel={formatDayMonth(selectedDate)}
-            />
-          ) : (
-            items.map((item, idx) => {
-              if (item.kind === 'section') {
+      <TourTarget id="staff-list" style={{ flex: 1 }}>
+        {loading ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="small" color={colors.brand[600]} />
+          </View>
+        ) : loadError ? (
+          <ErrorState onRetry={() => { setLoading(true); fetchAppointments(); }} />
+        ) : (
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={[styles.scrollContent, isEmpty && styles.scrollContentEmpty]}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            }
+          >
+            {isEmpty ? (
+              <EmptyState
+                onCta={handleAddAppointment}
+                dateLabel={formatDayMonth(selectedDate)}
+              />
+            ) : (
+              items.map((item, idx) => {
+                if (item.kind === 'section') {
+                  return (
+                    <SectionLabel
+                      key={`section-${item.label}-${idx}`}
+                      style={{ paddingHorizontal: 0, marginTop: item.topMargin ?? 0, marginBottom: 4, color: colors.slate[500] }}
+                    >
+                      {item.label}
+                    </SectionLabel>
+                  );
+                }
+                if (item.kind === 'blok') {
+                  return (
+                    <BlokCard
+                      key={item.id}
+                      time={item.time}
+                      endTime={item.endTime}
+                      duration={item.duration}
+                      label={item.label}
+                    />
+                  );
+                }
                 return (
-                  <SectionLabel
-                    key={`section-${item.label}-${idx}`}
-                    style={{ paddingHorizontal: 0, marginTop: item.topMargin ?? 0, marginBottom: 4, color: colors.slate[500] }}
-                  >
-                    {item.label}
-                  </SectionLabel>
-                );
-              }
-              if (item.kind === 'blok') {
-                return (
-                  <BlokCard
+                  <AppointmentCard
                     key={item.id}
                     time={item.time}
                     endTime={item.endTime}
                     duration={item.duration}
-                    label={item.label}
+                    name={item.name}
+                    service={item.service}
+                    notes={item.notes}
+                    state={item.state}
+                    onPress={item.isDetail ? () => openDetail(item) : undefined}
                   />
                 );
-              }
-              return (
-                <AppointmentCard
-                  key={item.id}
-                  time={item.time}
-                  endTime={item.endTime}
-                  duration={item.duration}
-                  name={item.name}
-                  service={item.service}
-                  notes={item.notes}
-                  state={item.state}
-                  onPress={item.isDetail ? () => openDetail(item) : undefined}
-                />
-              );
-            })
-          )}
-        </ScrollView>
-      )}
+              })
+            )}
+          </ScrollView>
+        )}
+      </TourTarget>
 
       {/* FAB */}
       <View style={styles.fab}>
-        <Button variant="accent" size="lg" onPress={handleAddAppointment}>
-          + Yeni Randevu
-        </Button>
+        <TourTarget id="staff-fab">
+          <Button variant="accent" size="lg" onPress={handleAddAppointment}>
+            + Yeni Randevu
+          </Button>
+        </TourTarget>
       </View>
 
       {/* Appointment detail sheet */}

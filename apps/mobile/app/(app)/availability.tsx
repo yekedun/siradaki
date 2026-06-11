@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AvailabilityScreen } from '../../components/availability/AvailabilityScreen';
 import { supabase } from '../../lib/supabase';
+import { TourTarget } from '../../lib/tour/TourContext';
 
 interface StaffContext {
   staffId: string | null;
@@ -87,15 +88,17 @@ export default function StaffAvailabilityRoute() {
   }, []);
 
   return (
-    <AvailabilityScreen
-      mode="staff"
-      shopId={context.shopId}
-      shopSlug={context.shopSlug}
-      staffId={context.staffId}
-      staffList={context.staffId ? [{ id: context.staffId, name: context.staffName }] : []}
-      services={context.services}
-      workingHours={context.workingHours}
-      loadingContext={loading}
-    />
+    <TourTarget id="staff-avail" style={{ flex: 1 }}>
+      <AvailabilityScreen
+        mode="staff"
+        shopId={context.shopId}
+        shopSlug={context.shopSlug}
+        staffId={context.staffId}
+        staffList={context.staffId ? [{ id: context.staffId, name: context.staffName }] : []}
+        services={context.services}
+        workingHours={context.workingHours}
+        loadingContext={loading}
+      />
+    </TourTarget>
   );
 }

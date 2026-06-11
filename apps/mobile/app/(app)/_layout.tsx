@@ -20,6 +20,8 @@ import { Tabs } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
 import { Clock3, CalendarCheck2, MinusCircle, Settings } from 'lucide-react-native';
 import { colors } from '../../lib/theme';
+import { TourProvider } from '../../lib/tour/TourContext';
+import { TourOverlayHost } from '../../components/TourOverlay';
 
 /**
  * Active-tab indicator — thin 2px line at the top of the active tab.
@@ -34,70 +36,75 @@ function TabIndicator({ focused }: { focused: boolean }) {
 
 export default function AppLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: colors.ink[900],
-        tabBarInactiveTintColor: colors.slate[500],
-        tabBarLabelStyle: styles.tabLabel,
-      }}
-    >
-      {/* M9 — Randevular */}
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Randevular',
-          tabBarIcon: ({ color, focused }) => (
-            <>
-              <TabIndicator focused={focused} />
-              <Clock3 size={20} color={color} />
-            </>
-          ),
-        }}
-      />
+    <TourProvider>
+      <View style={{ flex: 1 }}>
+        <Tabs
+          screenOptions={{
+            headerShown: false,
+            tabBarStyle: styles.tabBar,
+            tabBarActiveTintColor: colors.ink[900],
+            tabBarInactiveTintColor: colors.slate[500],
+            tabBarLabelStyle: styles.tabLabel,
+          }}
+        >
+          {/* M9 — Randevular */}
+          <Tabs.Screen
+            name="index"
+            options={{
+              title: 'Randevular',
+              tabBarIcon: ({ color, focused }) => (
+                <>
+                  <TabIndicator focused={focused} />
+                  <Clock3 size={20} color={color} />
+                </>
+              ),
+            }}
+          />
 
-      {/* M10 — Blok */}
-      <Tabs.Screen
-        name="availability"
-        options={{
-          title: 'Müsaitlik',
-          tabBarIcon: ({ color, focused }) => (
-            <>
-              <TabIndicator focused={focused} />
-              <CalendarCheck2 size={20} color={color} />
-            </>
-          ),
-        }}
-      />
+          {/* M10 — Blok */}
+          <Tabs.Screen
+            name="availability"
+            options={{
+              title: 'Müsaitlik',
+              tabBarIcon: ({ color, focused }) => (
+                <>
+                  <TabIndicator focused={focused} />
+                  <CalendarCheck2 size={20} color={color} />
+                </>
+              ),
+            }}
+          />
 
-      <Tabs.Screen
-        name="block"
-        options={{
-          title: 'Blok',
-          tabBarIcon: ({ color, focused }) => (
-            <>
-              <TabIndicator focused={focused} />
-              <MinusCircle size={20} color={color} />
-            </>
-          ),
-        }}
-      />
+          <Tabs.Screen
+            name="block"
+            options={{
+              title: 'Blok',
+              tabBarIcon: ({ color, focused }) => (
+                <>
+                  <TabIndicator focused={focused} />
+                  <MinusCircle size={20} color={color} />
+                </>
+              ),
+            }}
+          />
 
-      {/* M11 — Hesabım */}
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Hesabım',
-          tabBarIcon: ({ color, focused }) => (
-            <>
-              <TabIndicator focused={focused} />
-              <Settings size={20} color={color} />
-            </>
-          ),
-        }}
-      />
-    </Tabs>
+          {/* M11 — Hesabım */}
+          <Tabs.Screen
+            name="settings"
+            options={{
+              title: 'Hesabım',
+              tabBarIcon: ({ color, focused }) => (
+                <>
+                  <TabIndicator focused={focused} />
+                  <Settings size={20} color={color} />
+                </>
+              ),
+            }}
+          />
+        </Tabs>
+        <TourOverlayHost host="root" />
+      </View>
+    </TourProvider>
   );
 }
 

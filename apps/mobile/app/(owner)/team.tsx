@@ -39,6 +39,7 @@ import { supabase } from '../../lib/supabase';
 import { buildOwnerRoleFilter, isMissingColumnError } from '../../lib/supabase-role';
 import { StaffEditSheet, type StaffMember as EditableStaffMember } from '../../components/StaffEditSheet';
 import { OwnerSettingsAvatar } from '../../components/ds/OwnerSettingsAvatar';
+import { TourTarget } from '../../lib/tour/TourContext';
 
 const FN_BASE = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1`;
 import {
@@ -817,46 +818,50 @@ export default function TeamScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       >
-        {staff.length === 0 ? (
-          <Text style={styles.emptyText}>Henüz personel yok. Ekip ekranından ekleyebilirsiniz.</Text>
-        ) : (
-          <View style={styles.staffCard}>
-            {staff.map((s, i) => (
-              <StaffRowItem
-                key={s.id}
-                member={s}
-                onRowPress={() => {
-                  setEditStaff({
-                    id: s.id,
-                    name: s.name,
-                    is_active: s._is_active ?? s.status === 'Aktif',
-                    role: s._role ?? undefined,
-                    commission_type: s._commission_type ?? undefined,
-                    commission_rate_bps: s._commission_rate_bps ?? undefined,
-                  });
-                  setEditVisible(true);
-                }}
-                onChevronPress={() => {
-                  setSelectedId(s.id);
-                  setScheduleOpen(true);
-                }}
-                isLast={i === staff.length - 1}
-              />
-            ))}
-          </View>
-        )}
+        <TourTarget id="team-list">
+          {staff.length === 0 ? (
+            <Text style={styles.emptyText}>Henüz personel yok. Ekip ekranından ekleyebilirsiniz.</Text>
+          ) : (
+            <View style={styles.staffCard}>
+              {staff.map((s, i) => (
+                <StaffRowItem
+                  key={s.id}
+                  member={s}
+                  onRowPress={() => {
+                    setEditStaff({
+                      id: s.id,
+                      name: s.name,
+                      is_active: s._is_active ?? s.status === 'Aktif',
+                      role: s._role ?? undefined,
+                      commission_type: s._commission_type ?? undefined,
+                      commission_rate_bps: s._commission_rate_bps ?? undefined,
+                    });
+                    setEditVisible(true);
+                  }}
+                  onChevronPress={() => {
+                    setSelectedId(s.id);
+                    setScheduleOpen(true);
+                  }}
+                  isLast={i === staff.length - 1}
+                />
+              ))}
+            </View>
+          )}
+        </TourTarget>
 
         {/* Berber Davet Et */}
-        <TouchableOpacity
-          style={[styles.addButton, inviteLoading && { opacity: 0.6 }]}
-          onPress={handleInvite}
-          disabled={inviteLoading}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.addButtonText}>
-            {inviteLoading ? 'Link oluşturuluyor…' : '+ Berber Davet Et'}
-          </Text>
-        </TouchableOpacity>
+        <TourTarget id="team-invite">
+          <TouchableOpacity
+            style={[styles.addButton, inviteLoading && { opacity: 0.6 }]}
+            onPress={handleInvite}
+            disabled={inviteLoading}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.addButtonText}>
+              {inviteLoading ? 'Link oluşturuluyor…' : '+ Berber Davet Et'}
+            </Text>
+          </TouchableOpacity>
+        </TourTarget>
 
         <TouchableOpacity
           onPress={() => setAddOpen(true)}
