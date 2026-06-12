@@ -9,7 +9,7 @@ import { supabase, determineUserRole } from '../lib/supabase';
 import { isPublicAuthRoute, routeForRole, shouldSkipRoleRouting } from '../lib/router-guard';
 import { initSentry, SentryErrorBoundary, setSentryUserFromSession } from '../lib/sentry';
 import { initAnalytics, trackEvent, identifyUser, resetAnalytics } from '../lib/analytics';
-import { canUseExpoPushNotifications } from '../lib/notifications';
+import { canUseExpoPushNotifications, registerForPushNotifications } from '../lib/notifications';
 
 SplashScreen.preventAutoHideAsync();
 initSentry();
@@ -91,6 +91,18 @@ export default function RootLayout() {
     } else {
       resetAnalytics();
     }
+  }, [session]);
+
+  // Push token kaydı: oturum hangi yolla açılırsa açılsın (email, Google, Apple,
+  // geri yüklenen oturum) kullanıcı başına bir kez kaydet. login.tsx'teki çağrı
+  // yalnızca email akışını kapsıyordu; OAuth girişleri ve uygulama yeniden
+  // kurulumları token'sız kalıyordu.
+  const pushRegisteredFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!session) return;
+    if (pushRegisteredFor.current === session.user.id) return;
+    pushRegisteredFor.current = session.user.id;
+    registerForPushNotifications().catch(() => {});
   }, [session]);
 
   useEffect(() => {
