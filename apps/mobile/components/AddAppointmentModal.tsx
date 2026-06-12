@@ -68,6 +68,7 @@ import {
 import {
   AppointmentDayAvailability,
   fetchAppointmentDayAvailability,
+  getVisibleAppointmentTimes,
 } from '../lib/appointment-availability';
 
 /* ── Design-source service options ─────────────────────────────── */
@@ -170,7 +171,7 @@ export interface AddAppointmentModalProps {
   shopId?: string | null;
   /**
    * Verilirse saat grid'i widget-get-availability'den gelir: dolu saatler
-   * (randevu + blok + staff_schedules) disabled gösterilir. Verilmezse eski
+   * (randevu + blok + staff_schedules) gizlenir. Verilmezse eski
    * davranış — sadece çalışma saatlerinden üretilen grid — korunur.
    */
   shopSlug?: string | null;
@@ -358,21 +359,11 @@ export function AddAppointmentModal({
     [slot, totalDur],
   );
 
-  // Sunucu müsaitliği geldiyse grid oradan gelir (dolu saatler işaretli);
+  // Sunucu müsaitliği geldiyse grid oradan gelir (dolu saatler gizli);
   // shopSlug yoksa veya fetch başarısızsa eski yerel üretim fallback'tir.
   const serverGridActive = !!shopSlug && !availabilityFailed && availability !== null;
 
-  const timeSlots = useMemo(() => {
-    if (serverGridActive && availability) return availability.slots.map((s) => s.time);
-    return generateAppointmentTimesForDate(selDate, workingHours, totalDur || 30, serverNowMs);
-  }, [serverGridActive, availability, selDate, workingHours, totalDur, serverNowMs]);
-
-  const unavailableTimes = useMemo(() => {
-    if (!serverGridActive || !availability) return new Set<string>();
-    return new Set(availability.slots.filter((s) => !s.available).map((s) => s.time));
-  }, [serverGridActive, availability]);
-
-  // Edit modunda randevunun kendi saati sunucudan "dolu" döner — seçilebilir kalmalı.
+  // Edit modunda randevunun kendi saati sunucudan "dolu" döner — görünür ve seçilebilir kalmalı.
   const editOwnTime =
     mode === 'edit' &&
     initialValues &&
@@ -380,6 +371,18 @@ export function AddAppointmentModal({
     (initialValues.staffId ?? null) === (selectedStaffId ?? null)
       ? initialValues.time
       : null;
+
+  const timeSlots = useMemo(() => {
+    if (serverGridActive && availability) {
+      return getVisibleAppointmentTimes(availability, editOwnTime);
+    }
+    return generateAppointmentTimesForDate(selDate, workingHours, totalDur || 30, serverNowMs);
+  }, [serverGridActive, availability, editOwnTime, selDate, workingHours, totalDur, serverNowMs]);
+
+  const unavailableTimes = useMemo(() => {
+    if (!serverGridActive || !availability) return new Set<string>();
+    return new Set(availability.slots.filter((s) => !s.available).map((s) => s.time));
+  }, [serverGridActive, availability]);
 
   const isTimeDisabled = (t: string) => t !== editOwnTime && unavailableTimes.has(t);
 
@@ -389,8 +392,8 @@ export function AddAppointmentModal({
   }, [slot, editOwnTime, unavailableTimes]);
 
   const visibleTimeSlots = useMemo(
-    () => (slot && !timeSlots.includes(slot) ? [slot, ...timeSlots] : timeSlots),
-    [slot, timeSlots],
+    () => (slot === editOwnTime && !timeSlots.includes(slot) ? [slot, ...timeSlots] : timeSlots),
+    [slot, editOwnTime, timeSlots],
   );
 
   async function handleSave() {

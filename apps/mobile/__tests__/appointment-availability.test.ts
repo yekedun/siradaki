@@ -1,6 +1,7 @@
 import {
   buildAvailabilityQuery,
   formatIstanbulSlotTime,
+  getVisibleAppointmentTimes,
   mapAvailabilityResponse,
 } from '../lib/appointment-availability';
 
@@ -65,6 +66,29 @@ describe('mapAvailabilityResponse', () => {
 
   it('slots dizisi yoksa throw eder', () => {
     expect(() => mapAvailabilityResponse({ closed: false })).toThrow();
+  });
+});
+
+describe('getVisibleAppointmentTimes', () => {
+  const availability = mapAvailabilityResponse({
+    closed: false,
+    slots: [
+      { starts_at: '2026-06-12T06:00:00.000Z', available: true },
+      { starts_at: '2026-06-12T06:30:00.000Z', available: false },
+      { starts_at: '2026-06-12T07:00:00.000Z', available: true },
+    ],
+  });
+
+  it('yeni randevuda dolu saatleri gizler', () => {
+    expect(getVisibleAppointmentTimes(availability)).toEqual(['09:00', '10:00']);
+  });
+
+  it('duzenlemede mevcut randevu saatini gorunur tutar', () => {
+    expect(getVisibleAppointmentTimes(availability, '09:30')).toEqual([
+      '09:00',
+      '09:30',
+      '10:00',
+    ]);
   });
 });
 

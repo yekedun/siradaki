@@ -17,6 +17,15 @@ export interface AppointmentDayAvailability {
   slots: AppointmentTimeSlot[];
 }
 
+export function getVisibleAppointmentTimes(
+  availability: AppointmentDayAvailability,
+  currentAppointmentTime?: string | null,
+): string[] {
+  return availability.slots
+    .filter((slot) => slot.available || slot.time === currentAppointmentTime)
+    .map((slot) => slot.time);
+}
+
 const ISTANBUL_TIME_FORMAT = new Intl.DateTimeFormat('tr-TR', {
   timeZone: 'Europe/Istanbul',
   hour: '2-digit',
