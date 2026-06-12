@@ -7,6 +7,9 @@ interface PushMessage {
   title: string;
   body: string;
   data?: Record<string, unknown>;
+  sound?: string | null;
+  channelId?: string;
+  priority?: "default" | "normal" | "high";
 }
 
 interface SendPushRequest {
@@ -52,10 +55,19 @@ serve(async (req) => {
     return json({ sent: 0, errors: [] });
   }
 
+  // Ses/kanal varsayilanlari: iOS'ta sound olmadan bildirim sessiz gelir;
+  // Android'de channelId olmadan dusuk onemli fallback kanala duser.
+  const messages = body.messages.map((m) => ({
+    sound: "default",
+    channelId: "default",
+    priority: "high",
+    ...m,
+  }));
+
   // Batch into chunks of 100 (Expo limit)
   const chunks: PushMessage[][] = [];
-  for (let i = 0; i < body.messages.length; i += 100) {
-    chunks.push(body.messages.slice(i, i + 100));
+  for (let i = 0; i < messages.length; i += 100) {
+    chunks.push(messages.slice(i, i + 100));
   }
 
   let totalSent = 0;
