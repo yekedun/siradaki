@@ -287,7 +287,6 @@ function ProfileEditorSheet({ open, onClose, shopId, initialName, initialAddress
         <Pressable style={styles.sheetContainer} onPress={() => {}}>
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ flex: 1 }}
           >
           {/* Drag handle */}
           <View style={styles.sheetHandle} />
