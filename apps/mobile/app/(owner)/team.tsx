@@ -34,11 +34,12 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { ChevronLeft } from 'lucide-react-native';
 import { colors, radius } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { buildOwnerRoleFilter, isMissingColumnError } from '../../lib/supabase-role';
 import { StaffEditSheet, type StaffMember as EditableStaffMember } from '../../components/StaffEditSheet';
-import { OwnerSettingsAvatar } from '../../components/ds/OwnerSettingsAvatar';
 import { TourTarget } from '../../lib/tour/TourContext';
 
 const FN_BASE = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1`;
@@ -586,6 +587,7 @@ function StaffRowItem({ member, onRowPress, onChevronPress, isLast }: StaffRowIt
 
 export default function TeamScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [staff,          setStaff]          = useState<StaffMember[]>(INIT_STAFF);
   const [addOpen,        setAddOpen]        = useState(false);
   const [scheduleOpen,   setScheduleOpen]   = useState(false);
@@ -595,6 +597,10 @@ export default function TeamScreen() {
   const [inviteLoading,  setInviteLoading]  = useState(false);
   const [editStaff,      setEditStaff]      = useState<EditableStaffMember | null>(null);
   const [editVisible,    setEditVisible]    = useState(false);
+
+  function handleBack() {
+    router.replace('/(owner)/settings');
+  }
 
   const selected = staff.find((s) => s.id === selectedId);
 
@@ -807,10 +813,19 @@ export default function TeamScreen() {
     <View style={styles.screen}>
       {/* OverlineHeader */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <TouchableOpacity
+          onPress={handleBack}
+          style={styles.backBtn}
+          hitSlop={10}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Ayarlara geri dön"
+        >
+          <ChevronLeft size={24} color={colors.ink[900]} strokeWidth={2} />
+        </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.pageTitle}>Ustalar</Text>
         </View>
-        <OwnerSettingsAvatar />
       </View>
 
       <ScrollView
@@ -925,6 +940,14 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 16,
     gap: 12,
+  },
+  backBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+    flexShrink: 0,
   },
   eyebrow: {
     fontSize: 11,

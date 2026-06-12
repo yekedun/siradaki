@@ -965,12 +965,36 @@ export default function SettingsScreen() {
             </View>
           </TouchableOpacity>
 
+          {/* Ekip Yönetimi */}
+          <TouchableOpacity
+            onPress={() => router.push('/(owner)/team')}
+            style={styles.opRow}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Ekip yönetimini aç"
+            accessibilityHint="Personel ve çalışma saati ayarlarını açar"
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.opRowTitle}>Ekip Yönetimi</Text>
+              <Text style={styles.opRowMeta}>
+                Personeli, çalışma saatlerini ve komisyonları yönet
+              </Text>
+            </View>
+            <View style={styles.chevronWrap}>
+              <View style={styles.chevronLine1} />
+              <View style={styles.chevronLine2} />
+            </View>
+          </TouchableOpacity>
+
           {/* Hizmetler */}
           <TourTarget id="settings-services">
             <TouchableOpacity
               onPress={() => router.push('/(owner)/services')}
               style={[styles.opRow]}
               activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel="Hizmetleri aç"
+              accessibilityHint="Hizmet ve fiyat ayarlarını açar"
             >
               <View style={{ flex: 1 }}>
                 <Text style={styles.opRowTitle}>Hizmetler</Text>

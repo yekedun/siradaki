@@ -14,7 +14,6 @@ import { AddAppointmentModal, ServiceOption } from '../AddAppointmentModal';
 import { Chip, ChipRow } from '../ds/Chip';
 import { DayPicker } from '../ds/DayPicker';
 import { OverlineHeader } from '../ds/OverlineHeader';
-import { OwnerSettingsAvatar } from '../ds/OwnerSettingsAvatar';
 import {
   AVAILABILITY_DURATIONS,
   AvailabilityDuration,
@@ -272,7 +271,6 @@ export function AvailabilityScreen({
         eyebrow={mode === 'owner' ? 'Dükkan Sahibi' : 'Berber'}
         title="Müsaitlik"
         meta={`${duration} dk için`}
-        trailing={mode === 'owner' ? <OwnerSettingsAvatar /> : null}
       />
       <DayPicker selected={selectedDate} onSelect={setSelectedDate} />
 

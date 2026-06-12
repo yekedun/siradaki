@@ -54,7 +54,6 @@ import { colors, shadows } from '../../lib/theme';
 import { OverlineHeader } from '../../components/ds/OverlineHeader';
 import { SectionLabel } from '../../components/ds/SectionLabel';
 import { Chip } from '../../components/ds/Chip';
-import { OwnerSettingsAvatar } from '../../components/ds/OwnerSettingsAvatar';
 import { supabase } from '../../lib/supabase';
 import { estimatedAppointmentRevenueCents } from '../../lib/revenue-mappers';
 import { useShop } from '../../lib/ShopContext';
@@ -342,11 +341,6 @@ export default function OzetScreen() {
       <OverlineHeader
         title="Bugün"
         meta={new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'short' })}
-        trailing={
-          <TourTarget id="ozet-avatar">
-            <OwnerSettingsAvatar />
-          </TourTarget>
-        }
       />
 
       {/* ChipRow — gap:8, padding:'4px 20px 4px', overflowX:auto */}

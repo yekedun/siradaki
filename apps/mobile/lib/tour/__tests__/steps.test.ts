@@ -93,4 +93,10 @@ describe('tour step definitions', () => {
     expect(ownerTourSteps[0].targetId).toBeUndefined();
     expect(ownerTourSteps[ownerTourSteps.length - 1].targetId).toBeUndefined();
   });
+
+  it('owner tour points to the settings avatar in the tab bar', () => {
+    const settingsStep = ownerTourSteps.find((step) => step.id === 'owner-settings-tab');
+
+    expect(settingsStep?.targetId).toBe('owner-settings-tab');
+  });
 });

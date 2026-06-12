@@ -1,6 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '../../lib/theme';
 import { useShop } from '../../lib/ShopContext';
 
@@ -19,44 +18,35 @@ function getInitials(value: string | null | undefined) {
     .toLocaleUpperCase('tr-TR');
 }
 
-export function OwnerSettingsAvatar() {
-  const router = useRouter();
+export function OwnerTabAvatar({ focused }: { focused: boolean }) {
   const { shopName, shopSlug } = useShop();
   const initials = getInitials(shopName || shopSlug);
 
   return (
-    <TouchableOpacity
-      onPress={() => router.push('/(owner)/settings')}
-      style={styles.button}
-      activeOpacity={0.78}
-      accessibilityRole="button"
-      accessibilityLabel="Ayarlar"
-      hitSlop={8}
-    >
-      <Text style={styles.text}>{initials}</Text>
-    </TouchableOpacity>
+    <View style={[styles.tabAvatar, !focused && styles.tabAvatarInactive]}>
+      <Text style={styles.tabAvatarText}>{initials}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  button: {
-    width: 50,
-    height: 50,
+  tabAvatar: {
+    width: 28,
+    height: 28,
     borderRadius: 999,
     backgroundColor: colors.ink[900],
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: colors.slate[0],
-    shadowColor: colors.ink[900],
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.22,
-    shadowRadius: 14,
-    elevation: 6,
+    borderWidth: 2,
+    borderColor: colors.brand[500],
   },
-  text: {
+  tabAvatarInactive: {
+    backgroundColor: colors.slate[500],
+    borderColor: colors.slate[300],
+  },
+  tabAvatarText: {
     fontFamily: 'Montserrat-Bold',
-    fontSize: 15,
+    fontSize: 10,
     color: '#ffffff',
   },
 });

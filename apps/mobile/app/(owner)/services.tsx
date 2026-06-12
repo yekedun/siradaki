@@ -42,6 +42,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChevronLeft } from 'lucide-react-native';
 import { colors, radius } from '../../lib/theme';
 import { supabase } from '../../lib/supabase';
 import { trackEvent } from '../../lib/analytics';
@@ -376,6 +377,10 @@ export default function ServicesScreen() {
   const [shopId,   setShopId]   = useState<string | null>(null);
   const nextId = useRef(1);
 
+  function handleBack() {
+    router.replace('/(owner)/settings');
+  }
+
   useEffect(() => { loadServices(); }, []);
 
   async function loadServices() {
@@ -472,9 +477,15 @@ export default function ServicesScreen() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={10} activeOpacity={0.7}>
-          <View style={styles.backChevron1} />
-          <View style={styles.backChevron2} />
+        <TouchableOpacity
+          onPress={handleBack}
+          style={styles.backBtn}
+          hitSlop={10}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Ayarlara geri dön"
+        >
+          <ChevronLeft size={24} color={colors.ink[900]} strokeWidth={2} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.pageTitle}>Hizmetler</Text>
@@ -587,22 +598,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 6,
     flexShrink: 0,
-  },
-  backChevron1: {
-    position: 'absolute',
-    width: 9,
-    height: 1.8,
-    backgroundColor: colors.ink[900],
-    borderRadius: 1,
-    transform: [{ rotate: '45deg' }, { translateY: -3 }],
-  },
-  backChevron2: {
-    position: 'absolute',
-    width: 9,
-    height: 1.8,
-    backgroundColor: colors.ink[900],
-    borderRadius: 1,
-    transform: [{ rotate: '-45deg' }, { translateY: 3 }],
   },
   eyebrow: {
     fontSize: 11,

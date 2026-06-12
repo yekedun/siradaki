@@ -27,7 +27,6 @@ import { estimatedAppointmentRevenueCents } from '../../lib/revenue-mappers';
 import { useShop } from '../../lib/ShopContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Chip, ChipRow } from '../../components/ds/Chip';
-import { OwnerSettingsAvatar } from '../../components/ds/OwnerSettingsAvatar';
 
 /* ─── Types ─────────────────────────────────────────────────── */
 
@@ -158,7 +157,6 @@ export default function EarningsScreen() {
       {/* OverlineHeader */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.pageTitle}>Kazanç</Text>
-        <OwnerSettingsAvatar />
       </View>
 
       {/* Period chips */}

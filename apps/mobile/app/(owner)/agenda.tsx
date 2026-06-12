@@ -57,7 +57,6 @@ import { DayPicker } from '../../components/ds/DayPicker';
 import { AppointmentCard } from '../../components/ds/AppointmentCard';
 import { BlokCard } from '../../components/ds/BlokCard';
 import { Button } from '../../components/ds/Button';
-import { OwnerSettingsAvatar } from '../../components/ds/OwnerSettingsAvatar';
 import { supabase } from '../../lib/supabase';
 import {
   buildIstanbulAppointmentDayRange,
@@ -340,7 +339,6 @@ export default function AgendaScreen() {
         eyebrow="Dükkan Sahibi"
         title="Ajanda"
         meta={formatAgendaMetaDate(selectedDate)}
-        trailing={<OwnerSettingsAvatar />}
       />
 
       {/* DayPicker — gap:6, padding:'0 16px' — 2 geçmiş gün incelenebilir */}

@@ -6,16 +6,16 @@
  *   { key:'ozet',    icon:'bar-chart-3',   label:'Özet'    }
  *   { key:'ajanda',  icon:'calendar-days', label:'Ajanda'  }
  *   { key:'kazanc',  icon:'wallet',        label:'Kazanç'  }
- *   { key:'ekip',    icon:'users',         label:'Ekip'    }
- *   { key:'ayarlar', icon:'settings',      label:'Ayarlar' }
+ *   { key:'ayarlar', icon:'avatar',        label:'Ayarlar' }
  */
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
-import { BarChart3, CalendarDays, CalendarCheck2, Wallet, Users } from 'lucide-react-native';
+import { BarChart3, CalendarDays, CalendarCheck2, Wallet } from 'lucide-react-native';
 import { colors } from '../../lib/theme';
 import { ShopProvider } from '../../lib/ShopContext';
-import { TourProvider } from '../../lib/tour/TourContext';
+import { TourProvider, TourTarget } from '../../lib/tour/TourContext';
 import { TourOverlayHost } from '../../components/TourOverlay';
+import { OwnerTabAvatar } from '../../components/ds/OwnerTabAvatar';
 
 const ICON_SIZE = 20;
 
@@ -75,14 +75,18 @@ export default function OwnerLayout() {
               name="team"
               options={{
                 title: 'Ekip',
-                tabBarIcon: ({ color }) => <Users size={ICON_SIZE} color={color} />,
+                href: null,
               }}
             />
             <Tabs.Screen
               name="settings"
               options={{
                 title: 'Ayarlar',
-                href: null,
+                tabBarIcon: ({ focused }) => (
+                  <TourTarget id="owner-settings-tab">
+                    <OwnerTabAvatar focused={focused} />
+                  </TourTarget>
+                ),
               }}
             />
             {/* Non-tab screens — hidden from tab bar */}

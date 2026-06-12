@@ -104,11 +104,11 @@ export const ownerTourSteps: TourStep[] = [
     body: 'Yeni usta mı geldi? Buradan bir davet linki gönder, kendi telefonundan randevularını görsün.',
   },
   {
-    id: 'ozet-avatar',
+    id: 'owner-settings-tab',
     route: '/(owner)',
-    targetId: 'ozet-avatar',
+    targetId: 'owner-settings-tab',
     title: 'Ayarların kapısı',
-    body: 'Bu yuvarlağa dokununca Ayarlar açılır. Şimdi birlikte gidelim →',
+    body: 'Alt bardaki bu avatara dokununca Ayarlar açılır. Şimdi birlikte gidelim →',
   },
   {
     id: 'settings-link',
