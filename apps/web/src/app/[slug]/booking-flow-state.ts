@@ -60,6 +60,43 @@ export function otpResendState(state: OtpState): OtpState {
 }
 
 // ---------------------------------------------------------------------------
+// Slot broadcast (shop_slots:{shop_id} kanalından gelen slots_changed eventi)
+// ---------------------------------------------------------------------------
+
+/**
+ * Broadcast payload'ı mevcut seçimi (tarih + personel) etkiliyorsa true döner.
+ * Payload beklenmedik şekildeyse güvenli tarafta kalır ve true döner —
+ * gereksiz bir refetch, kaçırılmış bir güncellemeden iyidir.
+ */
+export function slotBroadcastAffectsSelection(
+  payload: unknown,
+  selectedDateStr: string,
+  selectedStaffId: string | null,
+): boolean {
+  if (typeof payload !== "object" || payload === null) return true;
+  const p = payload as { staff_id?: unknown; dates?: unknown };
+
+  if (
+    selectedStaffId !== null &&
+    typeof p.staff_id === "string" &&
+    p.staff_id !== selectedStaffId
+  ) {
+    return false;
+  }
+
+  if (
+    Array.isArray(p.dates) &&
+    p.dates.length > 0 &&
+    p.dates.every((d) => typeof d === "string") &&
+    !p.dates.includes(selectedDateStr)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+// ---------------------------------------------------------------------------
 
 export interface PersonalLinkBadgeState {
   isPersonalLink: boolean;

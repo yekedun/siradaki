@@ -502,6 +502,7 @@ export default function AgendaScreen() {
         workingHours={shopWorkingHours}
         serverNowMs={serverNowMs}
         shopId={shopId}
+        shopSlug={shopSlug}
         mode={editingAppt ? 'edit' : 'create'}
         initialValues={editingAppt ? {
           id: editingAppt.id,

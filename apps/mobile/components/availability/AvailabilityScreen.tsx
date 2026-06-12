@@ -440,6 +440,7 @@ export function AvailabilityScreen({
         initialStaffId={appointmentInitialValues?.staffId ?? (mode === 'staff' ? staffId ?? null : null)}
         workingHours={workingHours}
         shopId={shopId}
+        shopSlug={shopSlug}
         mode="create"
         initialValues={appointmentInitialValues}
       />

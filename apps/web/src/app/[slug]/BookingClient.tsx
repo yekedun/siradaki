@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { ServiceSelector, type Service } from '../../components/ServiceSelector';
 import { SlotGrid } from '../../components/SlotGrid';
 import { BookingModal } from '../../components/BookingModal';
-import { shouldShowPersonalLinkBadge } from './booking-flow-state';
+import { createClient } from '../../lib/supabase/browser';
+import { shouldShowPersonalLinkBadge, slotBroadcastAffectsSelection } from './booking-flow-state';
 import { toTimeLabel } from './booking-time';
 import { toggleService, computeTotals, buildServiceSummary } from '@berber/shared/booking-selection';
 import { trackWebEvent } from '../../lib/analytics';
@@ -64,7 +65,7 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
     setModalOpen(true);
   }
 
-  const fetchSlots = useCallback(async () => {
+  const fetchSlots = useCallback(async (fresh = false) => {
     if (selServices.length === 0) return;
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -78,7 +79,13 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
         service_ids: selServices.join(','),
         staff_id:    selStaff ?? 'any',
       });
-      const res = await fetch(`${FN_BASE}/widget-get-availability?${qs}`, { signal: controller.signal });
+      // Edge fn yanıtı 30 sn cache'lenir (Cache-Control). Realtime/iade sonrası
+      // refetch'lerde bayat slot göstermemek için cache atlanır.
+      if (fresh) qs.set('_t', String(Date.now()));
+      const res = await fetch(`${FN_BASE}/widget-get-availability?${qs}`, {
+        signal: controller.signal,
+        ...(fresh ? { cache: 'no-store' as RequestCache } : {}),
+      });
       if (!res.ok) { setSlotsErr('Müsaitlik bilgisi alınamadı.'); return; }
       const data = await res.json();
       if (data.closed) setIsClosed(true);
@@ -91,16 +98,55 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
     }
   }, [selServices, selDate, selStaff, shop.slug]);
 
+  // Realtime/polling handler'ları kanal aboneliğini bozmadan güncel seçimi
+  // görebilsin diye ref'lerde tutulur.
+  const fetchSlotsRef = useRef(fetchSlots);
+  useEffect(() => { fetchSlotsRef.current = fetchSlots; }, [fetchSlots]);
+  const selectionRef = useRef({ date: toDateStr(selDate), staffId: selStaff });
+  selectionRef.current = { date: toDateStr(selDate), staffId: selStaff };
+
   useEffect(() => { fetchSlots(); }, [fetchSlots]);
 
   useEffect(() => {
-    const onVisible = () => { if (document.visibilityState === 'visible') fetchSlots(); };
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchSlots(true); };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
       abortRef.current?.abort();
     };
   }, [fetchSlots]);
+
+  // Realtime: appointments/blocks trigger'ı shop_slots:{shop_id} kanalına PII'siz
+  // slots_changed yayınlar (migration 20260612100000). Seçili gün/personel
+  // etkileniyorsa müsaitlik tazelenir — app'ten eklenen randevu webte anında
+  // pasife düşer.
+  useEffect(() => {
+    const supabase = createClient();
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const channel = supabase
+      .channel(`shop_slots:${shop.id}`)
+      .on('broadcast', { event: 'slots_changed' }, ({ payload }) => {
+        const { date, staffId } = selectionRef.current;
+        if (!slotBroadcastAffectsSelection(payload, date, staffId)) return;
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => { fetchSlotsRef.current(true); }, 300);
+      })
+      .subscribe();
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      supabase.removeChannel(channel);
+    };
+  }, [shop.id]);
+
+  // Emniyet kemeri: realtime bağlantısı koparsa 60 sn'de bir taze veri çek.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchSlotsRef.current(true);
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const slotItems = rawSlots.map(s => ({ time: toTimeLabel(s.starts_at, shop.timezone), available: s.available }));
   const isAllFull = !isClosed && !slotsLoad && rawSlots.length > 0 && rawSlots.every(s => !s.available);
@@ -276,7 +322,7 @@ export default function BookingClient({ shop, services, staff, preselectedStaffI
             ...(selServices.length ? { service_ids: selServices.join(',') } : {}),
             ...(selStaff ? { staff_id: selStaff } : {}),
           });
-          fetchSlots();
+          fetchSlots(true);
         }}
       />
     </div>

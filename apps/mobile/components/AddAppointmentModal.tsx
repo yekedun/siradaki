@@ -46,6 +46,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { User } from 'lucide-react-native';
 import { colors } from '../lib/theme';
@@ -64,6 +65,10 @@ import {
   formatLocalAppointmentDate,
   generateAppointmentTimesForDate,
 } from '../lib/appointment-time';
+import {
+  AppointmentDayAvailability,
+  fetchAppointmentDayAvailability,
+} from '../lib/appointment-availability';
 
 /* ── Design-source service options ─────────────────────────────── */
 export interface ServiceOption {
@@ -153,7 +158,7 @@ export interface AddAppointmentModalProps {
     date: string;
     time: string;
     notes?: string;
-  }) => void;
+  }) => void | Promise<void>;
   /** Services to display in the selector. Defaults to the design mock data. */
   services?: ServiceOption[];
   staffList?: StaffOption[];
@@ -163,6 +168,12 @@ export interface AddAppointmentModalProps {
   serverNowMs?: number;
   /** Son müşteri önerilerini doldurmak için kullanılır. */
   shopId?: string | null;
+  /**
+   * Verilirse saat grid'i widget-get-availability'den gelir: dolu saatler
+   * (randevu + blok + staff_schedules) disabled gösterilir. Verilmezse eski
+   * davranış — sadece çalışma saatlerinden üretilen grid — korunur.
+   */
+  shopSlug?: string | null;
   mode?: 'create' | 'edit';
   initialValues?: {
     id?: string;
@@ -188,6 +199,7 @@ export function AddAppointmentModal({
   workingHours,
   serverNowMs,
   shopId,
+  shopSlug,
   mode = 'create',
   initialValues,
 }: AddAppointmentModalProps) {
@@ -199,6 +211,11 @@ export function AddAppointmentModal({
   const [slot,           setSlot]           = useState('');
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(initialStaffId ?? null);
   const [pickerVisible,  setPickerVisible]  = useState(false);
+  const [availability,        setAvailability]        = useState<AppointmentDayAvailability | null>(null);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availabilityFailed,  setAvailabilityFailed]  = useState(false);
+  // Kaydetme "saat dolu" gibi bir hatayla reddedilirse grid'i tazelemek için artar.
+  const [availabilityNonce,   setAvailabilityNonce]   = useState(0);
   const initializedKeyRef = useRef<string | null>(null);
 
   /* Build date label for ÖZET card */
@@ -270,6 +287,52 @@ export function AddAppointmentModal({
     setSvcIds((current) => resolveAppointmentServiceIds(current, services));
   }, [visible, mode, initialValues, services]);
 
+  const selDateStr = formatLocalAppointmentDate(days[dayIdx]);
+  const svcKey = svcIds.join(',');
+
+  /* ── Sunucu müsaitliği — personel/tarih/hizmet değişince yeniden çekilir ── */
+  useEffect(() => {
+    if (!visible || !shopSlug) {
+      setAvailability(null);
+      setAvailabilityLoading(false);
+      setAvailabilityFailed(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    let cancelled = false;
+    setAvailabilityLoading(true);
+    setAvailabilityFailed(false);
+
+    fetchAppointmentDayAvailability(
+      {
+        shopSlug,
+        date: selDateStr,
+        staffId: selectedStaffId,
+        serviceIds: svcKey ? svcKey.split(',') : [],
+      },
+      controller.signal,
+    )
+      .then((result) => {
+        if (cancelled) return;
+        setAvailability(result);
+        setAvailabilityLoading(false);
+      })
+      .catch((err: unknown) => {
+        if (cancelled || (err instanceof Error && err.name === 'AbortError')) return;
+        if (__DEV__) console.warn('[add-appointment] availability fetch failed:', err);
+        // Hata → yerel slot üretimine düş; sunucu booking guard'ı yine korur.
+        setAvailability(null);
+        setAvailabilityFailed(true);
+        setAvailabilityLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [visible, shopSlug, selectedStaffId, selDateStr, svcKey, availabilityNonce]);
+
   const selSvcs = svcIds
     .map((id) => services.find((s) => s.id === id))
     .filter((s): s is ServiceOption => Boolean(s));
@@ -295,20 +358,47 @@ export function AddAppointmentModal({
     [slot, totalDur],
   );
 
-  const timeSlots = useMemo(
-    () => generateAppointmentTimesForDate(selDate, workingHours, totalDur || 30, serverNowMs),
-    [selDate, workingHours, totalDur, serverNowMs],
-  );
+  // Sunucu müsaitliği geldiyse grid oradan gelir (dolu saatler işaretli);
+  // shopSlug yoksa veya fetch başarısızsa eski yerel üretim fallback'tir.
+  const serverGridActive = !!shopSlug && !availabilityFailed && availability !== null;
+
+  const timeSlots = useMemo(() => {
+    if (serverGridActive && availability) return availability.slots.map((s) => s.time);
+    return generateAppointmentTimesForDate(selDate, workingHours, totalDur || 30, serverNowMs);
+  }, [serverGridActive, availability, selDate, workingHours, totalDur, serverNowMs]);
+
+  const unavailableTimes = useMemo(() => {
+    if (!serverGridActive || !availability) return new Set<string>();
+    return new Set(availability.slots.filter((s) => !s.available).map((s) => s.time));
+  }, [serverGridActive, availability]);
+
+  // Edit modunda randevunun kendi saati sunucudan "dolu" döner — seçilebilir kalmalı.
+  const editOwnTime =
+    mode === 'edit' &&
+    initialValues &&
+    initialValues.date === selDateStr &&
+    (initialValues.staffId ?? null) === (selectedStaffId ?? null)
+      ? initialValues.time
+      : null;
+
+  const isTimeDisabled = (t: string) => t !== editOwnTime && unavailableTimes.has(t);
+
+  // Seçili saat sonradan dolu hale geldiyse (personel/hizmet değişimi, refetch) bırak.
+  useEffect(() => {
+    if (slot && slot !== editOwnTime && unavailableTimes.has(slot)) setSlot('');
+  }, [slot, editOwnTime, unavailableTimes]);
+
   const visibleTimeSlots = useMemo(
     () => (slot && !timeSlots.includes(slot) ? [slot, ...timeSlots] : timeSlots),
     [slot, timeSlots],
   );
 
-  function handleSave() {
+  async function handleSave() {
     if (!canSave) return;
     if (svcIds.length === 0) return;
+    if (slot && isTimeDisabled(slot)) return;
     const trimmedNotes = notes.trim();
-    onSave({
+    await Promise.resolve(onSave({
       customerName: name.trim(),
       customerPhone: phone,
       serviceIds: svcIds,
@@ -316,7 +406,9 @@ export function AddAppointmentModal({
       date: formatLocalAppointmentDate(selDate),
       time: slot,
       ...(trimmedNotes ? { notes: trimmedNotes } : {}),
-    });
+    }));
+    // Kaydetme başarısızsa modal açık kalır — grid'i tazele ki yeni dolan saat görünsün.
+    setAvailabilityNonce((n) => n + 1);
   }
 
   return (
@@ -486,26 +578,53 @@ export function AddAppointmentModal({
             {/* Time slot grid: 4 cols, gap 6
                 Each: height 38, borderRadius 8, sel=ink-900 bg, unsel=slate-0
                 13px SemiBold tabular-nums */}
-            {visibleTimeSlots.length === 0 && (
-              <Text style={styles.emptyHint}>
-                Bu tarih için uygun saat bulunamadı. Çalışma saatleri ayarlanmamış olabilir — Ayarlar → Dükkan Saatleri bölümünü kontrol et.
-              </Text>
+            {availabilityLoading ? (
+              <View style={styles.timeLoading}>
+                <ActivityIndicator size="small" color={colors.brand[600]} />
+              </View>
+            ) : (
+              <>
+                {visibleTimeSlots.length === 0 && (
+                  <Text style={styles.emptyHint}>
+                    {serverGridActive
+                      ? availability?.closed
+                        ? 'Seçilen personel bu gün çalışmıyor.'
+                        : 'Bu tarih için müsait saat kalmadı.'
+                      : 'Bu tarih için uygun saat bulunamadı. Çalışma saatleri ayarlanmamış olabilir — Ayarlar → Dükkan Saatleri bölümünü kontrol et.'}
+                  </Text>
+                )}
+                <View style={styles.timeGrid}>
+                  {visibleTimeSlots.map(t => {
+                    const sel = slot === t;
+                    const disabled = isTimeDisabled(t);
+                    return (
+                      <TouchableOpacity
+                        key={t}
+                        onPress={() => setSlot(t)}
+                        disabled={disabled}
+                        activeOpacity={0.8}
+                        accessibilityState={{ disabled, selected: sel }}
+                        style={[
+                          styles.timeCell,
+                          sel ? styles.timeCellActive : styles.timeCellInactive,
+                          disabled && styles.timeCellDisabled,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.timeCellText,
+                            sel && styles.timeCellTextActive,
+                            disabled && styles.timeCellTextDisabled,
+                          ]}
+                        >
+                          {t}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
             )}
-            <View style={styles.timeGrid}>
-              {visibleTimeSlots.map(t => {
-                const sel = slot === t;
-                return (
-                  <TouchableOpacity
-                    key={t}
-                    onPress={() => setSlot(t)}
-                    activeOpacity={0.8}
-                    style={[styles.timeCell, sel ? styles.timeCellActive : styles.timeCellInactive]}
-                  >
-                    <Text style={[styles.timeCellText, sel && styles.timeCellTextActive]}>{t}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
           </TourTarget>
 
           {/* ── ÖZET summary card (shown when slot selected) ──────
@@ -782,6 +901,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.slate[0],
     borderColor: colors.slate[200],
   },
+  /* Dolu saat — görünür ama seçilemez */
+  timeCellDisabled: {
+    backgroundColor: colors.slate[100],
+    borderColor: colors.slate[100],
+  },
+  timeLoading: {
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
   /* 13px SemiBold tabular-nums */
   timeCellText: {
     fontFamily: 'Montserrat-SemiBold',
@@ -789,6 +917,10 @@ const styles = StyleSheet.create({
     color: colors.ink[900],
   },
   timeCellTextActive: { color: '#ffffff' },
+  timeCellTextDisabled: {
+    color: colors.slate[300],
+    textDecorationLine: 'line-through',
+  },
 
   /* ── ÖZET summary card ───────────────────────────────────────────
      bg slate-100, borderRadius 12, padding 14, marginTop (from sectionLabel gap) */

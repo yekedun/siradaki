@@ -405,6 +405,8 @@ export default function RandevularScreen() {
         workingHours={workingHours}
         serverNowMs={serverNowMs}
         shopId={staffShopId}
+        shopSlug={staffShopSlug}
+        initialStaffId={staffId}
         onSave={async (data) => {
           if (!staffShopSlug || !staffId) {
             Alert.alert('Hata', 'Oturum bilgisi eksik.');
